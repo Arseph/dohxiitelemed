@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DOH XII Portal</string>
+    <string name="title_activity_main">DOH XII Portal</string>
+    <string name="package_name">com.employee.dohsox</string>
+    <string name="custom_url_scheme">com.employee.dohsox</string>
+</resources>
