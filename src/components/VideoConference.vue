@@ -110,7 +110,6 @@
 import { io } from 'socket.io-client'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-const socket = io('http://localhost:3000')
 
 const localVideo = ref<HTMLVideoElement | null>(null)
 const remoteVideo = ref<HTMLVideoElement | null>(null)
@@ -121,13 +120,86 @@ const cameras = ref<MediaDeviceInfo[]>([])
 const microphones = ref<MediaDeviceInfo[]>([])
 const videoEnabled = ref(true)
 const audioEnabled = ref(true)
-let localStream: MediaStream
+const roomId = "room123" // later make dynamic
+let socket: any
 let peerConnection: RTCPeerConnection
+let localStream: MediaStream
 let mediaRecorder: MediaRecorder
 let recordedChunks: Blob[] = []
 
-const servers = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+const config: RTCConfiguration = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+  ],
+}
+onMounted(async () => {
+  await loadDevices()
+  await restartStream()
+  // ✅ 1. Connect to signaling server
+  socket = io("https://telemed-dev.dohsox.com", {
+    path: "/socket.io",
+    transports: ["websocket"],
+    withCredentials: true,
+  })
+
+  socket.on("connect", () => {
+    console.log("✅ Connected to signaling server")
+    socket.emit("join", roomId)
+  })
+
+  // ✅ 2. Setup socket listeners
+  socket.on("offer", async (offer: RTCSessionDescriptionInit) => {
+    console.log("📩 Received offer", offer)
+
+    if (!peerConnection) createPeerConnection()
+
+    await peerConnection!.setRemoteDescription(new RTCSessionDescription(offer))
+    const answer = await peerConnection!.createAnswer()
+    await peerConnection!.setLocalDescription(answer)
+
+    socket.emit("answer", { roomId, answer })
+  })
+
+  socket.on("answer", async (answer: RTCSessionDescriptionInit) => {
+    console.log("📩 Received answer", answer)
+    await peerConnection!.setRemoteDescription(new RTCSessionDescription(answer))
+  })
+
+  socket.on("ice-candidate", async (candidate: RTCIceCandidateInit) => {
+    console.log("📩 Received candidate", candidate)
+    try {
+      await peerConnection!.addIceCandidate(new RTCIceCandidate(candidate))
+    } catch (err) {
+      console.error("Error adding ICE candidate", err)
+    }
+  })
+})
+
+onBeforeUnmount(() => {
+  if (peerConnection) peerConnection.close()
+  if (socket) socket.disconnect()
+})
+
+function createPeerConnection() {
+  peerConnection = new RTCPeerConnection(config)
+
+  // send ICE candidates to signaling
+  peerConnection.onicecandidate = (event) => {
+    if (event.candidate) {
+      console.log("📤 Sending ICE", event.candidate)
+      socket.emit("ice-candidate", { roomId, candidate: event.candidate })
+    }
+  }
+
+  // remote stream
+  peerConnection.ontrack = (event) => {
+    console.log("🎥 Remote stream received")
+    if (remoteVideo.value) {
+      remoteVideo.value.srcObject = event.streams[0]
+    }
+  }
+
+  return peerConnection
 }
 
 const getStream = async () => {
@@ -161,24 +233,23 @@ const restartStream = async () => {
   }
 }
 
-const startCall = async () => {
-  localStream = await getStream()
-  if (localVideo.value) localVideo.value.srcObject = localStream
+async function startCall() {
+  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
 
-  peerConnection = new RTCPeerConnection(servers)
-  localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream))
-
-  peerConnection.ontrack = (event) => {
-    if (remoteVideo.value) remoteVideo.value.srcObject = event.streams[0]
+  if (localVideo.value) {
+    localVideo.value.srcObject = localStream
   }
 
-  peerConnection.onicecandidate = (event) => {
-    if (event.candidate) socket.emit('ice-candidate', event.candidate)
-  }
+  if (!peerConnection) createPeerConnection()
 
-  const offer = await peerConnection.createOffer()
-  await peerConnection.setLocalDescription(offer)
-  socket.emit('offer', offer)
+  localStream.getTracks().forEach((track) => {
+    peerConnection!.addTrack(track, localStream!)
+  })
+
+  const offer = await peerConnection!.createOffer()
+  await peerConnection!.setLocalDescription(offer)
+
+  socket.emit("offer", { roomId, offer })
 }
 const toggleVideo = () => {
   if (!localStream) return
@@ -205,45 +276,6 @@ const loadDevices = async () => {
     selectedMic.value = microphones.value[0].deviceId
   }
 }
-
-onMounted(async () => {
-  await loadDevices()
-  await restartStream()
-  socket.on('offer', async (offer) => {
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-    if (localVideo.value) localVideo.value.srcObject = localStream
-
-    peerConnection = new RTCPeerConnection(servers)
-    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream))
-
-    peerConnection.ontrack = (event) => {
-      if (remoteVideo.value) remoteVideo.value.srcObject = event.streams[0]
-    }
-
-    peerConnection.onicecandidate = (event) => {
-      if (event.candidate) socket.emit('ice-candidate', event.candidate)
-    }
-
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
-    const answer = await peerConnection.createAnswer()
-    await peerConnection.setLocalDescription(answer)
-    socket.emit('answer', answer)
-  })
-
-  socket.on('answer', async (answer) => {
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(answer))
-  })
-
-  socket.on('ice-candidate', async (candidate) => {
-    if (peerConnection) {
-      await peerConnection.addIceCandidate(new RTCIceCandidate(candidate))
-    }
-  })
-})
-
-onBeforeUnmount(() => {
-  socket.disconnect()
-})
 
 const canvas = document.createElement('canvas')
 const ctx = canvas.getContext('2d')

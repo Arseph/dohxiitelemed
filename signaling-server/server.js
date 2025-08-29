@@ -1,29 +1,40 @@
-const express = require('express')
-const http = require('http')
-const socketIo = require('socket.io')
-const cors = require('cors')
+const http = require('http');
+const express = require('express');
+const socketIo = require('socket.io');
+const cors = require('cors');
 
-const app = express()
-app.use(cors())
-
-const server = http.createServer(app)
-const io = socketIo(server, {
+const app = express();
+app.use(cors());
+const httpServer = http.createServer(app);
+const io = socketIo(httpServer, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: "https://telemed-dev.dohsox.com", // your frontend domain
+    methods: ["GET", "POST"]
   }
-})
-
-io.on('connection', socket => {
+});
+io.on('connection', (socket) => {
+  socket.on("join", (roomId) => {
+    socket.join(roomId)
+  });
   console.log('Client connected:', socket.id)
 
-  socket.on('offer', data => socket.broadcast.emit('offer', data))
-  socket.on('answer', data => socket.broadcast.emit('answer', data))
-  socket.on('ice-candidate', data => socket.broadcast.emit('ice-candidate', data))
+  socket.on('offer', ({roomId, offer}) => {
+    socket.to(roomId).emit('offer', offer)
+  })
 
-  socket.on('disconnect', () => console.log('Client disconnected:', socket.id))
+  socket.on('answer', ({roomId, answer}) => {
+    socket.to(roomId).emit('answer', answer)
+  })
+
+  socket.on('ice-candidate', ({roomId,candidate}) => {
+    socket.to(roomId).emit('ice-candidate', candidate)
+  })
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id)
+  })
 })
-
-server.listen(3000, () => {
-  console.log('Socket.IO server running on http://localhost:5173')
+// Start HTTPS server
+httpServer.listen(3000, '127.0.0.1', () => {
+  console.log('Secure Socket.IO server running on port 3000')
 })
