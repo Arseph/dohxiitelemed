@@ -35,6 +35,6 @@ io.on('connection', (socket) => {
   })
 })
 // Start HTTPS server
-httpServer.listen(3000, '127.0.0.1', () => {
+httpServer.listen(3000, '192.168.1.75', () => {
   console.log('Secure Socket.IO server running on port 3000')
 })

@@ -234,7 +234,7 @@ const restartStream = async () => {
 }
 
 async function startCall() {
-  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+  localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
 
   if (localVideo.value) {
     localVideo.value.srcObject = localStream
