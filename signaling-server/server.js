@@ -32,6 +32,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id)
+    socket.to(roomId).emit("user-disconnected", socket.id)
   })
 })
 // Start HTTPS server

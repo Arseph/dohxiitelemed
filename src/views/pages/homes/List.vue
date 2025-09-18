@@ -1,14 +1,39 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-
-// Logistic data
+import { axiosIns } from '@/plugins/axios';
+import { register } from 'swiper/element/bundle';
+import { onMounted, onUnmounted, ref } from 'vue';
+register()
 const logisticData = ref([
-  { icon: 'tabler-video-plus', color: 'primary', title: 'Start Consultation', isHover: false, modal: 'start' },
-  { icon: 'tabler-video', color: 'warning', title: 'Join Teleconsultation', isHover: false, modal: 'join' },
-  { icon: 'tabler-calendar-clock', color: 'error', title: 'Schedule Teleconsultation', isHover: false, modal: 'schedule' },
+  { icon: 'tabler-video-plus', color: 'primary', title: 'Start Teleconsultation', isHover: false, modal: 'start', swipe: 0 },
+  { icon: 'tabler-video', color: 'warning', title: 'Join Teleconsultation', isHover: false, modal: 'join', swipe: 1 },
+  { icon: 'tabler-corner-left-down-double', color: 'info', title: 'Pending Teleconsultation', isHover: false, modal: 'pending', swipe: 2 },
+  { icon: 'tabler-calendar-clock', color: 'error', title: 'Request Teleconsultation', isHover: false, modal: 'schedule', swipe: 3 },
 ])
-
-// Track which modal is open
+const facilities = ref([])
+const docCat = ref([])
+const patient = ref([])
+const start = ref([])
+const active = ref(0)
+const pending = ref([])
+const req = ref([])
+const fetchTele = async () => {
+  try {
+    const response = await axiosIns.get(`/api/teleconsultation`);
+    facilities.value = response.data.facilities
+    docCat.value = response.data.telecat
+    patient.value = response.data.patients.map((pat: any) => ({
+      id: pat.id,
+      name: `${pat.fname} ${pat.mname ?? ''} ${pat.lname}`.replace(/\s+/g, ' ').trim(),
+    }))
+    start.value = response.data?.data
+    active.value =  response.data?.active_user?.id
+    pending.value =  response.data?.data_req
+    req.value =  response.data?.data_my_req
+    console.log(req.value)
+  } catch (error) {
+  } finally { 
+  }
+};
 const activeModal = ref<string | null>(null)
 
 // Function to open modal
@@ -20,50 +45,144 @@ const openModal = (modal: string) => {
 const closeModal = () => {
   activeModal.value = null
 }
+const time = ref('')
+const date = ref('')
+const swiperEl = ref<any>(null)
+const updateDateTime = () => {
+  const now = new Date()
+  time.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  date.value = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+}
+const swipeSpecific = (index: number) => {
+  if (swiperEl.value && swiperEl.value.swiper) {
+    swiperEl.value.swiper.slideTo(index)
+  }
+}
+let interval: number
+
+onMounted(() => {
+  swiperEl.value = document.querySelector('swiper-container')
+  updateDateTime()
+  fetchTele()
+  interval = window.setInterval(updateDateTime, 1000)
+})
+
+onUnmounted(() => {
+  clearInterval(interval)
+})
 </script>
 
 <template>
   <VRow>
     <VCol
-      v-for="(data, index) in logisticData"
-      :key="index"
-      cols="12"
-      md="4"
-      sm="6"
+      cols="5"
+      md="5"
+      sm="5"
     >
-      <VCard
-        class="logistics-card-statistics cursor-pointer"
-        :style="data.isHover ? `border-block-end-color: rgb(var(--v-theme-${data.color}))` : `border-block-end-color: rgba(var(--v-theme-${data.color}),0.38)`"
-        @mouseenter="data.isHover = true"
-        @mouseleave="data.isHover = false"
-        @click="openModal(data.modal)"
-      >
-        <VCardText>
-          <div class="d-flex align-center justify-center gap-x-4 mb-1">
-            <VAvatar variant="tonal" :color="data.color" rounded>
-              <VIcon :icon="data.icon" size="28" />
-            </VAvatar>
-          </div>
-          <div class="d-flex align-center justify-center text-body-1 mb-1">
-            {{ data.title }}
-          </div>
-        </VCardText>
+      <VRow>
+        <VCol
+          v-for="(data, index) in logisticData"
+          :key="index"
+          cols="12"
+          md="12"
+          sm="12"
+        >
+          <VCard
+            class="logistics-card-statistics cursor-pointer"
+            :style="data.isHover ? `border-block-end-color: rgb(var(--v-theme-${data.color}))` : `border-block-end-color: rgba(var(--v-theme-${data.color}),0.38)`"
+            @mouseenter="data.isHover = true"
+            @mouseleave="data.isHover = false"
+            @click="swipeSpecific(data.swipe)"
+          >
+            <VCardText>
+              <div class="d-flex align-center justify-center gap-x-4 mb-1">
+                <VAvatar variant="tonal" :color="data.color" rounded>
+                  <VIcon :icon="data.icon" size="28" />
+                </VAvatar>
+              </div>
+              <div class="d-flex align-center justify-center text-body-1 mb-1">
+                {{ data.title }}
+              </div>
+            </VCardText>
+          </VCard>
+        </VCol>
+      </VRow>
+    </VCol>
+    <VCol
+      cols="7"
+      md="7"
+      sm="7"
+    >
+      <VCard class="bg-cover bg-center"
+        style="background-image: url('https://picsum.photos/800/400?blur=2');">
+        <VCardItem>
+           <div class="d-flex align-center justify-center gap-x-4 mb-1">
+             <h1 class="text-white">{{ time }}</h1><br></br>
+            </div>
+            <div class="d-flex align-center justify-center gap-x-4 mb-1">
+              <h3 class="text-white">{{ date }}</h3>
+           </div>
+        </VCardItem>
       </VCard>
+      <swiper-container ref="swiperEl" :loop="false" slides-per-view="1">
+        <!-- Slide 1 -->
+        <swiper-slide>
+            <h1 class="text-h5 mt-6 mb-6">
+              <VIcon icon="tabler-video" size="28" class="mr-3" />
+              Today's Teleconsultation
+            </h1>
+            <Start :data="start" :active_id="active" />
+        </swiper-slide>
+
+        <!-- Slide 2 -->
+        <swiper-slide>
+          <h1 class="text-h5 mt-6 mb-6">
+            <VIcon icon="tabler-video" size="28" class="mr-3" />
+           Join Teleconsultation
+          </h1>
+          <Join :data="start" :active_id="active" />
+        </swiper-slide>
+
+        <!-- Slide 3 -->
+        <swiper-slide>
+          <h1 class="text-h5 mt-6 mb-6">
+            <VIcon icon="tabler-video" size="28" class="mr-3" />
+            Pending Teleconsultation
+          </h1>
+          <Pending :data="pending" />
+        </swiper-slide>
+        <swiper-slide>
+          <h1 class="text-h5 mt-6 mb-6">
+            <VIcon icon="tabler-video" size="28" class="mr-3" />
+            Request Teleconsultation
+            <VBtn
+              icon="tabler-plus"
+              variant="tonal"
+              color="success"
+              rounded
+              class="ml-6"
+              @click="openModal('schedule')"
+            />
+            <RequestPal :data="req"/>
+          </h1>
+        </swiper-slide>
+      </swiper-container>
     </VCol>
   </VRow>
 
   <!-- Single Dialog -->
-  <VDialog v-model="activeModal" max-width="500">
+  <VDialog v-model="activeModal" max-width="600">
+    <DialogCloseBtn @click="closeModal" />
     <VCard>
       <VCardTitle>
         <!-- Different titles based on modal -->
         <span v-if="activeModal === 'start'">Start Consultation</span>
         <span v-else-if="activeModal === 'join'">Join Teleconsultation</span>
-        <span v-else-if="activeModal === 'schedule'">Schedule Teleconsultation</span>
+        <span v-else-if="activeModal === 'schedule'">Request Teleconsultation</span>
+         <span v-else-if="activeModal === 'pending'">Pending Teleconsultation</span>
       </VCardTitle>
 
       <VCardText>
-        <!-- Different modal body -->
         <div v-if="activeModal === 'start'">
           🚀 You can start a new consultation here.
         </div>
@@ -71,21 +190,13 @@ const closeModal = () => {
         <div v-else-if="activeModal === 'join'">
           🔗 Enter meeting details to join your teleconsultation.
         </div>
-
         <div v-else-if="activeModal === 'schedule'">
-          📅 Choose a date and time to schedule a teleconsultation.
+          <Request :facilities="facilities" :docCat="docCat" :patient="patient"/>
         </div>
       </VCardText>
-
-      <VCardActions>
-        <VSpacer />
-        <VBtn color="primary" @click="closeModal">Close</VBtn>
-      </VCardActions>
     </VCard>
   </VDialog>
 </template>
-
-
 <style lang="scss" scoped>
 @use "@core/scss/base/mixins" as mixins;
 

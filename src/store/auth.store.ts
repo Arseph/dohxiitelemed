@@ -120,35 +120,7 @@ const auth: Module<AuthState, RootState> = {
         commit('SET_CHECKED')
       }
     },
-    async profile({ commit }: { commit: Commit }): Promise<void> {
-      const { isOnline } = useOnlineStatus()
-      const cachedProfile = localStorage.getItem('auth_profile')
-      try {
-        if(!cachedProfile) {
-          if (isOnline.value) {
-            const { data } = await axiosIns.get('/api/employee/profile-pic', {
-              responseType: 'blob',
-            })
-            localStorage.setItem('auth_profile', data)
-            commit('SET_PROFILE', data)
-          } else {
-            if (cachedProfile) {
-              commit('SET_PROFILE', cachedProfile)
-            }
-          }
-        } else {
-          const { data } = await axiosIns.get('/api/employee/profile-pic', {
-            responseType: 'blob',
-          })
-          localStorage.setItem('auth_profile', data)
-          commit('SET_PROFILE', data)
-        }
-      } catch {
-        commit('SET_PROFILE', null)
-      } finally {
-        commit('SET_CHECKED')
-      }
-    },
+
     async logout({ commit }: { commit: Commit }): Promise<void> {
       try {
         await axiosIns.get('/api/auth/logout')

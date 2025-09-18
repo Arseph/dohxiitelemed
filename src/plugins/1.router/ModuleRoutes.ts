@@ -46,6 +46,15 @@ const generatedRoutes: Array<RouteRecordRaw> = modules.flatMap((module) => [
     },
     component: () => import(`../../views/pages/${module.name}/View.vue`), // Dynamic imports for edit form
   },
+  {
+    path: `/${module.name}/consultation/:id`,
+    name: `${module.name}.consultation`,
+    meta: {
+      middleware: [ensureCsrfTokenSet, authenticated],
+      resource: module.name,
+    },
+    component: () => import(`../../views/pages/${module.name}/Consultation.vue`),
+  },
 ]);
 async function loadComponent(moduleName: string) {
   try {

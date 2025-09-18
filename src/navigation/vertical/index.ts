@@ -7,7 +7,7 @@ export default [
   },
   {
     title: 'Teleconsultation',
-    to: { name: 'pds.index' },
+    to: { name: 'tele.index' },
     icon: { icon: 'tabler-video' },
   },
 ]
