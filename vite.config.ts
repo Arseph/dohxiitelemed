@@ -7,7 +7,6 @@ import { VueRouterAutoImports, getPascalCaseRouteName } from 'unplugin-vue-route
 import VueRouter from 'unplugin-vue-router/vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from "vite-plugin-pwa"
-import VueDevTools from 'vite-plugin-vue-devtools'
 import Layouts from 'vite-plugin-vue-layouts'
 import vuetify from 'vite-plugin-vuetify'
 import svgLoader from 'vite-svg-loader'
@@ -33,7 +32,6 @@ export default defineConfig({
         },
       },
     }),
-    VueDevTools(),
     vueJsx(),
 
     // Docs: https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin

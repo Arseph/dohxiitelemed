@@ -247,7 +247,7 @@ interface CardItem {
   component: any
 }
 const cards = ref<CardItem[]>([
-  { id: 1, title: "Form 1", component: Form1 },
+  { id: 1, title: "Demographic Profile", component: Form1 },
   { id: 2, title: "Form 2", component: Form2 },
 ])
 const activeCard = ref<number | null>(null)
