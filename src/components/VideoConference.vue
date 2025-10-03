@@ -1,122 +1,139 @@
 <template>
-  <VRow>
+  <VRow v-if="!callEnded" class="fullscreen-video-row" no-gutters>
     <VCol :cols="colSize" :md="colSize" :sm="colSize">
-      <div class="video-container">
+      <div class="video-container" @mousemove="showControls" @click="toggleControls">
         <div class="video-wrap">
           <video ref="remoteVideo" autoplay playsinline class="remote-video" />
           <video ref="localVideo" autoplay playsinline muted class="local-video" />
+          <div class="call-timer">
+            {{ formatTime(elapsedSeconds) }}
+          </div>
+
+          <transition name="fade">
+            <div v-if="controlsVisible" class="video-controls" @mouseenter="cancelHide" @mouseleave="scheduleHide">
+              <VBtn
+                variant="tonal"
+                icon="tabler-notebook"
+                color="success"
+                :class="smAndDown ? 'mt-3' : 'ma-3'"
+                :size="smAndDown ? 'small' : 'x-large'"
+                @click="toggleCols"
+              />
+              <VMenu location="top">
+                <template #activator="{ props }">
+                  <VBtn
+                    v-if="videoEnabled"
+                    v-bind="props"
+                    variant="tonal"
+                    icon="tabler-video"
+                    color="warning"
+                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
+                    :size="smAndDown ? 'small' : 'x-large'"
+                  />
+                  <VBtn
+                    v-else
+                    v-bind="props"
+                    variant="tonal"
+                    icon="tabler-video-off"
+                    color="error"
+                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
+                    :size="smAndDown ? 'small' : 'x-large'"
+                  />
+                </template>
+        
+                <VList>
+                  <VListItem
+                    v-for="cam in cameras"
+                    :key="cam.deviceId"
+                    @click="selecVid(cam.deviceId)"
+                  >
+                    <VListItemTitle>
+                      <VBtn
+                        v-if="selectedCamera == cam.deviceId"
+                        icon="tabler-check"
+                        variant="text"
+                        color="error"
+                      />
+                      {{ cam.label || 'Camera ' + cam.deviceId }}
+                    </VListItemTitle>
+                  </VListItem>
+                  <VListItem
+                    @click="toggleVideo"
+                  >
+                    <VListItemTitle>
+                      {{ videoEnabled ? 'Turn Off Camera' : 'Turn On Camera' }}
+                    </VListItemTitle>
+                  </VListItem>
+                </VList>
+              </VMenu>
+              <VMenu location="top">
+                <template #activator="{ props }">
+                  <VBtn
+                    v-if="audioEnabled"
+                    v-bind="props"
+                    variant="tonal"
+                    icon="tabler-microphone"
+                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
+                    :size="smAndDown ? 'small' : 'x-large'"
+                  />
+                  <VBtn
+                    v-else
+                    v-bind="props"
+                    variant="tonal"
+                    icon="tabler-microphone-off"
+                    color="error"
+                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
+                    :size="smAndDown ? 'small' : 'x-large'"
+                  />
+                </template>
+        
+                <VList>
+                  <VListItem
+                    v-for="mic in microphones"
+                    :key="mic.deviceId"
+                    @click="selectMic(mic.deviceId)"
+                  >
+                    <VListItemTitle>
+                       <VBtn
+                        v-if="selectedMic == mic.deviceId"
+                        icon="tabler-check"
+                        variant="text"
+                        color="error"
+                      />
+                      {{ mic.label || 'Mic ' + mic.deviceId }}
+                    </VListItemTitle>
+                  </VListItem>
+                  <VListItem
+                    @click="toggleAudio"
+                  >
+                    <VListItemTitle>
+                      {{ audioEnabled ? 'Mute Mic' : 'Unmute Mic' }}
+                    </VListItemTitle>
+                  </VListItem>
+                </VList>
+              </VMenu>
+              <VBtn
+                variant="tonal"
+                :icon="isFullscreen ? 'tabler-minimize' : 'tabler-maximize'"
+                color="secondary"
+                :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
+                :size="smAndDown ? 'small' : 'x-large'"
+                @click="toggleFullscreen"
+              />
+              <VBtn
+                variant="tonal"
+                icon="tabler-logout"
+                color="error"
+                :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
+                :size="smAndDown ? 'small' : 'x-large'"
+                @click="stopCall"
+              />
+            </div>
+          </transition>
+
         </div>
       </div>
       <div class="device-selectors d-flex align-center justify-center gap-x-4 mb-1">
-        <VBtn
-          variant="tonal"
-          icon="tabler-notebook"
-          color="success"
-          :class="smAndDown ? 'mt-3' : 'ma-3'"
-          :size="smAndDown ? 'small' : 'x-large'"
-          @click="toggleCols"
-        />
-        <VMenu location="top">
-          <template #activator="{ props }">
-            <VBtn
-              v-if="videoEnabled"
-              v-bind="props"
-              variant="tonal"
-              icon="tabler-video"
-              color="warning"
-              :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-              :size="smAndDown ? 'small' : 'x-large'"
-            />
-            <VBtn
-              v-else
-              v-bind="props"
-              variant="tonal"
-              icon="tabler-video-off"
-              color="error"
-              :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-              :size="smAndDown ? 'small' : 'x-large'"
-            />
-          </template>
-  
-          <VList>
-            <VListItem
-              v-for="cam in cameras"
-              :key="cam.deviceId"
-              @click="selecVid(cam.deviceId)"
-            >
-              <VListItemTitle>
-                <VBtn
-                  v-if="selectedCamera == cam.deviceId"
-                  icon="tabler-check"
-                  variant="text"
-                  color="error"
-                />
-                {{ cam.label || 'Camera ' + cam.deviceId }}
-              </VListItemTitle>
-            </VListItem>
-            <VListItem
-              @click="toggleVideo"
-            >
-              <VListItemTitle>
-                {{ videoEnabled ? 'Turn Off Camera' : 'Turn On Camera' }}
-              </VListItemTitle>
-            </VListItem>
-          </VList>
-        </VMenu>
-        <VMenu location="top">
-          <template #activator="{ props }">
-            <VBtn
-              v-if="audioEnabled"
-              v-bind="props"
-              variant="tonal"
-              icon="tabler-microphone"
-              :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-              :size="smAndDown ? 'small' : 'x-large'"
-            />
-            <VBtn
-              v-else
-              v-bind="props"
-              variant="tonal"
-              icon="tabler-microphone-off"
-              color="error"
-              :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-              :size="smAndDown ? 'small' : 'x-large'"
-            />
-          </template>
-  
-          <VList>
-            <VListItem
-              v-for="mic in microphones"
-              :key="mic.deviceId"
-              @click="selectMic(mic.deviceId)"
-            >
-              <VListItemTitle>
-                 <VBtn
-                  v-if="selectedMic == mic.deviceId"
-                  icon="tabler-check"
-                  variant="text"
-                  color="error"
-                />
-                {{ mic.label || 'Mic ' + mic.deviceId }}
-              </VListItemTitle>
-            </VListItem>
-            <VListItem
-              @click="toggleAudio"
-            >
-              <VListItemTitle>
-                {{ audioEnabled ? 'Mute Mic' : 'Unmute Mic' }}
-              </VListItemTitle>
-            </VListItem>
-          </VList>
-        </VMenu>
-        <VBtn
-          variant="tonal"
-          icon="tabler-logout"
-          color="error"
-          :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-          :size="smAndDown ? 'small' : 'x-large'"
-          @click="stopRecording"
-        />
       </div>
     </VCol>
     <VCol v-if="colSize == 6" cols="6" md="6" sm="6">
@@ -156,6 +173,26 @@
       </div>
     </Transition>
     </VCol>
+  </VRow>
+  <VRow v-else>
+    <VContainer>
+      <div class="hero-text-box text-center px-6">
+        <h1 class="hero-title mb-4">
+          THANK YOU!
+        </h1>
+        <h6 class="mb-6 text-h5">
+          ✅ Your call has ended. All data has been safely stored with strict security measures to protect your privacy.
+        </h6>
+        <div class="position-relative">
+          <VBtn
+            :size="$vuetify.display.smAndUp ? 'large' : 'default' "
+            @click="closeTab"
+          >
+            Close Tab
+          </VBtn>
+        </div>
+      </div>
+    </VContainer>
   </VRow>
   <VDialog
     v-model="isStartDialog"
@@ -231,13 +268,13 @@
 import { cStatus } from "@/components/snackbars/cStatus";
 import ErrorSnackbar from '@/components/snackbars/errors.vue';
 import SuccessSnackbar from '@/components/snackbars/success.vue';
+import { axiosIns } from '@/plugins/axios';
 import { io } from 'socket.io-client';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useDisplay } from 'vuetify';
 import { VCardTitle, VCol } from 'vuetify/lib/components/index.mjs';
 import Form1 from "./forms/form1.vue";
 import Form2 from "./forms/form2.vue";
-
 const props = defineProps<{
     conid: any
 }>()
@@ -284,13 +321,15 @@ let peerConnection: RTCPeerConnection
 let localStream: MediaStream
 let mediaRecorder: MediaRecorder
 let recordedChunks: Blob[] = []
-
+const callEnded = ref(false)
 const config: RTCConfiguration = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
   ],
 }
 onMounted(async () => {
+  document.addEventListener("keydown", handleKeydown)
+  document.addEventListener("fullscreenchange", handleFullscreenChange)
   const stored = sessionStorage.getItem('consultationData')
   if (stored) {
     consult.value = JSON.parse(stored)
@@ -305,13 +344,11 @@ onMounted(async () => {
   })
 
   socket.on("connect", () => {
-    console.log("✅ Connected to signaling server")
     socket.emit("join", roomId)
   })
 
   // ✅ 2. Setup socket listeners
   socket.on("offer", async (offer: RTCSessionDescriptionInit) => {
-    console.log("📩 Received offer", offer)
 
     if (!peerConnection) createPeerConnection()
 
@@ -323,14 +360,12 @@ onMounted(async () => {
   })
 
   socket.on("answer", async (answer: RTCSessionDescriptionInit) => {
-    console.log("📩 Received answer", answer)
     successMessage.value = "User Enter the Teleconsultation";
     isSuccess.value = true;
     await peerConnection!.setRemoteDescription(new RTCSessionDescription(answer))
   })
 
   socket.on("ice-candidate", async (candidate: RTCIceCandidateInit) => {
-    console.log("📩 Received candidate", candidate)
     try {
       await peerConnection!.addIceCandidate(new RTCIceCandidate(candidate))
     } catch (err) {
@@ -338,8 +373,6 @@ onMounted(async () => {
     }
   })
   socket.on("user-disconnected", (userId: string) => {
-    console.log(`❌ User ${userId} disconnected`)
-    // Here you can close the peer connection or show UI
     errorMessage.value = "User Disconnected";
     isError.value = true;
     if (peerConnection) {
@@ -348,12 +381,10 @@ onMounted(async () => {
   })
   if (peerConnection) {
     peerConnection.onconnectionstatechange = () => {
-      console.log("🔄 Connection state:", peerConnection.connectionState)
 
       if (peerConnection.connectionState === "disconnected" || 
           peerConnection.connectionState === "failed" || 
           peerConnection.connectionState === "closed") {
-        console.log("❌ Remote peer disconnected")
         // cleanup UI
         peerConnection.close()
       }
@@ -373,14 +404,12 @@ function createPeerConnection() {
   // send ICE candidates to signaling
   peerConnection.onicecandidate = (event) => {
     if (event.candidate) {
-      console.log("📤 Sending ICE", event.candidate)
       socket.emit("ice-candidate", { roomId, candidate: event.candidate })
     }
   }
 
   // remote stream
   peerConnection.ontrack = (event) => {
-    console.log("🎥 Remote stream received")
     if (remoteVideo.value) {
       remoteVideo.value.srcObject = event.streams[0]
     }
@@ -424,23 +453,36 @@ const restartStream = async () => {
 }
 
 async function startCall() {
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-  
-  if (localVideo.value) {
-    localVideo.value.srcObject = localStream
-  }
-  
-  if (!peerConnection) createPeerConnection()
-  
-  localStream.getTracks().forEach((track) => {
-    peerConnection!.addTrack(track, localStream!)
-  })
-  
-  const offer = await peerConnection!.createOffer()
-  await peerConnection!.setLocalDescription(offer)
-  
-  socket.emit("offer", { roomId, offer })
-  isStartDialog.value = false
+   try {
+        const response = await axiosIns.get(`/api/start-consult`, {
+        params: { consult_id: props.conid }
+        })
+        if(response.data.is_finished) {
+          alert('Teleconsultation Finished!')
+          return
+        }
+        setCallStartTime(response.data.start_time)
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+        
+        if (localVideo.value) {
+          localVideo.value.srcObject = localStream
+        }
+        
+        if (!peerConnection) createPeerConnection()
+        
+        localStream.getTracks().forEach((track) => {
+          peerConnection!.addTrack(track, localStream!)
+        })
+        
+        const offer = await peerConnection!.createOffer()
+        await peerConnection!.setLocalDescription(offer)
+        
+        socket.emit("offer", { roomId, offer })
+        isStartDialog.value = false
+    } catch (error) {
+        console.error(error)
+    } finally {
+    }
 }
 const toggleVideo = () => {
   if (!localStream) return
@@ -506,25 +548,37 @@ const startRecording = () => {
   mediaRecorder.start()
 }
 
+const stopCall = async () => {
+  if (!confirm("⚠️ Are you sure you want to stop the call?")) {
+    return
+  }
 
-const stopRecording = () => {
   if (mediaRecorder && mediaRecorder.state !== 'inactive') {
     mediaRecorder.stop()
 
-    mediaRecorder.onstop = () => {
+    mediaRecorder.onstop = async () => {
       const blob = new Blob(recordedChunks, { type: 'video/webm' })
-      const url = URL.createObjectURL(blob)
 
-      // Auto-download
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'video-conference.webm'
-      a.click()
+      const formData = new FormData()
+      formData.append('consult_id', props.conid)
+      formData.append('video', blob, 'video-conference.webm')
 
-      URL.revokeObjectURL(url)
+      try {
+        const response = await axiosIns.post(`/api/stop-consult`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+        stopTimer()
+        callEnded.value = true
+      } catch (error) {
+        alert("❌ Failed to upload video")
+        console.error(error)
+      }
     }
   }
 }
+
 function selectMic(deviceId: string) {
   selectedMic.value = deviceId
   restartStream()
@@ -533,28 +587,135 @@ function selecVid(deviceId: string) {
   selectedCamera.value = deviceId
   restartStream()
 }
+const controlsVisible = ref(true)
+let hideTimeout: number | null = null
+
+const showControls = () => {
+  controlsVisible.value = true
+  scheduleHide()
+}
+
+const toggleControls = () => {
+  controlsVisible.value = !controlsVisible.value
+  if (controlsVisible.value) scheduleHide()
+}
+
+const scheduleHide = () => {
+  if (hideTimeout) clearTimeout(hideTimeout)
+  hideTimeout = window.setTimeout(() => {
+    controlsVisible.value = false
+  }, 3000)
+}
+
+const cancelHide = () => {
+  if (hideTimeout) clearTimeout(hideTimeout)
+}
+const isFullscreen = ref(false)
+
+const toggleFullscreen = () => {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen()
+    isFullscreen.value = true
+  } else {
+    if (document.exitFullscreen) {
+      document.exitFullscreen()
+      isFullscreen.value = false
+    }
+  }
+}
+const handleKeydown = (e: KeyboardEvent) => {
+  if (e.key === "Escape" && isFullscreen.value) {
+    toggleFullscreen()
+  }
+}
+
+const handleFullscreenChange = () => {
+  isFullscreen.value = !!document.fullscreenElement
+}
+const callStartTime = ref<string | null>(null) 
+const elapsedSeconds = ref(0)
+let timerInterval: number | null = null
+
+const setCallStartTime = (startTime: string) => {
+  callStartTime.value = startTime
+  startTimer()
+}
+
+const startTimer = () => {
+  if (timerInterval) clearInterval(timerInterval)
+
+  timerInterval = window.setInterval(() => {
+    if (callStartTime.value) {
+      const start = new Date(callStartTime.value).getTime()
+      const now = Date.now()
+      elapsedSeconds.value = Math.floor((now - start) / 1000)
+    }
+  }, 1000)
+}
+
+const stopTimer = () => {
+  if (timerInterval) clearInterval(timerInterval)
+  timerInterval = null
+}
+
+// Format seconds -> HH:MM:SS
+const formatTime = (secs: number) => {
+  const h = String(Math.floor(secs / 3600)).padStart(2, "0")
+  const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0")
+  const s = String(secs % 60).padStart(2, "0")
+  return `${h}:${m}:${s}`
+}
+const closeTab = () => {
+  window.close()
+}
 </script>
 
 <style scoped>
+.fullscreen-video-row {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+}
+
+html:fullscreen .fullscreen-video-row {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  z-index: 9999;
+  background: #000000;
+}
+html:fullscreen .remote-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .video-container {
+  width: 100%;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
 }
+
 .video-wrap {
   position: relative;
   width: 100%;
-  max-width: 1280px;
-  height: 520px;
-  background: #000;
+  height: 100%;
+  background: #000000;
   overflow: hidden;
   border-radius: 12px;
 }
 
 .remote-video {
+  position: relative;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: 700px;
+  background: #000;
+  overflow: hidden;
+  border-radius: 12px;
 }
 
 .local-video {
@@ -568,6 +729,7 @@ function selecVid(deviceId: string) {
   border-radius: 8px;
   object-fit: cover;
   box-shadow: 0 0 10px rgba(0,0,0,0.6);
+  margin-right: 20px;
 }
 @media (max-width: 768px) {
   .local-video {
@@ -616,5 +778,71 @@ function selecVid(deviceId: string) {
 }
 .slide-leave-active {
   transition: all 0.3s ease;
+}
+.video-controls {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px 20px;
+  border-radius: 40px;
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 20px);
+}
+
+.slide-fade-enter-to,
+.slide-fade-leave-from {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+.call-timer {
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  padding: 6px 12px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  z-index: 10;
+}
+@media (max-width: 599px) {
+  .hero-title {
+    font-size: 1.5rem !important;
+    line-height: 2.375rem !important;
+  }
+}
+
+.hero-title {
+  animation: shine 2s ease-in-out infinite alternate;
+    background: linear-gradient(135deg, #28c76f 0%, #5a4aff 47.92%, #ff3739 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 48px;
+  -webkit-text-fill-color: rgba(0, 0, 0, 0%);
 }
 </style>
