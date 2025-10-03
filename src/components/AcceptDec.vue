@@ -39,13 +39,6 @@ const handleAccept = async () => {
     isError.value = !isError.value
   } finally { 
   }
-  console.log('✅ Accepted', {
-    patient: patient.value,
-    complaint: chiefComplaint.value,
-    date: teleDate.value,
-    duration: duration.value,
-    time: time.value,
-  })
 }
 
 const handleDecline = () => {

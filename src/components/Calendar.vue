@@ -43,7 +43,6 @@ export default {
     async fetchTele() {
       try {
         const response = await axiosIns.get(`/api/my-calendar-meetings`)
-        console.log(response.data)
 
         this.calendarOptions.events = response.data.map((event: any) => ({
           id: event.id,

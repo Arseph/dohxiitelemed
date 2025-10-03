@@ -43,7 +43,7 @@
             </VListItemSubtitle>
 
             <template #append>
-            <VBtn size="small">
+            <VBtn size="small" :disabled="!isMeetingOngoing(data)" @click="joinConsult(data)">
                 Join
             </VBtn>
             </template>
@@ -53,11 +53,14 @@
     </VList>
 </template>
 <script setup lang="ts">
-import dayjs from 'dayjs'
-import customParseFormat from 'dayjs/plugin/customParseFormat'
-import relativeTime from 'dayjs/plugin/relativeTime'
-import { VIcon } from 'vuetify/lib/components/index.mjs'
-
+import { axiosIns } from '@/plugins/axios';
+import CryptoJS from 'crypto-js';
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import { useRouter } from 'vue-router';
+import { VIcon } from 'vuetify/lib/components/index.mjs';
+const router = useRouter()
 dayjs.extend(customParseFormat)
 dayjs.extend(relativeTime)
 const humanReadable = (time: string) => {
@@ -72,7 +75,12 @@ const parseTime = (time?: string) => {
   }
   return null
 }
-
+const isMeetingOngoing = (item: any) => {
+  const start = dayjs(`${item.date_meeting} ${item.from_time}`, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD H:mm'])
+  const end = dayjs(`${item.date_meeting} ${item.to_time}`, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD H:mm'])
+  const now = dayjs()
+  return now.isAfter(start)
+}
 const formatTime = (time?: string) => {
   const d = parseTime(time)
   return d ? d.format('h:mm A') : ''
@@ -84,4 +92,29 @@ const props = defineProps<{
 const data = computed(() =>
   props.data.filter((item: any) => item.Creator === props.active_id)
 )
+const joinConsult = async (item: any) => {
+    try {
+        const response = await axiosIns.get(`/api/enter-consult`, {
+        params: { consult_id: item.id }
+        })
+        if(!response.data.is_started) {
+            alert('Teleconsultation not yet started.')
+        } else if(response.data.is_finished) {
+            alert('Teleconsultation finished!')
+        } else {
+            sessionStorage.setItem('consultationData', JSON.stringify(item))
+            const conid = item.id
+            const secretKey = 'SecretKey'
+            const encryptedId = CryptoJS.AES.encrypt(conid.toString(), secretKey).toString()
+
+            const routeData = router.resolve({
+                name: 'tele.consultation',
+                params: { id: encryptedId },
+            })
+            window.open(routeData.href, '_blank')
+        }
+    } catch (error) {
+        console.error(error)
+    }
+};
 </script>

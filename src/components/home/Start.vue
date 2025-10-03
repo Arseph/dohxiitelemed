@@ -53,6 +53,7 @@
     </VList>
 </template>
 <script setup lang="ts">
+import { axiosIns } from '@/plugins/axios';
 import CryptoJS from 'crypto-js';
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
@@ -92,9 +93,16 @@ const isMeetingOngoing = (item: any) => {
 const data = computed(() =>
   props.data.filter((item: any) => item.RequestTo === props.active_id)
 )
-const startConsult = (item: any) => {
+const startConsult = async (item: any) => {
+    const response = await axiosIns.get(`/api/enter-consult`, {
+    params: { consult_id: item.id }
+    })
+    if(response.data.is_finished) {
+        alert('Teleconsultation finished!')
+        return
+    }
     sessionStorage.setItem('consultationData', JSON.stringify(item))
-    const conid = item.password
+    const conid = item.id
     const secretKey = 'SecretKey'
     const encryptedId = CryptoJS.AES.encrypt(conid.toString(), secretKey).toString()
 
