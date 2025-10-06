@@ -13,8 +13,8 @@ const telemed = ref({
 });
 </script>
 
-<template>
-  <VCard class="overflow-x-auto overflow-y-auto" style="max-height: 500px; width: max-content; min-width: 100%;">
+<template >
+  <!-- <VCard class="overflow-x-auto overflow-y-auto" style="max-height: 500px; width: max-content; min-width: 100%;"> -->
     <div class="d-flex flex-column justify-center">
       <!-- <h5><pre>{{ user }}</pre></h5> -->
     </div>
@@ -276,5 +276,5 @@ const telemed = ref({
         <VTextField v-model="telemed.cmpltad" outlined />
       </VCol>
     </VRow>
-  </VCard>
+  <!-- </VCard> -->
 </template>
