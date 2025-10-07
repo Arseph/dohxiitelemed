@@ -2,74 +2,30 @@
   <VRow v-if="!callEnded" class="fullscreen-video-row" no-gutters>
     <VCol :cols="colSize" :md="colSize" :sm="colSize">
       <!-- <VCol cols="12" md="9"> -->
-      <div
-        class="video-container"
-        @mousemove="showControls"
-        @click="toggleControls"
-      >
+      <div class="video-container" @mousemove="showControls" @click="toggleControls">
         <div class="video-wrap">
           <video ref="remoteVideo" autoplay playsinline class="remote-video" />
-          <video
-            ref="localVideo"
-            autoplay
-            playsinline
-            muted
-            class="local-video"
-          />
+          <video ref="localVideo" autoplay playsinline muted class="local-video" />
           <div class="call-timer">
             {{ formatTime(elapsedSeconds) }}
           </div>
 
           <transition name="fade">
-            <div
-              v-if="controlsVisible"
-              class="video-controls"
-              @mouseenter="cancelHide"
-              @mouseleave="scheduleHide"
-            >
-              <VBtn
-                variant="tonal"
-                icon="tabler-notebook"
-                color="success"
-                :class="smAndDown ? 'mt-3' : 'ma-3'"
-                :size="smAndDown ? 'small' : 'x-large'"
-                @click="toggleCols"
-              />
+            <div v-if="controlsVisible" class="video-controls" @mouseenter="cancelHide" @mouseleave="scheduleHide">
+              <VBtn variant="tonal" icon="tabler-notebook" color="success" :class="smAndDown ? 'mt-3' : 'ma-3'"
+                :size="smAndDown ? 'small' : 'x-large'" @click="toggleCols" />
               <VMenu location="top">
                 <template #activator="{ props }">
-                  <VBtn
-                    v-if="videoEnabled"
-                    v-bind="props"
-                    variant="tonal"
-                    icon="tabler-video"
-                    color="warning"
-                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                    :size="smAndDown ? 'small' : 'x-large'"
-                  />
-                  <VBtn
-                    v-else
-                    v-bind="props"
-                    variant="tonal"
-                    icon="tabler-video-off"
-                    color="error"
-                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                    :size="smAndDown ? 'small' : 'x-large'"
-                  />
+                  <VBtn v-if="videoEnabled" v-bind="props" variant="tonal" icon="tabler-video" color="warning"
+                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'" :size="smAndDown ? 'small' : 'x-large'" />
+                  <VBtn v-else v-bind="props" variant="tonal" icon="tabler-video-off" color="error"
+                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'" :size="smAndDown ? 'small' : 'x-large'" />
                 </template>
 
                 <VList>
-                  <VListItem
-                    v-for="cam in cameras"
-                    :key="cam.deviceId"
-                    @click="selecVid(cam.deviceId)"
-                  >
+                  <VListItem v-for="cam in cameras" :key="cam.deviceId" @click="selecVid(cam.deviceId)">
                     <VListItemTitle>
-                      <VBtn
-                        v-if="selectedCamera == cam.deviceId"
-                        icon="tabler-check"
-                        variant="text"
-                        color="error"
-                      />
+                      <VBtn v-if="selectedCamera == cam.deviceId" icon="tabler-check" variant="text" color="error" />
                       {{ cam.label || "Camera " + cam.deviceId }}
                     </VListItemTitle>
                   </VListItem>
@@ -82,38 +38,16 @@
               </VMenu>
               <VMenu location="top">
                 <template #activator="{ props }">
-                  <VBtn
-                    v-if="audioEnabled"
-                    v-bind="props"
-                    variant="tonal"
-                    icon="tabler-microphone"
-                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                    :size="smAndDown ? 'small' : 'x-large'"
-                  />
-                  <VBtn
-                    v-else
-                    v-bind="props"
-                    variant="tonal"
-                    icon="tabler-microphone-off"
-                    color="error"
-                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                    :size="smAndDown ? 'small' : 'x-large'"
-                  />
+                  <VBtn v-if="audioEnabled" v-bind="props" variant="tonal" icon="tabler-microphone"
+                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'" :size="smAndDown ? 'small' : 'x-large'" />
+                  <VBtn v-else v-bind="props" variant="tonal" icon="tabler-microphone-off" color="error"
+                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'" :size="smAndDown ? 'small' : 'x-large'" />
                 </template>
 
                 <VList>
-                  <VListItem
-                    v-for="mic in microphones"
-                    :key="mic.deviceId"
-                    @click="selectMic(mic.deviceId)"
-                  >
+                  <VListItem v-for="mic in microphones" :key="mic.deviceId" @click="selectMic(mic.deviceId)">
                     <VListItemTitle>
-                      <VBtn
-                        v-if="selectedMic == mic.deviceId"
-                        icon="tabler-check"
-                        variant="text"
-                        color="error"
-                      />
+                      <VBtn v-if="selectedMic == mic.deviceId" icon="tabler-check" variant="text" color="error" />
                       {{ mic.label || "Mic " + mic.deviceId }}
                     </VListItemTitle>
                   </VListItem>
@@ -124,29 +58,16 @@
                   </VListItem>
                 </VList>
               </VMenu>
-              <VBtn
-                variant="tonal"
-                :icon="isFullscreen ? 'tabler-minimize' : 'tabler-maximize'"
-                color="secondary"
-                :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                :size="smAndDown ? 'small' : 'x-large'"
-                @click="toggleFullscreen"
-              />
-              <VBtn
-                variant="tonal"
-                icon="tabler-logout"
-                color="error"
-                :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                :size="smAndDown ? 'small' : 'x-large'"
-                @click="stopCall"
-              />
+              <VBtn variant="tonal" :icon="isFullscreen ? 'tabler-minimize' : 'tabler-maximize'" color="secondary"
+                :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'" :size="smAndDown ? 'small' : 'x-large'"
+                @click="toggleFullscreen" />
+              <VBtn variant="tonal" icon="tabler-logout" color="error" :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
+                :size="smAndDown ? 'small' : 'x-large'" @click="stopCall" />
             </div>
           </transition>
         </div>
       </div>
-      <div
-        class="device-selectors d-flex align-center justify-center gap-x-4 mb-1"
-      ></div>
+      <div class="device-selectors d-flex align-center justify-center gap-x-4 mb-1"></div>
     </VCol>
     <VCol cols="12" md="3">
       <!-- <div v-if="activeCard === null" class="flex gap-2">
@@ -188,28 +109,14 @@
       </Transition> -->
 
       <!-- Buttons to open forms -->
-      <div
-        v-if="colSize == 9 && !isDrawerOpen"
-        class="d-flex flex-column gap-3 px-4 py-3"
-      >
-        <VBtn
-          v-for="card in cards"
-          :key="card.id"
-          color="primary"
-          @click="openCard(card.id)"
-        >
+      <div v-if="colSize == 9 && !isDrawerOpen" class="d-flex flex-column gap-3 px-4 py-3">
+        <VBtn v-for="card in cards" :key="card.id" color="primary" @click="openCard(card.id)">
           Open {{ card.title }}
         </VBtn>
       </div>
 
       <!-- Drawer for forms -->
-      <VNavigationDrawer
-        v-model="isDrawerOpen"
-        location="end"
-        temporary
-        width="700"
-        border="none"
-      >
+      <VNavigationDrawer v-model="isDrawerOpen" location="end" temporary width="700" border="none">
         <AppDrawerHeaderSection :title="activeCardTitle" @cancel="closeCard" />
         <VDivider />
 
@@ -231,10 +138,7 @@
           security measures to protect your privacy.
         </h6>
         <div class="position-relative">
-          <VBtn
-            :size="$vuetify.display.smAndUp ? 'large' : 'default'"
-            @click="closeTab"
-          >
+          <VBtn :size="$vuetify.display.smAndUp ? 'large' : 'default'" @click="closeTab">
             Close Tab
           </VBtn>
         </div>
@@ -251,33 +155,11 @@
         Facility name: {{ consult.encoded?.facility?.facilityname }}
       </VCardText>
       <VCardText>
-        <video
-          ref="localVideoPreview"
-          autoplay
-          playsinline
-          muted
-          class="video-preview"
-        />
-        <VSelect
-          v-model="selectedCamera"
-          :items="cameras"
-          item-title="label"
-          item-value="deviceId"
-          label="Select Camera"
-          variant="outlined"
-          class="mt-3"
-          @update:modelValue="selecVid"
-        />
-        <VSelect
-          v-model="selectedMic"
-          :items="microphones"
-          item-title="label"
-          item-value="deviceId"
-          label="Select Microphone"
-          variant="outlined"
-          class="mt-3"
-          @update:modelValue="selectMic"
-        />
+        <video ref="localVideoPreview" autoplay playsinline muted class="video-preview" />
+        <VSelect v-model="selectedCamera" :items="cameras" item-title="label" item-value="deviceId"
+          label="Select Camera" variant="outlined" class="mt-3" @update:modelValue="selecVid" />
+        <VSelect v-model="selectedMic" :items="microphones" item-title="label" item-value="deviceId"
+          label="Select Microphone" variant="outlined" class="mt-3" @update:modelValue="selectMic" />
       </VCardText>
 
       <VCardText class="d-flex justify-center gap-3 flex-wrap">
@@ -291,16 +173,8 @@
       </VCardText>
     </VCard>
   </VDialog>
-  <ErrorSnackbar
-    :message="errorMessage"
-    :visible="isError"
-    @update:visible="isError = $event"
-  />
-  <SuccessSnackbar
-    :message="successMessage"
-    :visible="isSuccess"
-    @update:visible="isSuccess = $event"
-  />
+  <ErrorSnackbar :message="errorMessage" :visible="isError" @update:visible="isError = $event" />
+  <SuccessSnackbar :message="successMessage" :visible="isSuccess" @update:visible="isSuccess = $event" />
 </template>
 
 <script lang="ts" setup>
@@ -316,6 +190,10 @@ import { VCol } from "vuetify/lib/components/index.mjs";
 import Form1 from "./forms/form1.vue";
 import Form2 from "./forms/form2.vue";
 import Form3 from "./forms/form3.vue";
+import Form4 from "./forms/form4.vue";
+import Form5 from "./forms/form5.vue";
+
+
 
 const props = defineProps<{
   conid: any;
@@ -329,6 +207,8 @@ const cards = ref<CardItem[]>([
   { id: 1, title: "Demographic Profile", component: Form1 },
   { id: 2, title: "Clinical History", component: Form2 },
   { id: 3, title: "Covid-19 Screening", component: Form3 },
+  { id: 4, title: "Diagnosis/Assessment", component: Form4 },
+  { id: 5, title: "Plan of Management", component: Form5 },
 ]);
 // const activeCard = ref<number | null>(null);
 // const showCard = ref(false);
@@ -757,11 +637,13 @@ html:fullscreen .fullscreen-video-row {
   z-index: 9999;
   background: #000000;
 }
+
 html:fullscreen .remote-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+
 .video-container {
   width: 100%;
   height: 100%;
@@ -801,6 +683,7 @@ html:fullscreen .remote-video {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
   margin-right: 20px;
 }
+
 @media (max-width: 768px) {
   .local-video {
     width: 30%;
@@ -815,25 +698,34 @@ html:fullscreen .remote-video {
     height: 500px;
   }
 }
-.blur-dialog >>> .v-overlay__scrim {
+
+.blur-dialog>>>.v-overlay__scrim {
   backdrop-filter: blur(60px);
-  background-color: rgba(0, 0, 0, 0.4); /* Optional: dark tint */
+  background-color: rgba(0, 0, 0, 0.4);
+  /* Optional: dark tint */
 }
+
 .video-preview {
   width: 100%;
-  height: 250px; /* you can adjust based on dialog size */
-  object-fit: cover; /* fills space, crops if needed */
+  height: 250px;
+  /* you can adjust based on dialog size */
+  object-fit: cover;
+  /* fills space, crops if needed */
   border-radius: 8px;
-  background: black; /* fallback if no stream */
+  background: black;
+  /* fallback if no stream */
 }
+
 .slide-enter-from {
   transform: translateX(100%);
   opacity: 0;
 }
+
 .slide-enter-to {
   transform: translateX(0);
   opacity: 1;
 }
+
 .slide-enter-active {
   transition: all 0.3s ease;
 }
@@ -842,13 +734,16 @@ html:fullscreen .remote-video {
   transform: translateX(0);
   opacity: 1;
 }
+
 .slide-leave-to {
   transform: translateX(100%);
   opacity: 0;
 }
+
 .slide-leave-active {
   transition: all 0.3s ease;
 }
+
 .video-controls {
   position: absolute;
   bottom: 10px;
@@ -866,10 +761,12 @@ html:fullscreen .remote-video {
 .fade-leave-active {
   transition: opacity 0.3s;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
 }
+
 .slide-fade-enter-active,
 .slide-fade-leave-active {
   transition: all 0.3s ease;
@@ -886,6 +783,7 @@ html:fullscreen .remote-video {
   opacity: 1;
   transform: translate(-50%, 0);
 }
+
 .call-timer {
   position: absolute;
   top: 10px;
@@ -898,6 +796,7 @@ html:fullscreen .remote-video {
   border-radius: 8px;
   z-index: 10;
 }
+
 @media (max-width: 599px) {
   .hero-title {
     font-size: 1.5rem !important;

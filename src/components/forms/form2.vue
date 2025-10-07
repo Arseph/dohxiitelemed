@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { VCol, VRow } from "vuetify/lib/components/index.mjs";
+import { VCol, VRow, VTextarea } from "vuetify/lib/components/index.mjs";
 
 interface ConsentOption {
   label: string;
@@ -20,250 +20,134 @@ const telemed = ref({
     <br></br>
     <VRow>
       <VCol>
-        <VTextField outlined dense hide-details label="Reason for Teleconsultation:" />
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Reason for Teleconsultation:" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol cols="12" md="6">
+      <VCol>
         <VTextField
           outlined
           dense
           hide-details
-          label="Name and Address of Health Facility (if applicable):"
-        />
-      </VCol>
-      <VCol cols="12" md="6" class="centered-col">
-        <VTextField
-          label="Name of Telemedicine Partner (if applicable):"
-          outlined
-          dense
-          hint="If none, Indicate telemedicine platform being used:"
+          label="Date of Onset of Illness:"
         />
       </VCol>
     </VRow>
-    <VRow class="align-center">
-      <VCol>
-        <VRadioGroup
-          v-model="telemed.pconsent"
-          label="Prior to teleconsultation proper, obtain patient consent:"
-          inline
-        >
-          <VRadio label="Yes" :value="true" />
-          <VRadio label="No" :value="false" />
-        </VRadioGroup>
-      </VCol>
-    </VRow>
-    <VRow class="align-center">
-      <VCol>
-        <VRadioGroup
-          v-model="telemed.acmpny"
-          label="Is patient accompanied/assisted by another person during the consultation: "
-          inline
-        >
-          <VRadio label="Yes" :value="true" />
-          <VRadio label="No" :value="false" />
-        </VRadioGroup>
-      </VCol>
-    </VRow>
-    <VRow class="align-center">
-      <VCol>
-        <h5 class="text-h5 font-weight-medium mb-2">Patient Profile</h5>
-      </VCol>
-      <VCol inline>
-        <div class="d-flex align-center">
-          <label class="mr-2">Case #:</label>
-          <VTextField
-            v-model="telemed.caseNo"
-            outlined
-            dense
-            hide-details
-            style="max-width: 200px"
-          />
-        </div>
-      </VCol>
-    </VRow>
-    <VRow class="align-center">
+    <VRow>
       <VCol>
         <VSelect
-          v-model="telemed.philhealthStatus"
+          v-model="telemed.refhlthfac"
           :items="['Member', 'Dependent', 'None']"
-          label="PhilHealth Status:"
+          label="Name of Referral Health Facility (if Applicable): "
           outlined
           dense
           hide-details
         />
       </VCol>
-      <VCol>
-        <VTextField
-          outlined
-          dense
-          hide-details
-          label="PhilHealth ID:"
-          disabled
-        />
-      </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField outlined dense hide-details label="First Name: " />
-      </VCol>
-      <VCol>
-        <VTextField outlined dense hide-details label="Middle Name: " />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextField outlined dense hide-details label="Last Name: " />
-      </VCol>
-      <VCol>
-        <VTextField outlined dense hide-details label="Contact Number: " />
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Known Medical Condition/s & Medical History:" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextField
-          type="date"
           outlined
           dense
           hide-details
-          label="Birth Date: "
-        />
-      </VCol>
-      <VCol>
-        <VSelect
-          v-model="telemed.sex"
-          :items="['Male', 'Female']"
-          label="Sex:"
-          outlined
-          dense
-          hide-details
+          label="Current Medications:"
         />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VSelect
-          v-model="telemed.cvlstat"
-          :items="['Single', 'Married', 'Divorced', 'Separated']"
-          label="Civil Status:"
+        <VTextField
           outlined
           dense
           hide-details
+          label="Blood Type:"
         />
       </VCol>
+    </VRow>
+    <VRow class="align-center">
       <VCol>
-        <VTextField outlined dense hide-details label="Religion: " />
+        <h5 class="text-h5 font-weight-medium mb-2">Physical Examination(Inspection)</h5>
+      </VCol>
+    </VRow>
+        <VRow>
+      <VCol>
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Clinical Status at the Time of Consult:" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VSelect
-          v-model="telemed.edu"
-          :items="[
-            'NOT APPLICABLE',
-            'COLLEGE',
-            'ELEMENTARY EDUCATION',
-            'HIGH SCHOOL EDUCATION',
-            'NO FORMAL EDUCATION',
-            'POSTGRADUATE PROGRAM',
-            'VOCATIONAL',
-          ]"
-          label="Educational Attainment: "
-          outlined
-          dense
-          hide-details
-        />
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Specific Findings:" />
       </VCol>
+    </VRow>
+        <VRow>
       <VCol>
-        <VTextField outlined dense hide-details label="Occupation: " />
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Head:" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField outlined dense hide-details label="Monthly Income: " />
-      </VCol>
-      <VCol>
-        <VSelect
-          v-model="telemed.slcid"
-          :items="[
-            'NOT APPLICABLE',
-            'UMID',
-            'DRIVERS LICENSE',
-            'PASSPORT ID',
-            'POSTAL ID',
-            'TIN ID',
-          ]"
-          label="Select ID: "
-          outlined
-          dense
-          hide-details
-        />
+        <VTextField outlined dense hide-details label="Conjunctiva (eye anatomy): " />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField outlined dense hide-details label="CRN: " />
-      </VCol>
-      <VCol>
-        <VSelect
-          v-model="telemed.ntnlty"
-          :items="['Filipino', 'others']"
-          label="Nationality: "
-          outlined
-          dense
-          hide-details
-        />
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Conjunctiva Remarks:" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField outlined dense hide-details label="House no./Lot/Bldg: " />
-      </VCol>
-      <VCol>
-        <VTextField outlined dense hide-details label="Street: " />
+        <VTextField outlined dense hide-details label="Neck:"/>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField outlined dense hide-details label="Region: " />
-      </VCol>
-      <VCol>
-        <VSelect
-          v-model="telemed.prvnc"
-          :items="['SOUTH COTABATO', 'others']"
-          label="Province: "
-          outlined
-          dense
-          hide-details
-        />
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Chest: " />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VSelect
-          v-model="telemed.mncpl"
-          :items="['KORONADAL', 'others']"
-          label="Municipality: "
-          outlined
-          dense
-          hide-details
-        />
-      </VCol>
-      <VCol>
-        <VSelect
-          v-model="telemed.brgy"
-          :items="['PARAISO', 'others']"
-          label="Barangay: "
-          outlined
-          dense
-          hide-details
-        />
+        <VTextField outlined dense hide-details label="Abdomen:"/>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <label>Complete Address :</label>
-        <VTextField v-model="telemed.cmpltad" outlined />
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Abdomen Remarks: " />
+      </VCol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VTextField outlined dense hide-details label="Genitals:"/>
+      </VCol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Genitals Remarks: " />
+      </VCol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VTextField outlined dense hide-details label="Extremities:"/>
+      </VCol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Extremities Remarks: " />
+      </VCol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Others: " />
+      </VCol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VTextarea outlined dense hide-details auto-grow rows="2" label="Waist Circumference: " />
       </VCol>
     </VRow>
 </template>
