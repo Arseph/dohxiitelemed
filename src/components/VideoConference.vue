@@ -74,39 +74,37 @@
     </VCol>
     <VCol cols="12" md="3">
       <!-- Buttons to open forms -->
-      <VNavigationDrawer v-model="drawerOpen" location="end" temporary width="300">
+      <VNavigationDrawer v-model="drawerOpen" location="end" temporary width="300" elevation="0" class="bg-opacity-75">
         <VDivider />
-        <VToolbar color="surface">
+        <VToolbar color="primary">
           <VToolbarTitle class="text-white">Forms</VToolbarTitle>
           <VSpacer />
-          <VBtn icon="tabler-x" color="white" variant="text" @click="drawerOpen = false" />
+          <VBtn icon="tabler-x" color="white" @click="drawerOpen = false" />
         </VToolbar>
 
         <VDivider />
 
         <VCard flat class="pa-4">
           <!-- Render form section buttons -->
-          <VBtn v-for="card in cards" :key="card.id" color="primary" variant="flat" class="justify-start mb-3 w-100"
-            @click="openCard(card.id)">
-            <VIcon v-if="card.icon" :icon="card.icon" :color="card.color" start size="24" class="mr-2" />
+          <VBtn v-for="card in cards" :key="card.id" variant="tonal"
+            :class="['justify-start mb-3 w-100 text-white', `btn-${card.color}`]" @click="openCard(card.id)">
+            <VIcon v-if="card.icon" :icon="card.icon" start size="24" class="mr-2" />
             {{ card.title }}
           </VBtn>
         </VCard>
       </VNavigationDrawer>
       <!-- Larger drawer: actual form view -->
       <VNavigationDrawer v-model="isDrawerOpen" location="end" temporary width="700" border="none" class="form-drawer">
-        <VToolbar :color="activeCardIconColor" class="text-white" variant="tonal">
-          <VCol class="d-flex align-center">
-            <VIcon v-if="activeCardIcon" :icon="activeCardIcon" size="28" class="mr-2 text-white" />
-            <!-- <VToolbarTitle :class="`text-${activeCardIconColor}`">{{ activeCardTitle }}</VToolbarTitle> -->
+        <VToolbar variant="tonal"
+          :class="['toolbar-' + activeCardIconColor, 'icon-' + activeCardIconColor, 'text-white']">
+          <VCol class="mr-2 d-flex align-end">
+            <VIcon v-if="activeCardIcon" :icon="activeCardIcon" size="28" class="mr-2" />
             <VToolbarTitle>{{ activeCardTitle }}</VToolbarTitle>
           </VCol>
           <VSpacer />
-          <VBtn icon="tabler-x" variant="text" color="white" @click="closeCard" />
+          <VBtn icon="tabler-x" variant="text" color="white" @click="closeCard()" />
         </VToolbar>
-
         <VDivider />
-
         <VCard flat>
           <VCardText>
             <component :is="activeCardComponent" />
@@ -195,20 +193,18 @@ interface CardItem {
 }
 
 const cards = ref<CardItem[]>([
-  { id: 1, title: "Demographic Profile", icon: "tabler-user", color: "info", component: Form1 },
-  { id: 2, title: "Clinical History", icon: "tabler-stethoscope", color: "secondary", component: Form2 },
-  { id: 3, title: "COVID-19 Screening", icon: "tabler-virus-search", color: "error", component: Form3 },
-  { id: 4, title: "Diagnosis / Assessment", icon: "tabler-notes", color: "warning", component: Form4 },
-  { id: 5, title: "Plan of Management", icon: "tabler-clipboard-check", color: "success", component: Form5 },
+  { id: 1, title: "Demographic Profile", icon: "tabler-user", color: "royalblue", component: Form1 },
+  { id: 2, title: "Clinical History", icon: "tabler-stethoscope", color: "white", component: Form2 },
+  { id: 3, title: "COVID-19 Screening", icon: "tabler-virus-search", color: "maroon", component: Form3 },
+  { id: 4, title: "Diagnosis / Assessment", icon: "tabler-notes", color: "blue", component: Form4 },
+  { id: 5, title: "Plan of Management", icon: "tabler-clipboard-check", color: "emerald", component: Form5 },
 ]);
 
 // const activeCard = ref<number | null>(null);
 // const showCard = ref(false);
 
-// small drawer for form list
-const drawerOpen = ref(false)
-// big drawer for actual forms
-const isDrawerOpen = ref(false)
+const drawerOpen = ref(false) //button drawer
+const isDrawerOpen = ref(false) //form drawer
 
 const activeCardTitle = ref('')
 const activeCardIcon = ref('')
@@ -230,6 +226,7 @@ function openCard(id) {
 
 function closeCard() {
   isDrawerOpen.value = false
+  drawerOpen.value = true
 }
 
 // const activeCardTitle = computed(() => activeCard.value?.title || "");

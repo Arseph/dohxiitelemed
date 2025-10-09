@@ -1,1 +1,79 @@
-// Write your overrides
+/* Button and Icon Color Styles */
+.v-btn.btn-teal, .toolbar-teal, .icon-teal {
+  background-color: rgba(0, 137, 123, 0.15) !important;
+  color: #22a699 !important; /* lighter teal */
+}
+
+.v-btn.btn-slate, .toolbar-slate, .icon-slate {
+  background-color: rgba(71, 85, 105, 0.15) !important;
+  color: #6b7b91 !important; /* lighter slate */
+}
+
+.v-btn.btn-maroon, .toolbar-maroon, .icon-maroon {
+  background-color: rgba(123, 30, 30, 0.15) !important;
+  color: #a84747 !important; /* lighter maroon */
+}
+
+.v-btn.btn-amber, .toolbar-amber, .icon-amber {
+  background-color: rgba(255, 179, 0, 0.2) !important;
+  color: #ffca33 !important; /* lighter amber */
+}
+
+.v-btn.btn-emerald, .toolbar-emerald, .icon-emerald {
+  background-color: rgba(46, 125, 50, 0.15) !important;
+  color: #49a956 !important; /* lighter emerald */
+}
+
+.v-btn.btn-white, .toolbar-white, .icon-white {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  color: #fafafa !important; /* light gray */
+}
+
+.v-btn.btn-violet, .toolbar-violet, .icon-violet {
+  background-color: rgba(138, 43, 226, 0.15) !important; /* violet bg */
+  color: #b980ff !important; /* lighter violet */
+}
+
+.v-btn.btn-magenta, .toolbar-magenta, .icon-magenta {
+  background-color: rgba(255, 0, 128, 0.15) !important; /* magenta bg */
+  color: #ff66b3 !important; /* lighter magenta */
+}
+
+.v-btn.btn-royalblue, .toolbar-royalblue, .icon-royalblue {
+  background-color: rgba(65, 105, 225, 0.15) !important; /* royal blue bg */
+  color: #7ea9ff !important; /* lighter royal blue */
+}
+
+.v-btn.btn-orange, .toolbar-orange, .icon-orange {
+  background-color: rgba(255, 140, 0, 0.2) !important; /* orange bg */
+  color: #ffb266 !important; /* lighter orange */
+}
+
+.v-btn.btn-red, .toolbar-red, .icon-red {
+  background-color: rgba(244, 67, 54, 0.15) !important; /* red bg */
+  color: #ff7b71 !important; /* lighter red */
+}
+
+.v-btn.btn-blue, .toolbar-blue, .icon-blue {
+  background-color: rgba(33, 150, 243, 0.15) !important; /* translucent blue */
+  color: #5bb6ff !important; /* lighter blue */
+}
+
+.v-btn.btn-yellow, .toolbar-yellow, .icon-yellow {
+  background-color: rgba(255, 235, 59, 0.2) !important; /* translucent yellow */
+  color: #fff176 !important; /* lighter yellow */
+}
+
+/* Hover effects: deepen background slightly */
+.v-btn[class*='btn-']:hover {
+  opacity: 50;
+  filter: brightness(1.1);
+  background-color: color-mix(in srgb, currentColor 20%, transparent) !important;
+  transition: all 0.25s ease;
+}
+
+/* Match icons with text brightness */
+.v-btn[class*='btn-'] .icon {
+  color: inherit !important;
+  opacity: 0.95;
+}

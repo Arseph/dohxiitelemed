@@ -74,7 +74,6 @@ interface ConsentOption {
 
 <template>
     <div class="d-flex flex-column justify-center">
-        <!-- <h5><pre>{{ user }}</pre></h5> -->
     </div>
     <br></br>
     <VRow>
