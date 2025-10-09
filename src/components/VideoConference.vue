@@ -12,8 +12,11 @@
 
           <transition name="fade">
             <div v-if="controlsVisible" class="video-controls" @mouseenter="cancelHide" @mouseleave="scheduleHide">
+              <!-- <VBtn variant="tonal" icon="tabler-notebook" color="success" :class="smAndDown ? 'mt-3' : 'ma-3'"
+                :size="smAndDown ? 'small' : 'x-large'" @click="toggleCols" /> -->
+              <!-- Notebook Button -->
               <VBtn variant="tonal" icon="tabler-notebook" color="success" :class="smAndDown ? 'mt-3' : 'ma-3'"
-                :size="smAndDown ? 'small' : 'x-large'" @click="toggleCols" />
+                :size="smAndDown ? 'small' : 'x-large'" @click="drawerOpen = true" />
               <VMenu location="top">
                 <template #activator="{ props }">
                   <VBtn v-if="videoEnabled" v-bind="props" variant="tonal" icon="tabler-video" color="warning"
@@ -70,54 +73,38 @@
       <div class="device-selectors d-flex align-center justify-center gap-x-4 mb-1"></div>
     </VCol>
     <VCol cols="12" md="3">
-      <!-- <div v-if="activeCard === null" class="flex gap-2">
-        <button
-          v-for="card in cards"
-          :key="card.id"
-          @click="openCard(card.id)"
-          class="px-4 py-2 bg-blue-500 text-white rounded-lg"
-        >
-          Open {{ card.title }}
-        </button>
-      </div>
-      <Transition name="slide">  -->
-      <!-- Show active card -->
-      <!-- <div
-          v-if="activeCard !== null"
-          class="fixed top-0 left-0 h-full w-64 bg-white shadow-lg p-4"
-        >
-          <VCard>
-            <VCardTitle>
-              <div class="d-flex justify-end">
-                <button
-                  @click="closeCard"
-                  class="px-2 py-1 bg-gray-300 rounded-md hover:bg-gray-400"
-                >
-                  Back
-                </button>
-              </div>
-              {{ cards.find((c) => c.id === activeCard)?.title }}
-            </VCardTitle>
-            <VCardText> -->
-      <!-- Render dynamic component -->
-      <!-- <component
-                :is="cards.find((c) => c.id === activeCard)?.component"
-              />
-            </VCardText>
-          </VCard>
-        </div>
-      </Transition> -->
-
       <!-- Buttons to open forms -->
-      <div v-if="colSize == 9 && !isDrawerOpen" class="d-flex flex-column gap-3 px-4 py-3">
-        <VBtn v-for="card in cards" :key="card.id" color="primary" @click="openCard(card.id)">
-          Open {{ card.title }}
-        </VBtn>
-      </div>
+      <VNavigationDrawer v-model="drawerOpen" location="end" temporary width="300">
+        <VDivider />
+        <VToolbar color="surface">
+          <VToolbarTitle class="text-white">Forms</VToolbarTitle>
+          <VSpacer />
+          <VBtn icon="tabler-x" color="white" variant="text" @click="drawerOpen = false" />
+        </VToolbar>
 
-      <!-- Drawer for forms -->
-      <VNavigationDrawer v-model="isDrawerOpen" location="end" temporary width="700" border="none">
-        <AppDrawerHeaderSection :title="activeCardTitle" @cancel="closeCard" />
+        <VDivider />
+
+        <VCard flat class="pa-4">
+          <!-- Render form section buttons -->
+          <VBtn v-for="card in cards" :key="card.id" color="primary" variant="flat" class="justify-start mb-3 w-100"
+            @click="openCard(card.id)">
+            <VIcon v-if="card.icon" :icon="card.icon" :color="card.color" start size="24" class="mr-2" />
+            {{ card.title }}
+          </VBtn>
+        </VCard>
+      </VNavigationDrawer>
+      <!-- Larger drawer: actual form view -->
+      <VNavigationDrawer v-model="isDrawerOpen" location="end" temporary width="700" border="none" class="form-drawer">
+        <VToolbar :color="activeCardIconColor" class="text-white" variant="tonal">
+          <VCol class="d-flex align-center">
+            <VIcon v-if="activeCardIcon" :icon="activeCardIcon" size="28" class="mr-2 text-white" />
+            <!-- <VToolbarTitle :class="`text-${activeCardIconColor}`">{{ activeCardTitle }}</VToolbarTitle> -->
+            <VToolbarTitle>{{ activeCardTitle }}</VToolbarTitle>
+          </VCol>
+          <VSpacer />
+          <VBtn icon="tabler-x" variant="text" color="white" @click="closeCard" />
+        </VToolbar>
+
         <VDivider />
 
         <VCard flat>
@@ -198,39 +185,55 @@ import Form5 from "./forms/form5.vue";
 const props = defineProps<{
   conid: any;
 }>();
+
 interface CardItem {
   id: number;
   title: string;
+  icon: string;
+  color: string;
   component: any;
 }
+
 const cards = ref<CardItem[]>([
-  { id: 1, title: "Demographic Profile", component: Form1 },
-  { id: 2, title: "Clinical History", component: Form2 },
-  { id: 3, title: "Covid-19 Screening", component: Form3 },
-  { id: 4, title: "Diagnosis/Assessment", component: Form4 },
-  { id: 5, title: "Plan of Management", component: Form5 },
+  { id: 1, title: "Demographic Profile", icon: "tabler-user", color: "info", component: Form1 },
+  { id: 2, title: "Clinical History", icon: "tabler-stethoscope", color: "secondary", component: Form2 },
+  { id: 3, title: "COVID-19 Screening", icon: "tabler-virus-search", color: "error", component: Form3 },
+  { id: 4, title: "Diagnosis / Assessment", icon: "tabler-notes", color: "warning", component: Form4 },
+  { id: 5, title: "Plan of Management", icon: "tabler-clipboard-check", color: "success", component: Form5 },
 ]);
+
 // const activeCard = ref<number | null>(null);
 // const showCard = ref(false);
 
-const isDrawerOpen = ref(false);
-const activeCard = ref<CardItem | null>(null);
+// small drawer for form list
+const drawerOpen = ref(false)
+// big drawer for actual forms
+const isDrawerOpen = ref(false)
 
-const openCard = (id: number) => {
-  const card = cards.value.find((c) => c.id === id);
-  if (card) {
-    activeCard.value = card;
-    isDrawerOpen.value = true;
-  }
-};
+const activeCardTitle = ref('')
+const activeCardIcon = ref('')
+const activeCardIconColor = ref('')
+const activeCardComponent = ref(null)
 
-const closeCard = () => {
-  isDrawerOpen.value = false;
-  activeCard.value = null;
-};
+function openCard(id) {
+  const selected = cards.value.find(c => c.id === id)
+  if (!selected) return
+  drawerOpen.value = false               // close small drawer
+  activeCardTitle.value = selected.title
+  activeCardIcon.value = selected.icon
+  activeCardIconColor.value = selected.color
+  activeCardComponent.value = selected.component
+  setTimeout(() => {
+    isDrawerOpen.value = true            // open large form drawer
+  }, 250)                                // small delay for smoother animation
+}
 
-const activeCardTitle = computed(() => activeCard.value?.title || "");
-const activeCardComponent = computed(() => activeCard.value?.component || null);
+function closeCard() {
+  isDrawerOpen.value = false
+}
+
+// const activeCardTitle = computed(() => activeCard.value?.title || "");
+// const activeCardComponent = computed(() => activeCard.value?.component || null);
 
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 const { smAndDown } = useDisplay();
