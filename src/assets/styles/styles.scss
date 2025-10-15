@@ -64,16 +64,31 @@
   color: #fff176 !important; /* lighter yellow */
 }
 
+.v-btn.btn-green, .toolbar-green, .icon-green {
+  background-color: rgba(76, 175, 80, 0.15) !important; /* green bg */
+  color: #66bb6a !important; /* lighter green */
+}
+
 /* Hover effects: deepen background slightly */
 .v-btn[class*='btn-']:hover {
   opacity: 50;
   filter: brightness(1.1);
   background-color: color-mix(in srgb, currentColor 20%, transparent) !important;
   transition: all 0.25s ease;
-}
+}w
 
 /* Match icons with text brightness */
 .v-btn[class*='btn-'] .icon {
   color: inherit !important;
   opacity: 0.95;
+}
+
+//button float
+.fab-fixed-top {
+  position: fixed;
+  top: 92%;
+  right: 2rem; 
+  z-index: 10000;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  border-radius: 8px;
 }

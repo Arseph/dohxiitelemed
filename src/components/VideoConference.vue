@@ -107,7 +107,7 @@
         <VDivider />
         <VCard flat>
           <VCardText>
-            <component :is="activeCardComponent" />
+            <component :is="activeCardComponent" :consultId="activeMeetingId" />
           </VCardText>
         </VCard>
       </VNavigationDrawer>
@@ -195,9 +195,9 @@ interface CardItem {
 const cards = ref<CardItem[]>([
   { id: 1, title: "Demographic Profile", icon: "tabler-user", color: "royalblue", component: Form1 },
   { id: 2, title: "Clinical History", icon: "tabler-stethoscope", color: "white", component: Form2 },
-  { id: 3, title: "COVID-19 Screening", icon: "tabler-virus-search", color: "maroon", component: Form3 },
+  { id: 3, title: "COVID-19 Screening", icon: "tabler-virus-search", color: "red", component: Form3 },
   { id: 4, title: "Diagnosis / Assessment", icon: "tabler-notes", color: "blue", component: Form4 },
-  { id: 5, title: "Plan of Management", icon: "tabler-clipboard-check", color: "emerald", component: Form5 },
+  { id: 5, title: "Plan of Management", icon: "tabler-clipboard-check", color: "green", component: Form5 },
 ]);
 
 // const activeCard = ref<number | null>(null);
@@ -395,6 +395,8 @@ const restartStream = async () => {
   }
 };
 
+const activeMeetingId = ref<number | null>(null);
+
 async function startCall() {
   try {
     const response = await axiosIns.get(`/api/start-consult`, {
@@ -404,6 +406,10 @@ async function startCall() {
       alert("Teleconsultation Finished!");
       return;
     }
+
+    // ✅ store meeting id
+    activeMeetingId.value = response.data.id;
+
     setCallStartTime(response.data.start_time);
     localStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
