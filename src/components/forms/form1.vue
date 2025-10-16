@@ -246,9 +246,9 @@ async function saveUpdateDP() {
     <div class="d-flex flex-column justify-center">
     </div>
     <br></br>
-    <h5>
+    <!-- <h5>
       <pre>{{ meeting }}</pre>
-    </h5>
+    </h5> -->
 
     <VRow>
       <VCol cols="12" md="6">
@@ -285,7 +285,7 @@ async function saveUpdateDP() {
         <VRadioGroup v-model="meeting.is_patient_accompanied"
           label="Is patient accompanied/assisted by another person during the consultation: " inline>
           <VRadio label="Yes" :value="1" />
-          <VRadio label="No" :value="2" />
+          <VRadio label="No" :value="0" />
         </VRadioGroup>
       </VCol>
     </VRow>
@@ -296,7 +296,7 @@ async function saveUpdateDP() {
       <VCol inline>
         <div class="d-flex align-center">
           <label class="mr-2">Case #:</label>
-          <VTextField v-model="meeting.case_no" outlined dense hide-details style="max-width: 200px" />
+          <VTextField v-model="meeting.case_no" outlined dense hide-details disabled />
         </div>
       </VCol>
     </VRow>
