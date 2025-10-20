@@ -309,7 +309,7 @@ async function saveUpdatePE() {
     <div class="d-flex flex-column justify-center">
     </div>
     <h5>
-      <pre>{{ clinichis }}{{ physexam }}</pre>
+      <!-- <pre>{{ clinichis }}{{ physexam }}</pre> -->
     </h5>
     <br></br>
     <VRow>
@@ -365,7 +365,8 @@ async function saveUpdatePE() {
     </VRow>
     <br />
     <br />
-    <VRow style="background-color: rgba(255, 255, 255, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%;">
+    <VRow
+      style="background-color: rgba(255, 255, 255, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
       <Vcol>
         <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px;">
           Physical Examination (Inspection)
