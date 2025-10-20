@@ -92,3 +92,15 @@
   box-shadow: 0 6px 18px rgba(0,0,0,0.12);
   border-radius: 8px;
 }
+
+.ignore-parent-pad {
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-top: 25px;
+    margin-bottom: 10px;
+    margin-left: -22rem;
+    margin-right: -10vw;
+    width: 100vw;
+    height: 75px;
+}

@@ -38,32 +38,51 @@ async function fetchFacilities() {
 
 const clinichis = ref({
   // savedID: props.consultId,
-  meetID: '',
+  meeting_id: '',
   reason_consult: '',
-  date_diagnosis: '',
-  time_diagnosis: '',
   date_onset_illness: '',
   date_referral: '',
-  facilityOptions: '',
+  facilityOptions: '', //facility list
   known_medical_history: '',
   current_medication: '',
   blood_type: '',
   clinical_status_time_consult: '',
   specific_findings: '',
+});
+
+const physexam = ref({
+  // savedID: props.consultId,
+  meeting_id: '',
   head: '',
   conjunctiva: '',
   con_remarks: '',
   neck: '',
   chest: '',
+  breast: '',
+  breast_remarks: '',
+  thorax: '',
+  thorax_remarks: '',
   abdomen: '',
-  abdomen_remakrs: '',
+  abdomen_remarks: '',
   genitals: '',
-  genitals_remakrs: '',
+  genital_remarks: '',
   extremities: '',
-  extrimities_remarks: '',
+  extremities_remarks: '',
   others: '',
   waist_circumference: '',
 });
+
+// ✅ loop data definition for exam
+const examFields = [
+  { field: 'conjunctiva', label: 'Conjunctiva (Eye Anatomy)', remark: 'con_remarks' },
+  { field: 'neck', label: 'Neck', remark: 'neck_remarks' }, // optional if you’ll add later
+  { field: 'chest', label: 'Chest', remark: 'chest_remarks' }, // optional
+  { field: 'breast', label: 'Breast', remark: 'breast_remarks' },
+  { field: 'thorax', label: 'Thorax', remark: 'thorax_remarks' },
+  { field: 'abdomen', label: 'Abdomen', remark: 'abdomen_remarks' },
+  { field: 'genitals', label: 'Genitals', remark: 'genital_remarks' },
+  { field: 'extremities', label: 'Extremities', remark: 'extremities_remarks' },
+]
 
 
 // const meeting = ref<any>(null);
@@ -79,24 +98,107 @@ async function fetchMeetingInfo(meetId: number) {
     // DOC name 
     const docfname = data.docfname ?? '';
 
+    // ✅ Clinical History
     clinichis.value = {
-      meetID: data.meetID,
-      reason_consult: data.title ?? null,
-      time_diagnosis: data.time_diagnosis ?? null,
+      meeting_id: data.meetID ?? null,
+      reason_consult: data.reason_consult ?? '',
+      date_onset_illness: data.date_onset_illness ?? '',
+      date_referral: data.date_referral ?? '',
+      facilityOptions: data.facilityOptions ?? '',
+      known_medical_history: data.known_medical_history ?? '',
+      current_medication: data.current_medication ?? '',
+      blood_type: data.blood_type ?? '',
+      clinical_status_time_consult: data.clinical_status_time_consult ?? '',
+      specific_findings: data.specific_findings ?? '',
+    };
 
-
-
-
-
-
+    // ✅ Physical Exam
+    physexam.value = {
+      meeting_id: data.meetID ?? null,
+      head: data.head ?? '',
+      conjunctiva: data.conjunctiva ?? '',
+      con_remarks: data.con_remarks ?? '',
+      neck: data.neck ?? '',
+      chest: data.chest ?? '',
+      breast: data.breast ?? '',
+      breast_remarks: data.breast_remarks ?? '',
+      thorax: data.thorax ?? '',
+      thorax_remarks: data.thorax_remarks ?? '',
+      abdomen: data.abdomen ?? '',
+      abdomen_remarks: data.abdomen_remarks ?? '',
+      genitals: data.genitals ?? '',
+      genital_remarks: data.genital_remarks ?? '',
+      extremities: data.extremities ?? '',
+      extremities_remarks: data.extremities_remarks ?? '',
+      others: data.others ?? '',
+      waist_circumference: data.waist_circumference ?? '',
     };
 
     console.log("Clinical History fetched:", clinichis.value);
 
+    // 🔹 Step 3: Try to fetch existing Clinical History
+    if (clinichis.value.meeting_id) {
+      const chResponse = await axiosIns.get(`/api/get-clinicalhistory/${clinichis.value.meeting_id}`);
+      const ch = chResponse.data.data;
+
+      if (ch) {
+        console.log("✅ Existing clinical history found:", ch);
+
+        // Merge existing ch data into meeting.value
+        clinichis.value.meeting_id = ch.meeting_id ?? null;
+        clinichis.value.reason_consult = ch.reason_consult ?? null;
+        clinichis.value.date_onset_illness = ch.date_onset_illness ?? null;
+        clinichis.value.date_referral = ch.date_referral ?? null;
+        clinichis.value.facilityOptions = ch.facility_id ?? null;
+        clinichis.value.known_medical_history = ch.known_medical_history ?? null;
+        clinichis.value.current_medication = ch.current_medication ?? null;
+        clinichis.value.blood_type = ch.blood_type ?? null;
+        clinichis.value.clinical_status_time_consult = ch.clinical_status_time_consult ?? null;
+        clinichis.value.specific_findings = ch.specific_findings ?? null;
+
+      } else {
+        console.log("ℹ️ No clinical history found for this meeting ID.");
+      }
+    }
+
+    // 🔹 Step 4: Try to fetch existing physical exam
+    if (physexam.value.meeting_id) {
+      const peResponse = await axiosIns.get(`/api/get-physicalexam/${physexam.value.meeting_id}`);
+      const pe = peResponse.data.data;
+
+      if (pe) {
+        console.log("✅ Physical exam history found:", pe);
+
+        // Merge existing pe data into meeting.value
+        physexam.value.meeting_id = pe.meeting_id ?? null;
+        physexam.value.head = pe.head ?? null;
+        physexam.value.conjunctiva = pe.conjunctiva ?? null;
+        physexam.value.con_remarks = pe.con_remarks ?? null;
+        physexam.value.neck = pe.neck ?? null;
+        physexam.value.chest = pe.chest ?? null;
+        physexam.value.breast = pe.breast ?? null;
+        physexam.value.breast_remarks = pe.breast_remarks ?? null;
+        physexam.value.thorax = pe.thorax ?? null;
+        physexam.value.abdomen = pe.abdomen ?? null;
+        physexam.value.abdomen_remarks = pe.abdomen_remarks ?? null;
+        physexam.value.genitals = pe.genitals ?? null;
+        physexam.value.genital_remarks = pe.genital_remarks ?? null;
+        physexam.value.extremities = pe.extremities ?? null;
+        physexam.value.extremities_remarks = pe.extremities_remarks ?? null;
+        physexam.value.others = pe.others ?? null;
+        physexam.value.waist_circumference = pe.waist_circumference ?? null;
+
+      } else {
+        console.log("ℹ️ No physical exam  found for this meeting ID.");
+      }
+    }
+
+
+
   } catch (error) {
-    console.error("Error fetching clinical history:", error);
-    errorMessage.value = "Failed to fetch clnical history.";
-    isError.value = true;
+    console.error("Error fetching clinical history or physical exam:", error);
+    // errorMessage.value = "Failed to fetch clnical history or physical exam:";
+    // isError.value = true;
   }
 }
 
@@ -106,10 +208,10 @@ onMounted(() => {
   fetchFacilities();
 });
 
-async function saveUpdateDP() {
+async function saveUpdateCH() {
   try {
     // Ensure form validation
-    const { valid } = await demProf.value.validate();
+    const { valid } = await clinform.value.validate();
 
     if (!valid) {
       errorMessage.value = "Please fill in all required fields correctly.";
@@ -119,40 +221,25 @@ async function saveUpdateDP() {
 
     // ✅ Prepare payload using all meeting data
     const payload = {
-      meeting_id: clinichis.value.meetID,
+      meeting_id: clinichis.value.meeting_id,
       reason_consult: clinichis.value.reason_consult,
-      date_diagnosis: clinichis.value.date_diagnosis,
-      time_diagnosis: clinichis.value.time_diagnosis,
       date_onset_illness: clinichis.value.date_onset_illness,
       date_referral: clinichis.value.date_referral,
-      facilityOptions: clinichis.value.facilityOptions,
+      facility_id: clinichis.value.facilityOptions,
       known_medical_history: clinichis.value.known_medical_history,
       current_medication: clinichis.value.current_medication,
       blood_type: clinichis.value.blood_type,
       clinical_status_time_consult: clinichis.value.clinical_status_time_consult,
       specific_findings: clinichis.value.specific_findings,
-      head: clinichis.value.head,
-      conjunctiva: clinichis.value.conjunctiva,
-      con_remarks: clinichis.value.con_remarks,
-      neck: clinichis.value.neck,
-      chest: clinichis.value.chest,
-      abdomen: clinichis.value.abdomen,
-      abdomen_remakrs: clinichis.value.abdomen_remakrs,
-      genitals: clinichis.value.genitals,
-      genitals_remakrs: clinichis.value.genitals_remakrs,
-      extremities: clinichis.value.extremities,
-      extrimities_remarks: clinichis.value.extrimities_remarks,
-      others: clinichis.value.others,
-      waist_circumference: clinichis.value.waist_circumference,
     };
 
 
     console.log("Payload being sent:", payload);
     // Send request
-    const response = await axiosIns.post('/api/save-clinical-history', payload); //no route yet
+    const response = await axiosIns.post('/api/save-clinicalhistory', payload); //no route yet
 
     // Success response handling
-    successMessage.value = "Saved demographic profile.";
+    successMessage.value = "Saved  Clinical history.";
     isSuccess.value = true;
 
   } catch (error) {
@@ -162,14 +249,67 @@ async function saveUpdateDP() {
 
   }
 }
+
+async function saveUpdatePE() {
+  try {
+    // Ensure form validation
+    const { valid } = await clinform.value.validate();
+
+    if (!valid) {
+      errorMessage.value = "Please fill in all required fields correctly.";
+      isError.value = true;
+      return;
+    }
+
+    // ✅ Prepare payload using all meeting data
+    const payload = {
+      meeting_id: physexam.value.meeting_id,
+      head: physexam.value.head,
+      conjunctiva: physexam.value.conjunctiva,
+      con_remarks: physexam.value.con_remarks,
+      neck: physexam.value.neck,
+      chest: physexam.value.chest,
+      breast: physexam.value.breast,
+      breast_remarks: physexam.value.breast_remarks,
+      thorax: physexam.value.thorax,
+      thorax_remarks: physexam.value.thorax_remarks,
+      abdomen: physexam.value.abdomen,
+      abdomen_remarks: physexam.value.abdomen_remarks,
+      genitals: physexam.value.genitals,
+      genital_remarks: physexam.value.genital_remarks,
+      extremities: physexam.value.extremities,
+      extremities_remarks: physexam.value.extremities_remarks,
+      others: physexam.value.others,
+      waist_circumference: physexam.value.waist_circumference,
+    };
+
+
+    console.log("Payload being sent:", payload);
+    // Send request
+    const response = await axiosIns.post('/api/save-physicalexam', payload); //no route yet
+
+    // Success response handling
+    successMessage.value = "Saved Physical Exam.";
+    isSuccess.value = true;
+
+  } catch (error) {
+    console.error("Error Saving Physical Exam:", error);
+    errorMessage.value = "Failed to save Physical Exam.";
+    isError.value = true;
+
+  }
+}
 </script>
 
 <template>
   <VForm ref="clinform">
+    <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48"
+      @click="() => { saveUpdateCH(); saveUpdatePE(); }" class="fab-fixed-top">
+    </VBtn>
     <div class="d-flex flex-column justify-center">
     </div>
     <h5>
-      <!-- <pre>{{ clinichis }}</pre> -->
+      <pre>{{ clinichis }}{{ physexam }}</pre>
     </h5>
     <br></br>
     <VRow>
@@ -180,15 +320,19 @@ async function saveUpdateDP() {
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="clinichis.date_onset_illness" type="datetime-local" outlined dense hide-details
+        <VTextField v-model="clinichis.date_referral" type="date" outlined dense hide-details
+          label="Date of Referral:" />
+      </VCol>
+      <VCol>
+        <VTextField v-model="clinichis.date_onset_illness" type="date" outlined dense hide-details
           label="Date of Onset of Illness:" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VAutocomplete v-model="clinichis.refhlthfac" :items="facilityOptions" item-title="facilityname"
-          label="Name of Referral Health Facility (if Applicable):" outlined dense hide-details clearable
-          persistent-hint />
+        <VAutocomplete v-model="clinichis.facilityOptions" :items="facilityOptions" item-title="facilityname"
+          item-value="id" label="Name of Referral Health Facility (if Applicable):" outlined dense hide-details
+          clearable persistent-hint />
       </VCol>
     </VRow>
     <VRow>
@@ -204,18 +348,7 @@ async function saveUpdateDP() {
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="clinichis.specific_findings" outlined dense hide-details label="Blood Type:" />
-      </VCol>
-    </VRow>
-    <VRow class="align-center">
-      <VCol>
-        <h5 class="text-h5 font-weight-medium mb-2">Physical Examination(Inspection)</h5>
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextarea v-model="clinichis.clinical_status_time_consult" outlined dense hide-details auto-grow rows="2"
-          label="Clinical Status at the Time of Consult:" />
+        <VTextField v-model="clinichis.blood_type" outlined dense hide-details label="Blood Type:" />
       </VCol>
     </VRow>
     <VRow>
@@ -226,71 +359,41 @@ async function saveUpdateDP() {
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="clinichis.head" outlined dense hide-details auto-grow rows="2" label="Head:" />
+        <VTextarea v-model="clinichis.clinical_status_time_consult" outlined dense hide-details auto-grow rows="2"
+          label="Clinical Status at the Time of Consult:" />
+      </VCol>
+    </VRow>
+    <br />
+    <br />
+    <VRow style="background-color: rgba(255, 255, 255, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%;">
+      <Vcol>
+        <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px;">
+          Physical Examination (Inspection)
+        </h5>
+      </Vcol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VTextarea v-model="physexam.head" outlined dense hide-details auto-grow rows="2" label="Head:" />
+      </VCol>
+    </VRow>
+    <VRow v-for="(item, index) in examFields" :key="index">
+      <VCol>
+        <!-- Field -->
+        <VTextField v-model="physexam[item.field]" outlined dense hide-details :label="item.label + ':'" class="mb-2" />
+        <!-- Remarks -->
+        <VTextarea v-model="physexam[item.remark]" outlined dense hide-details auto-grow rows="2"
+          :label="item.label + ' Remarks:'" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="clinichis.conjunctiva" outlined dense hide-details label="Conjunctiva (eye anatomy): " />
+        <VTextarea v-model="physexam.others" outlined dense hide-details auto-grow rows="2" label="Others: " />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="clinichis.con_remarks" outlined dense hide-details auto-grow rows="2"
-          label="Conjunctiva Remarks:" />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextField v-model="clinichis.neck" outlined dense hide-details label="Neck:" />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextarea v-model="clinichis.chest" outlined dense hide-details auto-grow rows="2" label="Chest: " />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextField v-model="clinichis.abdomen" outlined dense hide-details label="Abdomen:" />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextarea v-model="clinichis.abdomen_remakrs" outlined dense hide-details auto-grow rows="2"
-          label="Abdomen Remarks: " />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextField v-model="clinichis.genitals" outlined dense hide-details label="Genitals:" />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextarea v-model="clinichis.genitals_remakrs" outlined dense hide-details auto-grow rows="2"
-          label="Genitals Remarks: " />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextField v-model="clinichis.extremities" outlined dense hide-details label="Extremities:" />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextarea v-model="clinichis.extrimities_remarks" outlined dense hide-details auto-grow rows="2"
-          label="Extremities Remarks: " />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextarea v-model="clinichis.others" outlined dense hide-details auto-grow rows="2" label="Others: " />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextarea v-model="clinichis.waist_circumference" outlined dense hide-details auto-grow rows="2"
+        <VTextarea v-model="physexam.waist_circumference" outlined dense hide-details auto-grow rows="2"
           label="Waist Circumference: " />
       </VCol>
     </VRow>
