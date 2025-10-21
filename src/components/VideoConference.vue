@@ -237,9 +237,9 @@ const { smAndDown } = useDisplay();
 const colSize = ref(12);
 const isStartDialog = ref(true);
 
-const toggleCols = () => {
-  colSize.value = colSize.value === 12 ? 9 : 12;
-};
+// const toggleCols = () => {
+//   colSize.value = colSize.value === 12 ? 9 : 12;
+// };
 
 const localVideo = ref<HTMLVideoElement | null>(null);
 const localVideoPreview = ref<HTMLVideoElement | null>(null);

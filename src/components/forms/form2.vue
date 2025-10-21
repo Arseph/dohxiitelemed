@@ -368,7 +368,7 @@ async function saveUpdatePE() {
     <VRow
       style="background-color: rgba(255, 255, 255, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
       <Vcol>
-        <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px;">
+        <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#fafafa">
           Physical Examination (Inspection)
         </h5>
       </Vcol>
@@ -382,9 +382,9 @@ async function saveUpdatePE() {
       <VCol>
         <!-- Field -->
         <VTextField v-model="physexam[item.field]" outlined dense hide-details :label="item.label + ':'" class="mb-2" />
-        <!-- Remarks -->
-        <VTextarea v-model="physexam[item.remark]" outlined dense hide-details auto-grow rows="2"
-          :label="item.label + ' Remarks:'" />
+        <!-- Remarks (hidden for Neck and Chest) -->
+        <VTextarea v-if="item.field !== 'neck' && item.field !== 'chest'" v-model="physexam[item.remark]" outlined dense
+          hide-details auto-grow rows="2" :label="item.label + ' Remarks:'" />
       </VCol>
     </VRow>
     <VRow>
