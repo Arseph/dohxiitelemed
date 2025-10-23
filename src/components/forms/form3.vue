@@ -207,6 +207,12 @@ watch(speOthersList, (newList) => {
         .join(',');
 }, { deep: true });
 
+watch(() => covids.known_covid_case, (newVal) => {
+    if (newVal === 0) {
+        covids.date_contact_known_covid_case = '';
+    }
+});
+
 
 //save/update
 async function fetchMeetingInfo(meetId) {
@@ -598,6 +604,7 @@ async function saveUpdateCA() {
     }
 }
 
+const requiredValidator = (v) => !!v || 'This field is required'
 </script>
 
 <template>
@@ -749,7 +756,8 @@ async function saveUpdateCA() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Accommodation</label>
 
-                    <VRadioGroup v-model="covids.accomodation" inline hide-details density="compact">
+                    <VRadioGroup v-model="covids.accomodation" inline hide-details density="compact" :rules="[
+                        v => v === 0 || v === 1 ? true : 'This field is required']">
                         <VRadio label="Yes" :value="1" />
                         <VRadio label="No" :value="0" />
                         <VRadio label="Unknown" :value="2" />
@@ -781,8 +789,9 @@ async function saveUpdateCA() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Food Establishment</label>
 
-                    <VRadioGroup v-model="covids.food_establishment" inline hide-details density="compact">
-                        <VRadio label="Yes" :value="1" />
+                    <VRadioGroup v-model="covids.food_establishment" inline hide-details density="compact" :rules="[
+                        v => v === 0 || v === 1 ? true : 'This field is required']">
+                        <VRadio label=" Yes" :value="1" />
                         <VRadio label="No" :value="0" />
                         <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
@@ -813,8 +822,9 @@ async function saveUpdateCA() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Store</label>
 
-                    <VRadioGroup v-model="covids.store" inline hide-details density="compact">
-                        <VRadio label="Yes" :value="1" />
+                    <VRadioGroup v-model="covids.store" inline hide-details density="compact" :rules="[
+                        v => v === 0 || v === 1 ? true : 'This field is required']">
+                        <VRadio label=" Yes" :value="1" />
                         <VRadio label="No" :value="0" />
                         <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
@@ -844,8 +854,9 @@ async function saveUpdateCA() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Health Facility</label>
 
-                    <VRadioGroup v-model="covids.facility" inline hide-details density="compact">
-                        <VRadio label="Yes" :value="1" />
+                    <VRadioGroup v-model="covids.facility" inline hide-details density="compact" :rules="[
+                        v => v === 0 || v === 1 ? true : 'This field is required']">
+                        <VRadio label=" Yes" :value="1" />
                         <VRadio label="No" :value="0" />
                         <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
@@ -876,8 +887,9 @@ async function saveUpdateCA() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Event</label>
 
-                    <VRadioGroup v-model="covids.event" inline hide-details density="compact">
-                        <VRadio label="Yes" :value="1" />
+                    <VRadioGroup v-model="covids.event" inline hide-details density="compact" :rules="[
+                        v => v === 0 || v === 1 ? true : 'This field is required']">
+                        <VRadio label=" Yes" :value="1" />
                         <VRadio label="No" :value="0" />
                         <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
@@ -900,8 +912,9 @@ async function saveUpdateCA() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Workplace</label>
 
-                    <VRadioGroup v-model="covids.workplace" inline hide-details density="compact">
-                        <VRadio label="Yes" :value="1" />
+                    <VRadioGroup v-model="covids.workplace" inline hide-details density="compact" :rules="[
+                        v => v === 0 || v === 1 ? true : 'This field is required']">
+                        <VRadio label=" Yes" :value="1" />
                         <VRadio label="No" :value="0" />
                         <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
@@ -972,8 +985,9 @@ async function saveUpdateCA() {
                         <label>
                             14 days PRIOR to first date of Exposure:
                         </label>
-                        <VRadioGroup v-model="clinas.days_14_prior_expose" inline hide-details density="compact">
-                            <VRadio label="Yes" :value="1" />
+                        <VRadioGroup v-model="clinas.days_14_prior_expose" inline hide-details density="compact" :rules="[
+                            v => v === 0 || v === 1 ? true : 'This field is required']">
+                            <VRadio label=" Yes" :value="1" />
                             <VRadio label="No" :value="0" />
                         </VRadioGroup>
                     </div>
@@ -1009,8 +1023,10 @@ async function saveUpdateCA() {
                             Anytime during date of Exposure:
                         </label>
 
-                        <VRadioGroup v-model="clinas.anytime_during_expose" inline hide-details density="compact">
-                            <VRadio label="Yes" :value="1" />
+                        <VRadioGroup v-model="clinas.anytime_during_expose" inline hide-details density="compact"
+                            :rules="[
+                                v => v === 0 || v === 1 ? true : 'This field is required']">
+                            <VRadio label=" Yes" :value="1" />
                             <VRadio label="No" :value="0" />
                         </VRadioGroup>
                     </div>

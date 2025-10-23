@@ -237,6 +237,8 @@ async function saveUpdateDP() {
 
   }
 }
+
+const requiredValidator = (v) => !!v || 'This field is required'
 </script>
 <template>
   <VForm ref="demProf">
@@ -252,7 +254,8 @@ async function saveUpdateDP() {
 
     <VRow>
       <VCol cols="12" md="6">
-        <VTextField v-model="meeting.name_physician" outlined dense hide-details label="Name of physician:" />
+        <VTextField v-model="meeting.name_physician" outlined dense hide-details label="Name of physician:"
+          :rules="[requiredValidator]" />
       </VCol>
       <VCol cols="12" md="6" class="centered-col">
         <VTextField type="datetime-local" v-model="meeting.datetimemeet" outlined dense hide-details
@@ -274,7 +277,8 @@ async function saveUpdateDP() {
     <VRow class="align-center">
       <VCol>
         <VRadioGroup v-model="meeting.prior_tele_proper"
-          label="Prior to teleconsultation proper, obtain patient consent:" inline>
+          label="Prior to teleconsultation proper, obtain patient consent:" inline :rules="[
+            v => v === 0 || v === 1 ? true : 'This field is required']">
           <VRadio label="Yes" :value="1" />
           <VRadio label="No" :value="0" />
         </VRadioGroup>
@@ -283,7 +287,8 @@ async function saveUpdateDP() {
     <VRow class="align-center">
       <VCol>
         <VRadioGroup v-model="meeting.is_patient_accompanied"
-          label="Is patient accompanied/assisted by another person during the consultation: " inline>
+          label="Is patient accompanied/assisted by another person during the consultation: " inline :rules="[
+            v => v === 0 || v === 1 ? true : 'This field is required']">
           <VRadio label="Yes" :value="1" />
           <VRadio label="No" :value="0" />
         </VRadioGroup>
@@ -296,7 +301,7 @@ async function saveUpdateDP() {
       <VCol inline>
         <div class="d-flex align-center">
           <label class="mr-2">Case #:</label>
-          <VTextField v-model="meeting.case_no" outlined dense hide-details disabled />
+          <VTextField v-model="meeting.case_no" outlined dense hide-details disabled :rules="[requiredValidator]" />
         </div>
       </VCol>
     </VRow>

@@ -299,6 +299,8 @@ async function saveUpdatePE() {
 
   }
 }
+
+const requiredValidator = (v) => !!v || 'This field is required'
 </script>
 
 <template>
@@ -315,7 +317,7 @@ async function saveUpdatePE() {
     <VRow>
       <VCol>
         <VTextarea v-model="clinichis.reason_consult" outlined dense hide-details auto-grow rows="2"
-          label="Reason for Teleconsultation:" />
+          label="Reason for Teleconsultation:" :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <VRow>
@@ -325,7 +327,7 @@ async function saveUpdatePE() {
       </VCol>
       <VCol>
         <VTextField v-model="clinichis.date_onset_illness" type="date" outlined dense hide-details
-          label="Date of Onset of Illness:" />
+          label="Date of Onset of Illness:" :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <VRow>
@@ -338,29 +340,31 @@ async function saveUpdatePE() {
     <VRow>
       <VCol>
         <VTextarea v-model="clinichis.known_medical_history" outlined dense hide-details auto-grow rows="2"
-          label="Known Medical Condition/s & Medical History:" />
+          label="Known Medical Condition/s & Medical History:" :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="clinichis.current_medication" outlined dense hide-details label="Current Medications:" />
+        <VTextField v-model="clinichis.current_medication" outlined dense hide-details label="Current Medications:"
+          :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="clinichis.blood_type" outlined dense hide-details label="Blood Type:" />
+        <VTextField v-model="clinichis.blood_type" outlined dense hide-details label="Blood Type:"
+          :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="clinichis.specific_findings" outlined dense hide-details auto-grow rows="2"
-          label="Specific Findings:" />
+          label="Specific Findings:" :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="clinichis.clinical_status_time_consult" outlined dense hide-details auto-grow rows="2"
-          label="Clinical Status at the Time of Consult:" />
+          label="Clinical Status at the Time of Consult:" :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <br />
@@ -375,13 +379,15 @@ async function saveUpdatePE() {
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="physexam.head" outlined dense hide-details auto-grow rows="2" label="Head:" />
+        <VTextarea v-model="physexam.head" outlined dense hide-details auto-grow rows="2" label="Head:"
+          :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <VRow v-for="(item, index) in examFields" :key="index">
       <VCol>
         <!-- Field -->
-        <VTextField v-model="physexam[item.field]" outlined dense hide-details :label="item.label + ':'" class="mb-2" />
+        <VTextField v-model="physexam[item.field]" outlined dense hide-details :label="item.label + ':'" class="mb-2"
+          :rules="[requiredValidator]" />
         <!-- Remarks (hidden for Neck and Chest) -->
         <VTextarea v-if="item.field !== 'neck' && item.field !== 'chest'" v-model="physexam[item.remark]" outlined dense
           hide-details auto-grow rows="2" :label="item.label + ' Remarks:'" />
