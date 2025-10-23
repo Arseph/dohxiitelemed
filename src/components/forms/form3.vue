@@ -222,61 +222,21 @@ async function fetchMeetingInfo(meetId) {
         // Populate meeting data (defaults to null if missing)
         covids.value = {
             meeting_id: data.meetID ?? null,
-            //     employers_name: data.employers_name ?? null,
-            //     place_of_work: data.place_of_work ?? null,
-            //     house_bldg_name: data.house_bldg_name ?? null,
-            //     street: data.street ?? null,
-            //     municipal: data.municipal ?? null,
-            //     province: data.province ?? null,
-            //     country_id: data.country_id ?? null,
-            //     office_phone_no: data.office_phone_no ?? null,
-            //     cellphone_no: data.cellphone_no ?? null,
-            //     history_travel_country_symptoms: data.history_travel_country_symptoms ?? null,
-            //     port_of_exit: data.port_of_exit ?? null,
-            //     airline_sea_vessel: data.airline_sea_vessel ?? null,
-            //     flight_vessel_no: data.flight_vessel_no ?? null,
-            //     date_departure: data.date_departure ?? null,
-            //     date_arrival_ph: data.date_arrival_ph ?? null,
-            //     known_covid_case: data.known_covid_case ?? null,
-            //     date_contact_known_covid_case: data.date_contact_known_covid_case ?? null,
-            //     accomodation: data.accomodation ?? null,
-            //     acco_specify_type: data.acco_specify_type ?? null,
-            //     acco_address: data.acco_address ?? null,
-            //     acco_date_last_expose: data.acco_date_last_expose ?? null,
-            //     acco_name: data.acco_name ?? null,
-            //     acco_name_type: data.acco_name_type ?? null,
-            //     food_establishment: data.food_establishment ?? null,
-            //     food_es_specify_type: data.food_es_specify_type ?? null,
-            //     food_es_address: data.food_es_address ?? null,
-            //     food_es_date_last_expose: data.food_es_date_last_expose ?? null,
-            //     food_es_name: data.food_es_name ?? null,
-            //     food_es_name_type: data.food_es_name_type ?? null,
-            //     store: data.store ?? null,
-            //     store_specify_type: data.store_specify_type ?? null,
-            //     store_address: data.store_address ?? null,
-            //     store_date_last_expose: data.store_date_last_expose ?? null,
-            //     store_name: data.store_name ?? null,
-            //     store_name_type: data.store_name_type ?? null,
-            //     facility: data.facility ?? null,
-            //     fac_specify_type: data.fac_specify_type ?? null,
-            //     fac_address: data.fac_address ?? null,
-            //     fac_date_last_expose: data.fac_date_last_expose ?? null,
-            //     fac_name: data.fac_name ?? null,
-            //     fac_name_type: data.fac_name_type ?? null,
-            //     fac_significant_other: data.fac_significant_other ?? null,
-            //     event: data.event ?? null,
-            //     event_specify_type: data.event_specify_type ?? null,
-            //     event_date_last_expose: data.event_date_last_expose ?? null,
-            //     event_place: data.event_place ?? null,
-            //     workplace: data.workplace ?? null,
-            //     wp_company_name: data.wp_company_name ?? null,
-            //     wp_date_last_expose: data.wp_date_last_expose ?? null,
-            //     wp_address: data.wp_address ?? null,
-            //     list_name_occasion: data.list_name_occasion ?? null
+            food_establishment: data.food_establishment ?? 0,
+            known_covid_case: data.known_covid_case ?? 0,
+            event: data.event ?? 0,
+            accomodation: data.accomodation ?? 0,
+            facility: data.facility ?? 0,
+            workplace: data.workplace ?? 0,
+            store: data.store ?? 0,
+            list_name_occasion: data.list_name_occasion ?? 0,
+
         };
 
         clinas.value = {
             meeting_id: data.meetID ?? null,
+            days_14_prior_expose: data.days_14_prior_expose ?? 0,
+            anytime_during_expose: data.anytime_during_expose ?? 0,
         };
 
 
@@ -307,15 +267,15 @@ async function fetchMeetingInfo(meetId) {
                 covids.value.flight_vessel_no = cv.flight_vessel_no ?? null;
                 covids.value.date_departure = cv.date_departure ?? null;
                 covids.value.date_arrival_ph = cv.date_arrival_ph ?? null;
-                covids.value.known_covid_case = cv.known_covid_case ?? null;
+                covids.value.known_covid_case = cv.known_covid_case ?? 0;
                 covids.value.date_contact_known_covid_case = cv.date_contact_known_covid_case ?? null;
-                covids.value.accomodation = cv.accomodation ?? null;
+                covids.value.accomodation = cv.accomodation ?? 0;
                 covids.value.acco_specify_type = cv.acco_specify_type ?? null;
                 covids.value.acco_address = cv.acco_address ?? null;
                 covids.value.acco_date_last_expose = cv.acco_date_last_expose ?? null;
                 covids.value.acco_name = cv.acco_name ?? null;
                 covids.value.acco_name_type = cv.acco_name_type ?? null;
-                covids.value.food_establishment = cv.food_establishment ?? null;
+                covids.value.food_establishment = cv.food_establishment ?? 0;
                 covids.value.food_es_specify_type = cv.food_es_specify_type ?? null;
                 covids.value.food_es_address = cv.food_es_address ?? null;
                 covids.value.food_es_date_last_expose = cv.food_es_date_last_expose ?? null;
@@ -327,22 +287,36 @@ async function fetchMeetingInfo(meetId) {
                 covids.value.store_date_last_expose = cv.store_date_last_expose ?? null;
                 covids.value.store_name = cv.store_name ?? null;
                 covids.value.store_name_type = cv.store_name_type ?? null;
-                covids.value.facility = cv.facility ?? null;
+                covids.value.facility = cv.facility ?? 0;
                 covids.value.fac_specify_type = cv.fac_specify_type ?? null;
                 covids.value.fac_address = cv.fac_address ?? null;
                 covids.value.fac_date_last_expose = cv.fac_date_last_expose ?? null;
                 covids.value.fac_name = cv.fac_name ?? null;
                 covids.value.fac_name_type = cv.fac_name_type ?? null;
                 covids.value.fac_significant_other = cv.fac_significant_other ?? null;
-                covids.value.event = cv.event ?? null;
+                covids.value.event = cv.event ?? 0;
                 covids.value.event_specify_type = cv.event_specify_type ?? null;
                 covids.value.event_date_last_expose = cv.event_date_last_expose ?? null;
                 covids.value.event_place = cv.event_place ?? null;
-                covids.value.workplace = cv.workplace ?? null;
+                covids.value.workplace = cv.workplace ?? 0;
                 covids.value.wp_company_name = cv.wp_company_name ?? null;
                 covids.value.wp_date_last_expose = cv.wp_date_last_expose ?? null;
                 covids.value.wp_address = cv.wp_address ?? null;
                 covids.value.list_name_occasion = cv.list_name_occasion ?? null;
+
+                //contacts explode
+                if (cv.list_name_occasion) {
+                    const matches = cv.list_name_occasion.match(/\{([^}]+)\}/g) || [];
+                    contactList.value = matches.map(item => {
+                        const [number, name] = item.replace(/[{}]/g, '').split(',');
+                        return {
+                            number: number?.trim() || '',
+                            name: name?.trim() || '',
+                        };
+                    });
+                } else {
+                    contactList.value = [];
+                }
 
             } else {
                 console.log("ℹ️ No covid screening found for this meeting ID.");
@@ -393,6 +367,36 @@ async function fetchMeetingInfo(meetId) {
                 clinas.value.classification = ca.classification ?? null;
                 clinas.value.outcome_date_discharge = ca.outcome_date_discharge ?? null;
                 clinas.value.outcome_condition_discharge = ca.outcome_condition_discharge ?? null;
+
+                // ✅ Scrum list
+                if (clinas.value.scrum) {
+                    const matches = clinas.value.scrum.match(/\{([^}]+)\}/g) || [];
+                    scrumList.value = matches.map(item => ({
+                        scrum: item.replace(/[{}]/g, '').trim() || '',
+                    }));
+                } else {
+                    scrumList.value = [];
+                }
+
+                // ✅ Oro Naso Swab list
+                if (clinas.value.oro_naso_swab) {
+                    const matches = clinas.value.oro_naso_swab.match(/\{([^}]+)\}/g) || [];
+                    oroNasoSwabList.value = matches.map(item => ({
+                        oro_naso_swab: item.replace(/[{}]/g, '').trim() || '',
+                    }));
+                } else {
+                    oroNasoSwabList.value = [];
+                }
+
+                // ✅ Special Others list
+                if (clinas.value.spe_others) {
+                    const matches = clinas.value.spe_others.match(/\{([^}]+)\}/g) || [];
+                    speOthersList.value = matches.map(item => ({
+                        spe_others: item.replace(/[{}]/g, '').trim() || '',
+                    }));
+                } else {
+                    speOthersList.value = [];
+                }
 
             } else {
                 console.log("ℹ️ No covid assessment found for this meeting ID.");
@@ -457,63 +461,63 @@ async function saveUpdateCV() {
         // ✅ Prepare payload using all meeting data
         const payload = {
             meeting_id: covids.value.meeting_id,
-            employers_name: covids.value.employers_name,
-            place_of_work: covids.value.place_of_work,
-            house_bldg_name: covids.value.house_bldg_name,
-            street: covids.value.street,
-            municipal: covids.value.municipal,
-            province: covids.value.province,
-            country_id: covids.value.country_id,
-            office_phone_no: covids.value.office_phone_no,
-            cellphone_no: covids.value.cellphone_no,
-            history_travel_country_symptoms: covids.value.history_travel_country_symptoms,
-            port_of_exit: covids.value.port_of_exit,
-            airline_sea_vessel: covids.value.airline_sea_vessel,
-            flight_vessel_no: covids.value.flight_vessel_no,
-            date_departure: covids.value.date_departure,
-            date_arrival_ph: covids.value.date_arrival_ph,
-            known_covid_case: covids.value.known_covid_case,
-            date_contact_known_covid_case: covids.value.date_contact_known_covid_case,
-            accomodation: covids.value.accomodation,
-            acco_specify_type: covids.value.acco_specify_type,
-            acco_address: covids.value.acco_address,
-            acco_date_last_expose: covids.value.acco_date_last_expose,
-            acco_name: covids.value.acco_name,
-            acco_name_type: covids.value.acco_name_type,
-            food_establishment: covids.value.food_establishment,
-            food_es_specify_type: covids.value.food_es_specify_type,
-            food_es_address: covids.value.food_es_address,
-            food_es_date_last_expose: covids.value.food_es_date_last_expose,
-            food_es_name: covids.value.food_es_name,
-            food_es_name_type: covids.value.food_es_name_type,
-            store: covids.value.store,
-            store_specify_type: covids.value.store_specify_type,
-            store_address: covids.value.store_address,
-            store_date_last_expose: covids.value.store_date_last_expose,
-            store_name: covids.value.store_name,
-            store_name_type: covids.value.store_name_type,
-            facility: covids.value.facility,
-            fac_specify_type: covids.value.fac_specify_type,
-            fac_address: covids.value.fac_address,
-            fac_date_last_expose: covids.value.fac_date_last_expose,
-            fac_name: covids.value.fac_name,
-            fac_name_type: covids.value.fac_name_type,
-            fac_significant_other: covids.value.fac_significant_other,
-            event: covids.value.event,
-            event_specify_type: covids.value.event_specify_type,
-            event_date_last_expose: covids.value.event_date_last_expose,
-            event_place: covids.value.event_place,
-            workplace: covids.value.workplace,
-            wp_company_name: covids.value.wp_company_name,
-            wp_date_last_expose: covids.value.wp_date_last_expose,
-            wp_address: covids.value.wp_address,
-            list_name_occasion: covids.value.list_name_occasion
+            employers_name: covids.value.employers_name ?? null,
+            place_of_work: covids.value.place_of_work ?? null,
+            house_bldg_name: covids.value.house_bldg_name ?? null,
+            street: covids.value.street ?? null,
+            municipal: covids.value.municipal ?? null,
+            province: covids.value.province ?? null,
+            country_id: covids.value.country_id ?? null,
+            office_phone_no: covids.value.office_phone_no ?? null,
+            cellphone_no: covids.value.cellphone_no ?? null,
+            history_travel_country_symptoms: covids.value.history_travel_country_symptoms ?? null,
+            port_of_exit: covids.value.port_of_exit ?? null,
+            airline_sea_vessel: covids.value.airline_sea_vessel ?? null,
+            flight_vessel_no: covids.value.flight_vessel_no ?? null,
+            date_departure: covids.value.date_departure ?? null,
+            date_arrival_ph: covids.value.date_arrival_ph ?? null,
+            known_covid_case: covids.value.known_covid_case ?? null,
+            date_contact_known_covid_case: covids.value.date_contact_known_covid_case ?? null,
+            accomodation: covids.value.accomodation ?? null,
+            acco_specify_type: covids.value.acco_specify_type ?? null,
+            acco_address: covids.value.acco_address ?? null,
+            acco_date_last_expose: covids.value.acco_date_last_expose ?? null,
+            acco_name: covids.value.acco_name ?? null,
+            acco_name_type: covids.value.acco_name_type ?? null,
+            food_establishment: covids.value.food_establishment ?? null,
+            food_es_specify_type: covids.value.food_es_specify_type ?? null,
+            food_es_address: covids.value.food_es_address ?? null,
+            food_es_date_last_expose: covids.value.food_es_date_last_expose ?? null,
+            food_es_name: covids.value.food_es_name ?? null,
+            food_es_name_type: covids.value.food_es_name_type ?? null,
+            store: covids.value.store ?? null,
+            store_specify_type: covids.value.store_specify_type ?? null,
+            store_address: covids.value.store_address ?? null,
+            store_date_last_expose: covids.value.store_date_last_expose ?? null,
+            store_name: covids.value.store_name ?? null,
+            store_name_type: covids.value.store_name_type ?? null,
+            facility: covids.value.facility ?? null,
+            fac_specify_type: covids.value.fac_specify_type ?? null,
+            fac_address: covids.value.fac_address ?? null,
+            fac_date_last_expose: covids.value.fac_date_last_expose ?? null,
+            fac_name: covids.value.fac_name ?? null,
+            fac_name_type: covids.value.fac_name_type ?? null,
+            fac_significant_other: covids.value.fac_significant_other ?? null,
+            event: covids.value.event ?? null,
+            event_specify_type: covids.value.event_specify_type ?? null,
+            event_date_last_expose: covids.value.event_date_last_expose ?? null,
+            event_place: covids.value.event_place ?? null,
+            workplace: covids.value.workplace ?? null,
+            wp_company_name: covids.value.wp_company_name ?? null,
+            wp_date_last_expose: covids.value.wp_date_last_expose ?? null,
+            wp_address: covids.value.wp_address ?? null,
+            list_name_occasion: covids.value.list_name_occasion ?? null
         };
 
 
         console.log("Payload being sent:", payload);
         // Send request
-        const response = await axiosIns.post('/api/save-covidscreening', payload); //no route controller yet
+        const response = await axiosIns.post('/api/save-covidscreening', payload);
 
         // Success response handling
         successMessage.value = "Saved covid-19 screening.";
@@ -704,7 +708,7 @@ async function saveUpdateCA() {
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="covids.date_arrival_ph" outlined dense hide-details
+                <VTextField type="date" v-model="covids.date_arrival_ph" outlined dense hide-details
                     label="Date of Arrival in Philippines:" />
             </VCol>
         </VRow>
@@ -727,7 +731,7 @@ async function saveUpdateCA() {
                     <VRadioGroup v-model="covids.known_covid_case" inline hide-details density="compact">
                         <VRadio label="Yes" :value="1" />
                         <VRadio label="No" :value="0" />
-                        <VRadio label="Unknown" :value="3" />
+                        <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
                 </div>
                 <br />
@@ -748,14 +752,14 @@ async function saveUpdateCA() {
                     <VRadioGroup v-model="covids.accomodation" inline hide-details density="compact">
                         <VRadio label="Yes" :value="1" />
                         <VRadio label="No" :value="0" />
-                        <VRadio label="Unknown" :value="3" />
+                        <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
                 </div>
 
                 <VTextField v-model="covids.acco_specify_type" outlined dense hide-details label="Specific Type:"
                     class="mt-2" />
                 <VTextField v-model="covids.acco_address" outlined dense hide-details label="Address:" class="mt-2" />
-                <VTextField v-model="covids.acco_date_last_expose" outlined dense hide-details
+                <VTextField type="date" v-model="covids.acco_date_last_expose" outlined dense hide-details
                     label="Date of Last Exposure:" class="mt-2" />
                 <VTextField v-model="covids.acco_name" outlined dense hide-details label="Name:" class="mt-2" />
 
@@ -780,7 +784,7 @@ async function saveUpdateCA() {
                     <VRadioGroup v-model="covids.food_establishment" inline hide-details density="compact">
                         <VRadio label="Yes" :value="1" />
                         <VRadio label="No" :value="0" />
-                        <VRadio label="Unknown" :value="3" />
+                        <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
                 </div>
 
@@ -788,7 +792,7 @@ async function saveUpdateCA() {
                     class="mt-2" />
                 <VTextField v-model="covids.food_es_address" outlined dense hide-details label="Address:"
                     class="mt-2" />
-                <VTextField v-model="covids.food_es_date_last_expose" outlined dense hide-details
+                <VTextField type="date" v-model="covids.food_es_date_last_expose" outlined dense hide-details
                     label="Date of Last Exposure:" class="mt-2" />
                 <VTextField v-model="covids.food_es_name" outlined dense hide-details label="Name:" class="mt-2" />
 
@@ -812,14 +816,14 @@ async function saveUpdateCA() {
                     <VRadioGroup v-model="covids.store" inline hide-details density="compact">
                         <VRadio label="Yes" :value="1" />
                         <VRadio label="No" :value="0" />
-                        <VRadio label="Unknown" :value="3" />
+                        <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
                 </div>
 
                 <VTextField v-model="covids.store_specify_type" outlined dense hide-details label="Specific Type:"
                     class="mt-2" />
                 <VTextField v-model="covids.store_address" outlined dense hide-details label="Address:" class="mt-2" />
-                <VTextField v-model="covids.store_date_last_expose" outlined dense hide-details
+                <VTextField type="date" v-model="covids.store_date_last_expose" outlined dense hide-details
                     label="Date of Last Exposure:" class="mt-2" />
                 <VTextField v-model="covids.store_name" outlined dense hide-details label="Name:" class="mt-2" />
 
@@ -843,7 +847,7 @@ async function saveUpdateCA() {
                     <VRadioGroup v-model="covids.facility" inline hide-details density="compact">
                         <VRadio label="Yes" :value="1" />
                         <VRadio label="No" :value="0" />
-                        <VRadio label="Unknown" :value="3" />
+                        <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
                 </div>
 
@@ -852,7 +856,7 @@ async function saveUpdateCA() {
                 <VTextField v-model="covids.fac_address" outlined dense hide-details label="Address:" class="mt-2" />
                 <VTextField v-model="covids.fac_significant_other" outlined dense hide-details
                     label="Significant Other:" class="mt-2" />
-                <VTextField v-model="covids.fac_date_last_expose" outlined dense hide-details
+                <VTextField type="date" v-model="covids.fac_date_last_expose" outlined dense hide-details
                     label="Date of Last Exposure:" class="mt-2" />
                 <VTextField v-model="covids.fac_name" outlined dense hide-details label="Name:" class="mt-2" />
 
@@ -875,7 +879,7 @@ async function saveUpdateCA() {
                     <VRadioGroup v-model="covids.event" inline hide-details density="compact">
                         <VRadio label="Yes" :value="1" />
                         <VRadio label="No" :value="0" />
-                        <VRadio label="Unknown" :value="3" />
+                        <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
                 </div>
 
@@ -899,7 +903,7 @@ async function saveUpdateCA() {
                     <VRadioGroup v-model="covids.workplace" inline hide-details density="compact">
                         <VRadio label="Yes" :value="1" />
                         <VRadio label="No" :value="0" />
-                        <VRadio label="Unknown" :value="3" />
+                        <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
                 </div>
 
@@ -1110,16 +1114,17 @@ async function saveUpdateCA() {
                     label="Specimen Collected:" />
             </VCol>
             <VCol>
-                <VTextField v-model="clinas.date_collected" outlined dense hide-details label="Date Collected:" />
+                <VTextField type="date" v-model="clinas.date_collected" outlined dense hide-details
+                    label="Date Collected:" />
             </VCol>
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="clinas.date_sent_ritm" outlined dense hide-details
+                <VTextField type="date" v-model="clinas.date_sent_ritm" outlined dense hide-details
                     label="Date Sent to RITM or any accredited laboratory:" />
             </VCol>
             <VCol>
-                <VTextField v-model="clinas.date_received_ritm" outlined dense hide-details
+                <VTextField type="date" v-model="clinas.date_received_ritm" outlined dense hide-details
                     label="Date Received in RITM:" />
             </VCol>
         </VRow>

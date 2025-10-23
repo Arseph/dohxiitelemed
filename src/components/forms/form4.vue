@@ -1,27 +1,44 @@
 <script setup lang="ts">
+import { cStatus } from "@/components/snackbars/cStatus";
+import { useUser } from '@/composables/useUser';
 import { ref } from "vue";
+import { VForm } from 'vuetify/components/VForm';
 import { VCol, VRow } from "vuetify/lib/components/index.mjs";
 
-interface ConsentOption {
-  label: string;
-  value: string;
-}
+const cvdform = ref<VForm>();
+const { user } = useUser();
+const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 
-const telemed = ref({
-  pconsent: null as boolean | null, // default null, can be true/false
-  acmpny: null as boolean | null, // default null, can be true/false
+// Props — so this form can be reused for different calls
+const props = defineProps({
+  consultId: {
+    type: Number,
+    required: false,
+  },
 });
+
+const diagass = ref({
+  // savedID: props.consultId,
+  meeting_id: '',
+  summary: '',
+  diagnosis: '',
+  clinclass: '',
+});
+
+
+
 </script>
 
 <template>
   <VRow>
     <VCol>
-      <VTextarea outlined dense hide-details auto-grow rows="2" label="Summary of Assessment Findings:" />
+      <VTextarea v-model="diagass.summary" outlined dense hide-details auto-grow rows="2"
+        label="Summary of Assessment Findings:" />
     </VCol>
   </VRow>
   <VRow>
     <VCol>
-      <VTextarea outlined dense hide-details auto-grow rows="2" label="Diagnosis:" />
+      <VTextarea v-model="diagass.diagnosis" outlined dense hide-details auto-grow rows="2" label="Diagnosis:" />
     </VCol>
   </VRow>
   <VRow class="align-center" flex>
@@ -30,9 +47,9 @@ const telemed = ref({
         Clinical Classification:
       </label>
       <div class="d-flex align-center">
-        <VRadioGroup v-model="telemed.prgnnt" inline hide-details density="compact">
-          <VRadio label="Covid-19 Case" :value="cvd19case" />
-          <VRadio label="Non-Covid-19 Case" :value="nncvd19case" />
+        <VRadioGroup v-model="diagass.clinclass" inline hide-details density="compact">
+          <VRadio label="Covid-19 Case" :value="1" />
+          <VRadio label="Non-Covid-19 Case" :value="0" />
         </VRadioGroup>
       </div>
     </VCol>
