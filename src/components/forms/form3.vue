@@ -207,12 +207,24 @@ watch(speOthersList, (newList) => {
         .join(',');
 }, { deep: true });
 
+// v-ifs changed
 watch(() => covids.known_covid_case, (newVal) => {
     if (newVal === 0) {
         covids.date_contact_known_covid_case = '';
     }
 });
 
+watch(() => clinas.days_14_prior_expose, (newVal) => {
+    if (newVal != 1) {
+        clinas.days_14_date_onset_illness = '';
+    }
+});
+
+watch(() => clinas.days_14_prior_expose, (newVal) => {
+    if (newVal != 0) {
+        clinass.place_quarantine = '';
+    }
+});
 
 //save/update
 async function fetchMeetingInfo(meetId) {
@@ -612,14 +624,25 @@ const requiredValidator = (v) => !!v || 'This field is required'
         <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48"
             @click="() => { saveUpdateCV(); saveUpdateCA() }" class="fab-fixed-top">
         </VBtn>
-        <pre>{{ covids }}{{ clinas }}</pre>
+        <!-- <pre>{{ covids }}{{ clinas }}</pre> -->
         <div class="d-flex flex-column justify-center">
         </div>
         <br></br>
+        <!-- <VRow style="position: relative;">
+            <VCol>
+                <div
+                    style="background-color:rgba(244, 67, 54, 0.15);height: 70px; width: 100vw; margin-left: calc(-50vw + 50%); padding: 4% 0% 2% 4%; position: absolute;">
+                </div>
+                <br />
+                <h5 class=" text-h5 font-weight-medium mb-2" style="color: #ff7b71; margin: 0;">
+                    Overseas Employment Address (for Overseas Filipino Workers)
+                </h5>
+            </VCol>
+        </VRow> -->
         <VRow
             style="background-color:rgba(244, 67, 54, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
             <Vcol>
-                <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#ff7b71">
+                <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#ff7b71;">
                     Overseas Employment Address(for Overseas Filipino Workers)
                 </h5>
             </Vcol>
@@ -670,7 +693,8 @@ const requiredValidator = (v) => !!v || 'This field is required'
                 <VTextField v-model="covids.cellphone_no" outlined dense hide-details label="Office Cellphone No:" />
             </VCol>
         </VRow>
-        <br></br>
+        <br />
+        <br />
         <VRow
             style="background-color:rgba(244, 67, 54, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
             <Vcol>
@@ -719,7 +743,8 @@ const requiredValidator = (v) => !!v || 'This field is required'
                     label="Date of Arrival in Philippines:" />
             </VCol>
         </VRow>
-        <br></br>
+        <br />
+        <br />
         <VRow
             style="background-color:rgba(244, 67, 54, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
             <Vcol>

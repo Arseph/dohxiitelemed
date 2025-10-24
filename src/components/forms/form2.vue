@@ -370,9 +370,9 @@ const requiredValidator = (v) => !!v || 'This field is required'
     <br />
     <br />
     <VRow
-      style="background-color: rgba(255, 255, 255, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
+      style="background-color: rgba(255, 0, 128, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
       <Vcol>
-        <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#fafafa">
+        <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#ff66b3">
           Physical Examination (Inspection)
         </h5>
       </Vcol>

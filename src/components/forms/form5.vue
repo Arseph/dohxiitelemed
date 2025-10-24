@@ -1,55 +1,240 @@
 <script setup lang="ts">
+import { cStatus } from "@/components/snackbars/cStatus";
+import { useUser } from '@/composables/useUser';
+import { axiosIns } from '@/plugins/axios';
 import { ref } from "vue";
-import { VCol, VRow, VTextField } from "vuetify/lib/components/index.mjs";
+import { VForm } from 'vuetify/components/VForm';
+import { VCol, VRow } from "vuetify/lib/components/index.mjs";
 
-interface ConsentOption {
-  label: string;
-  value: string;
+const planform = ref<VForm>();
+const { user } = useUser();
+const { isError, errorMessage, isSuccess, successMessage } = cStatus();
+
+// Props — so this form can be reused for different calls
+const props = defineProps({
+  consultId: {
+    type: Number,
+    required: false,
+  },
+});
+
+const dialog = ref(false)
+
+const planma = ref({
+  // savedID: props.consultId,
+  meeting_id: '',
+  plan_management: '',
+  prescription: '',
+  referral: '',
+  disposition: '',
+  name_physician: '',
+  // signature: '',
+  license_no: '',
+  prof_tax_receipt: '',
+});
+
+const headers = [
+  { title: 'Prescription Code', key: 'prescription_code' },
+  { title: 'Medicine Type', key: 'medicine_type' },
+  { title: 'Drug Code', key: 'drug_code' },
+  { title: 'Frequency', key: 'frequency' },
+  { title: 'Dose Regimen', key: 'dose_regimen' },
+  { title: 'Quantity', key: 'quantity' }
+]
+
+const showDialog = ref(false)
+const prescriptions = ref([])
+
+function selectPrescription(item) {
+  planma.value.prescription = `${item.presc_code} - ${item.drug_code}`
+  showDialog.value = false
 }
 
-const telemed = ref({
-  pconsent: null as boolean | null, // default null, can be true/false
-  acmpny: null as boolean | null, // default null, can be true/false
+// define function you can call anytime
+// async function fetchPrescriptions() {
+//   try {
+//     const res = await axios.get('/api/prescriptions')
+//     prescriptions.value = res.data
+//   } catch (err) {
+//     console.error('Error fetching prescriptions:', err)
+//   }
+// }
+
+const loadPrescriptions = async () => {
+  try {
+    console.log('Fetching prescriptions...')
+    const res = await axiosIns.get('/api/prescriptions')  // ✅ use axiosIns
+    console.log('Prescriptions response:', res.data)
+    prescriptions.value = res.data
+    console.log('Prescriptions stored in ref:', prescriptions.value)
+  } catch (error) {
+    console.error('Error fetching prescriptions:', error)
+  }
+}
+
+
+async function fetchMeetingInfo(meetId) {
+  try {
+    // Fetch meeting info
+    const response = await axiosIns.get(`/api/admin-patient-meeting-info`, {
+      params: { meet_id: meetId },
+    });
+
+    const data = response.data;
+
+    // --- Physician name ---
+    const docfname = data.docfname ?? null;
+    const docmname = data.docmname ? `${data.docmname.charAt(0)}.` : null;
+    const doclname = data.doclname ?? null;
+
+    const name_physician = [docfname, docmname, doclname].filter(Boolean).join(' ').trim();
+    const name_physician2 = [doclname ? `${doclname},` : '', docfname || '', docmname || '']
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+
+    // Populate meeting data (defaults to null if missing)
+    planma.value = {
+      meeting_id: data.meetID ?? null,
+      name_physician: name_physician2 ?? null,
+
+    };
+
+    console.log("✅ Meeting info fetched:", planma.value);
+
+    // 🔹 Step 3: Try to fetch existing Demographic Profile
+    if (planma.value.meeting_id) {
+      const pmResponse = await axiosIns.get(`/api/get-planofmanagement/${planma.value.meeting_id}`);
+      const pm = pmResponse.data.data;
+
+      if (pm) {
+        console.log("✅ Existing plan of management found:", pm);
+
+        // Merge existing DP data into diagass.value
+        planma.value.meeting_id = pm.meeting_id ?? null;
+        planma.value.plan_management = pm.plan_management ?? null;
+        planma.value.prescription = pm.prescription ?? null;
+        planma.value.referral = pm.referral ?? null;
+        planma.value.disposition = pm.disposition ?? null;
+        planma.value.name_physician = pm.name_physician ?? null;
+        // planma.value.signature = pm.signature ?? null;
+        planma.value.license_no = pm.license_no ?? null;
+        planma.value.prof_tax_receipt = pm.prof_tax_receipt ?? null;
+      } else {
+        console.log("ℹ️ No plan of management found for this meeting ID.");
+      }
+    }
+
+  } catch (error) {
+    console.error("❌ Error fetching meeting info or PM:", error);
+    errorMessage.value = "Failed to load meeting info.";
+    isError.value = true;
+  }
+}
+
+async function saveUpdatePM() {
+  try {
+    // Ensure form validation
+    const { valid } = await planform.value.validate();
+
+    if (!valid) {
+      errorMessage.value = "Please fill in all required fields correctly.";
+      isError.value = true;
+      return;
+    }
+
+    // ✅ Prepare payload using all meeting data
+    const payload = {
+      meeting_id: planma.value.meeting_id,
+      plan_management: planma.value.plan_management,
+      prescription: planma.value.prescription,
+      referral: planma.value.referral,
+      disposition: planma.value.disposition,
+      name_physician: planma.value.name_physician,
+      // signature: planma.value.signature,
+      license_no: planma.value.license_no,
+      prof_tax_receipt: planma.value.prof_tax_receipt,
+    };
+
+
+    console.log("Payload being sent:", payload);
+    // Send request
+    const response = await axiosIns.post('/api/save-planofmanagement', payload);
+
+    // Success response handling
+    successMessage.value = "Saved  plan of management.";
+    isSuccess.value = true;
+
+  } catch (error) {
+    console.error("Error Saving plan of management:", error);
+    errorMessage.value = "Failed to save plan of management.";
+    isError.value = true;
+
+  }
+}
+
+onMounted(() => {
+  if (props.consultId) fetchMeetingInfo(props.consultId);
+  loadPrescriptions();
+
 });
+
+const requiredValidator = (v) => !!v || 'This field is required'
 </script>
 
 <template>
-  <VRow>
-    <VCol>
-      <VTextarea outlined dense hide-details auto-grow rows="2" label="Plan of Management:" />
-    </VCol>
-  </VRow>
-  <VRow>
-    <VCol>
-      <VTextarea outlined dense hide-details auto-grow rows="2" label="Prescription:" disabled />
-    </VCol>
-  </VRow>
-  <VRow>
-    <VCol>
-      <VTextarea outlined dense hide-details auto-grow rows="2" label="Referral:" />
-    </VCol>
-  </VRow>
-  <VRow>
-    <VCol>
-      <VTextarea outlined dense hide-details auto-grow rows="2" label="Disposition:" />
-    </VCol>
-  </VRow>
-  <VCard class="pa-4" elevation="2">
+  <VForm ref="planform">
+    <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48" @click="() => { saveUpdatePM(); }"
+      class="fab-fixed-top">
+    </VBtn>
+    <VRow>
+      <VCol>
+        <VTextarea v-model="planma.plan_management" outlined dense hide-details auto-grow rows="2"
+          label="Plan of Management:" />
+      </VCol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VTextarea v-model="planma.prescription" outlined dense hide-details auto-grow rows="2" label="Prescription:"
+          @click="showDialog = true" readonly />
+      </VCol>
+    </VRow>
+
+    <VDialog v-model="showDialog" max-width="800px">
+      <VCard>
+        <VCardTitle>Select Prescription</VCardTitle>
+        <VDataTable :headers="headers" :items="prescriptions" @click:row="selectPrescription" />
+      </VCard>
+    </VDialog>
+    <VRow>
+      <VCol>
+        <VTextarea v-model="planma.referral" outlined dense hide-details auto-grow rows="2" label="Referral:" />
+      </VCol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VTextarea v-model="planma.disposition" outlined dense hide-details auto-grow rows="2" label="Disposition:" />
+      </VCol>
+    </VRow>
+    <!-- <VCard class="pa-4" elevation="2">
     <VSheet class="d-flex align-center justify-center border rounded" color="grey-lighten-3" height="150">
       <span class="text-grey">Signature pad will appear here</span>
     </VSheet>
   </VCard>
   <VTextField />
   <div class="d-flex align-center justify-center"><label>Name & Signature of Physician</label></div>
-  <br></br>
-  <VRow>
-    <VCol>
-      <VTextarea outlined dense hide-details auto-grow rows="2" label="License #:" />
-    </VCol>
-  </VRow>
-  <VRow>
-    <VCol>
-      <VTextarea outlined dense hide-details auto-grow rows="2" label="Professional Tax Receipt:" />
-    </VCol>
-  </VRow>
+  <br></br> -->
+    <VRow>
+      <VCol>
+        <VTextarea v-model="planma.license_no" outlined dense hide-details auto-grow rows="2" label="License #:" />
+      </VCol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VTextarea v-model="planma.prof_tax_receipt" outlined dense hide-details auto-grow rows="2"
+          label="Professional Tax Receipt:" />
+      </VCol>
+    </VRow>
+  </VForm>
 </template>

@@ -194,7 +194,7 @@ interface CardItem {
 
 const cards = ref<CardItem[]>([
   { id: 1, title: "Demographic Profile", icon: "tabler-user", color: "royalblue", component: Form1 },
-  { id: 2, title: "Clinical History & Physical Examination", icon: "tabler-stethoscope", color: "white", component: Form2 },
+  { id: 2, title: "Clinical History & Physical Examination", icon: "tabler-stethoscope", color: "magenta", component: Form2 },
   { id: 3, title: "COVID-19 Screening", icon: "tabler-virus-search", color: "red", component: Form3 },
   { id: 4, title: "Diagnosis / Assessment", icon: "tabler-notes", color: "blue", component: Form4 },
   { id: 5, title: "Plan of Management", icon: "tabler-clipboard-check", color: "green", component: Form5 },
