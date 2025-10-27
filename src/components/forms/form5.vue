@@ -34,36 +34,32 @@ const planma = ref({
 });
 
 const headers = [
-  { title: 'Prescription Code', key: 'prescription_code' },
-  { title: 'Medicine Type', key: 'medicine_type' },
-  { title: 'Drug Code', key: 'drug_code' },
+  { title: 'Prescription Code', key: 'presc_code' },
+  { title: 'Medicine Type', key: 'type_of_medicine' },
+  { title: 'Drug Code', key: 'drugcode' },
   { title: 'Frequency', key: 'frequency' },
   { title: 'Dose Regimen', key: 'dose_regimen' },
-  { title: 'Quantity', key: 'quantity' }
+  { title: 'Quantity', key: 'total_qty' }
 ]
 
 const showDialog = ref(false)
 const prescriptions = ref([])
 
+// function selectPrescription(item) {
+//   planma.value.prescription = `${item.presc_code} - ${item.drug_code}`
+//   showDialog.value = false
+// }
+
 function selectPrescription(item) {
-  planma.value.prescription = `${item.presc_code} - ${item.drug_code}`
+  if (!item || !item.presc_code) return
+  planma.value.prescription = item.presc_code
   showDialog.value = false
 }
-
-// define function you can call anytime
-// async function fetchPrescriptions() {
-//   try {
-//     const res = await axios.get('/api/prescriptions')
-//     prescriptions.value = res.data
-//   } catch (err) {
-//     console.error('Error fetching prescriptions:', err)
-//   }
-// }
 
 const loadPrescriptions = async () => {
   try {
     console.log('Fetching prescriptions...')
-    const res = await axiosIns.get('/api/prescriptions')  // ✅ use axiosIns
+    const res = await axiosIns.get('/api/get-prescriptions')
     console.log('Prescriptions response:', res.data)
     prescriptions.value = res.data
     console.log('Prescriptions stored in ref:', prescriptions.value)
@@ -88,16 +84,18 @@ async function fetchMeetingInfo(meetId) {
     const doclname = data.doclname ?? null;
 
     const name_physician = [docfname, docmname, doclname].filter(Boolean).join(' ').trim();
-    const name_physician2 = [doclname ? `${doclname},` : '', docfname || '', docmname || '']
-      .filter(Boolean)
-      .join(' ')
-      .trim();
+
+    //surname first
+    // const name_physician2 = [doclname ? `${doclname},` : '', docfname || '', docmname || '']
+    //   .filter(Boolean)
+    //   .join(' ')
+    //   .trim();
 
 
     // Populate meeting data (defaults to null if missing)
     planma.value = {
       meeting_id: data.meetID ?? null,
-      name_physician: name_physician2 ?? null,
+      name_physician: name_physician ?? null,
 
     };
 
@@ -188,33 +186,43 @@ const requiredValidator = (v) => !!v || 'This field is required'
     <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48" @click="() => { saveUpdatePM(); }"
       class="fab-fixed-top">
     </VBtn>
+    <pre>planma val{{ planma }}</pre>
     <VRow>
       <VCol>
         <VTextarea v-model="planma.plan_management" outlined dense hide-details auto-grow rows="2"
-          label="Plan of Management:" />
+          label="Plan of Management:" :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="planma.prescription" outlined dense hide-details auto-grow rows="2" label="Prescription:"
-          @click="showDialog = true" readonly />
+          @click="showDialog = true" readonly :rules="[requiredValidator]" />
       </VCol>
     </VRow>
-
-    <VDialog v-model="showDialog" max-width="800px">
-      <VCard>
-        <VCardTitle>Select Prescription</VCardTitle>
-        <VDataTable :headers="headers" :items="prescriptions" @click:row="selectPrescription" />
-      </VCard>
+    <VDialog v-model="showDialog">
+      <VDataTable :headers="headers" :items="prescriptions">
+        <template #item="{ item }">
+          <tr @click="selectPrescription(item)" style="cursor: pointer;">
+            <td>{{ item.presc_code }}</td>
+            <td>{{ item.type_of_medicine }}</td>
+            <td class="align-center">{{ item.drugcode }}</td>
+            <td>{{ item.frequency }}</td>
+            <td>{{ item.dose_regimen }}</td>
+            <td class="align-center">{{ item.total_qty }}</td>
+          </tr>
+        </template>
+      </VDataTable>
     </VDialog>
     <VRow>
       <VCol>
-        <VTextarea v-model="planma.referral" outlined dense hide-details auto-grow rows="2" label="Referral:" />
+        <VTextarea v-model="planma.referral" outlined dense hide-details auto-grow rows="2" label="Referral:"
+          :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="planma.disposition" outlined dense hide-details auto-grow rows="2" label="Disposition:" />
+        <VTextarea v-model="planma.disposition" outlined dense hide-details auto-grow rows="2" label="Disposition:"
+          :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <!-- <VCard class="pa-4" elevation="2">
@@ -227,7 +235,8 @@ const requiredValidator = (v) => !!v || 'This field is required'
   <br></br> -->
     <VRow>
       <VCol>
-        <VTextarea v-model="planma.license_no" outlined dense hide-details auto-grow rows="2" label="License #:" />
+        <VTextarea v-model="planma.license_no" outlined dense hide-details auto-grow rows="2" label="License #:"
+          :rules="[requiredValidator]" />
       </VCol>
     </VRow>
     <VRow>
