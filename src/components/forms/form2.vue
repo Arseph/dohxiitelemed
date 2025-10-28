@@ -101,7 +101,7 @@ async function fetchMeetingInfo(meetId: number) {
     // ✅ Clinical History
     clinichis.value = {
       meeting_id: data.meetID ?? null,
-      reason_consult: data.reason_consult ?? '',
+      reason_consult: data.title ?? '',
       date_onset_illness: data.date_onset_illness ?? '',
       date_referral: data.date_referral ?? '',
       facilityOptions: data.facilityOptions ?? '',

@@ -143,7 +143,7 @@ function removeContact(index) {
 // Watch contact list to update model
 watch(contactList, (newList) => {
     covids.value.list_name_occasion = newList
-        .map(contact => `{${contact.number},${contact.name}}`)
+        .map(contact => `{${contact.name},${contact.number}}`)
         .join(',');
 }, { deep: true });
 
@@ -317,8 +317,8 @@ async function fetchMeetingInfo(meetId) {
                     contactList.value = matches.map(item => {
                         const [number, name] = item.replace(/[{}]/g, '').split(',');
                         return {
-                            number: number?.trim() || '',
-                            name: name?.trim() || '',
+                            name: number?.trim() || '',
+                            number: name?.trim() || '',
                         };
                     });
                 } else {
@@ -427,8 +427,8 @@ onMounted(() => {
         const pairs = [];
         for (let i = 0; i < parts.length; i += 2) {
             pairs.push({
-                number: parts[i] || '',
-                name: parts[i + 1] || ''
+                name: parts[i] || '',
+                number: parts[i + 1] || ''
             });
         }
         contactList.value = pairs.length ? pairs : [];
