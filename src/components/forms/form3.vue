@@ -230,7 +230,7 @@ watch(() => clinas.days_14_prior_expose, (newVal) => {
 async function fetchMeetingInfo(meetId) {
     try {
         // Fetch meeting info
-        const response = await axiosIns.get(`/api/admin-patient-meeting-info`, {
+        const response = await axiosIns.get(`/api/meeting-info`, {
             params: { meet_id: meetId },
         });
 
@@ -240,21 +240,10 @@ async function fetchMeetingInfo(meetId) {
         // Populate meeting data (defaults to null if missing)
         covids.value = {
             meeting_id: data.meetID ?? null,
-            food_establishment: data.food_establishment ?? 0,
-            known_covid_case: data.known_covid_case ?? 0,
-            event: data.event ?? 0,
-            accomodation: data.accomodation ?? 0,
-            facility: data.facility ?? 0,
-            workplace: data.workplace ?? 0,
-            store: data.store ?? 0,
-            list_name_occasion: data.list_name_occasion ?? 0,
-
         };
 
         clinas.value = {
             meeting_id: data.meetID ?? null,
-            days_14_prior_expose: data.days_14_prior_expose ?? 0,
-            anytime_during_expose: data.anytime_during_expose ?? 0,
         };
 
 
@@ -285,38 +274,38 @@ async function fetchMeetingInfo(meetId) {
                 covids.value.flight_vessel_no = cv.flight_vessel_no ?? null;
                 covids.value.date_departure = cv.date_departure ?? null;
                 covids.value.date_arrival_ph = cv.date_arrival_ph ?? null;
-                covids.value.known_covid_case = cv.known_covid_case ?? 0;
+                covids.value.known_covid_case = cv.known_covid_case ?? null;
                 covids.value.date_contact_known_covid_case = cv.date_contact_known_covid_case ?? null;
-                covids.value.accomodation = cv.accomodation ?? 0;
+                covids.value.accomodation = cv.accomodation ?? null;
                 covids.value.acco_specify_type = cv.acco_specify_type ?? null;
                 covids.value.acco_address = cv.acco_address ?? null;
                 covids.value.acco_date_last_expose = cv.acco_date_last_expose ?? null;
                 covids.value.acco_name = cv.acco_name ?? null;
                 covids.value.acco_name_type = cv.acco_name_type ?? null;
-                covids.value.food_establishment = cv.food_establishment ?? 0;
+                covids.value.food_establishment = cv.food_establishment ?? null;
                 covids.value.food_es_specify_type = cv.food_es_specify_type ?? null;
                 covids.value.food_es_address = cv.food_es_address ?? null;
                 covids.value.food_es_date_last_expose = cv.food_es_date_last_expose ?? null;
                 covids.value.food_es_name = cv.food_es_name ?? null;
                 covids.value.food_es_name_type = cv.food_es_name_type ?? null;
-                covids.value.store = cv.store ?? null;
+                covids.value.store = Number(cv.store) ?? null; //number because varchar in db
                 covids.value.store_specify_type = cv.store_specify_type ?? null;
                 covids.value.store_address = cv.store_address ?? null;
                 covids.value.store_date_last_expose = cv.store_date_last_expose ?? null;
                 covids.value.store_name = cv.store_name ?? null;
                 covids.value.store_name_type = cv.store_name_type ?? null;
-                covids.value.facility = cv.facility ?? 0;
+                covids.value.facility = cv.facility ?? null;
                 covids.value.fac_specify_type = cv.fac_specify_type ?? null;
                 covids.value.fac_address = cv.fac_address ?? null;
                 covids.value.fac_date_last_expose = cv.fac_date_last_expose ?? null;
                 covids.value.fac_name = cv.fac_name ?? null;
                 covids.value.fac_name_type = cv.fac_name_type ?? null;
                 covids.value.fac_significant_other = cv.fac_significant_other ?? null;
-                covids.value.event = cv.event ?? 0;
+                covids.value.event = cv.event ?? null;
                 covids.value.event_specify_type = cv.event_specify_type ?? null;
                 covids.value.event_date_last_expose = cv.event_date_last_expose ?? null;
                 covids.value.event_place = cv.event_place ?? null;
-                covids.value.workplace = cv.workplace ?? 0;
+                covids.value.workplace = cv.workplace ?? null;
                 covids.value.wp_company_name = cv.wp_company_name ?? null;
                 covids.value.wp_date_last_expose = cv.wp_date_last_expose ?? null;
                 covids.value.wp_address = cv.wp_address ?? null;
@@ -797,9 +786,9 @@ const requiredValidator = (v) => !!v || 'This field is required'
                 <VTextField v-model="covids.acco_name" outlined dense hide-details label="Name:" class="mt-2" />
 
                 <VRadioGroup v-model="covids.acco_name_type" inline hide-details density="compact" class="pt-2">
-                    <VRadio label="Owner" value="0" />
-                    <VRadio label="Staff" value="1" />
-                    <VRadio label="Guest" value="2" />
+                    <VRadio label="Owner" :value="0" />
+                    <VRadio label="Staff" :value="1" />
+                    <VRadio label="Guest" :value="2" />
                 </VRadioGroup>
             </VCol>
         </VRow>
@@ -831,9 +820,9 @@ const requiredValidator = (v) => !!v || 'This field is required'
                 <VTextField v-model="covids.food_es_name" outlined dense hide-details label="Name:" class="mt-2" />
 
                 <VRadioGroup v-model="covids.food_es_name_type" inline hide-details density="compact" class="pt-2">
-                    <VRadio label="Owner" value="0" />
-                    <VRadio label="Staff" value="1" />
-                    <VRadio label="Customer" value="2" />
+                    <VRadio label="Owner" :value="0" />
+                    <VRadio label="Staff" :value="1" />
+                    <VRadio label="Customer" :value="2" />
                 </VRadioGroup>
             </VCol>
         </VRow>
@@ -863,9 +852,9 @@ const requiredValidator = (v) => !!v || 'This field is required'
                 <VTextField v-model="covids.store_name" outlined dense hide-details label="Name:" class="mt-2" />
 
                 <VRadioGroup v-model="covids.store_name_type" inline hide-details density="compact" class="pt-2">
-                    <VRadio label="Owner" value="0" />
-                    <VRadio label="Staff" value="1" />
-                    <VRadio label="Customer" value="2" />
+                    <VRadio label="Owner" :value="0" />
+                    <VRadio label="Staff" :value="1" />
+                    <VRadio label="Customer" :value="2" />
                 </VRadioGroup>
             </VCol>
         </VRow>
@@ -897,9 +886,9 @@ const requiredValidator = (v) => !!v || 'This field is required'
                 <VTextField v-model="covids.fac_name" outlined dense hide-details label="Name:" class="mt-2" />
 
                 <VRadioGroup v-model="covids.fac_name_type" inline hide-details density="compact" class="pt-2">
-                    <VRadio label="Patient" value="0" />
-                    <VRadio label="Visitor" value="1" />
-                    <VRadio label="Staff" value="2" />
+                    <VRadio label="Patient" :value="0" />
+                    <VRadio label="Visitor" :value="1" />
+                    <VRadio label="Staff" :value="2" />
                 </VRadioGroup>
             </VCol>
         </VRow>

@@ -89,7 +89,7 @@ const examFields = [
 
 async function fetchMeetingInfo(meetId: number) {
   try {
-    const response = await axiosIns.get(`/api/admin-patient-meeting-info`, {
+    const response = await axiosIns.get(`/api/meeting-info`, {
       params: { meet_id: meetId },
     });
 

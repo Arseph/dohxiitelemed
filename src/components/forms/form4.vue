@@ -42,7 +42,7 @@ watch(
 async function fetchMeetingInfo(meetId) {
   try {
     // Fetch meeting info
-    const response = await axiosIns.get(`/api/admin-patient-meeting-info`, {
+    const response = await axiosIns.get(`/api/meeting-info`, {
       params: { meet_id: meetId },
     });
 

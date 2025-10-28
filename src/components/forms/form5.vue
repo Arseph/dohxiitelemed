@@ -72,7 +72,7 @@ const loadPrescriptions = async () => {
 async function fetchMeetingInfo(meetId) {
   try {
     // Fetch meeting info
-    const response = await axiosIns.get(`/api/admin-patient-meeting-info`, {
+    const response = await axiosIns.get(`/api/meeting-info`, {
       params: { meet_id: meetId },
     });
 
@@ -186,7 +186,7 @@ const requiredValidator = (v) => !!v || 'This field is required'
     <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48" @click="() => { saveUpdatePM(); }"
       class="fab-fixed-top">
     </VBtn>
-    <pre>planma val{{ planma }}</pre>
+    <!-- <pre>planma val{{ planma }}</pre> -->
     <VRow>
       <VCol>
         <VTextarea v-model="planma.plan_management" outlined dense hide-details auto-grow rows="2"
