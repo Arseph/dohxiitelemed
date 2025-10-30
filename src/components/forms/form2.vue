@@ -9,6 +9,8 @@ import { VCol, VRow, VTextField } from "vuetify/lib/components/index.mjs";
 const clinform = ref<VForm>();
 const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
+const emit = defineEmits(['loaded'])
+
 
 
 console.log(user.value);
@@ -199,6 +201,8 @@ async function fetchMeetingInfo(meetId: number) {
     console.error("Error fetching clinical history or physical exam:", error);
     // errorMessage.value = "Failed to fetch clnical history or physical exam:";
     // isError.value = true;
+  } finally {
+    emit('loaded');
   }
 }
 
@@ -304,10 +308,13 @@ const requiredValidator = (v) => !!v || 'This field is required'
 </script>
 
 <template>
-  <VForm ref="clinform">
-    <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48"
-      @click="() => { saveUpdateCH(); saveUpdatePE(); }" class="fab-fixed-top">
-    </VBtn>
+  <VForm ref="clinform" style="align-self: stretch; width: 100%;">
+    <VTooltip text="Save All" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48" class="fab-fixed-top"
+          @click="() => { saveUpdateCH(); saveUpdatePE(); }" />
+      </template>
+    </VTooltip>
     <div class="d-flex flex-column justify-center">
     </div>
     <h5>
@@ -315,7 +322,7 @@ const requiredValidator = (v) => !!v || 'This field is required'
     </h5>
     <br></br>
     <VRow>
-      <VCol>
+      <VCol cols="12" md="12">
         <VTextarea v-model="clinichis.reason_consult" outlined dense hide-details auto-grow rows="2"
           label="Reason for Teleconsultation:" :rules="[requiredValidator]" />
       </VCol>

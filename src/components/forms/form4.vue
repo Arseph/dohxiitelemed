@@ -9,6 +9,8 @@ import { VCol, VRow } from "vuetify/lib/components/index.mjs";
 const daform = ref<VForm>();
 const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
+const emit = defineEmits(['loaded'])
+
 
 // Props — so this form can be reused for different calls
 const props = defineProps({
@@ -20,7 +22,7 @@ const props = defineProps({
 
 const diagass = ref({
   // savedID: props.consultId,
-  meeting_id: '',
+  meeting_id: props.consultId ?? '',
   patient_id: '',
   summary_assess: '',
   diagnosis: '',
@@ -39,23 +41,23 @@ watch(
 )
 
 
-async function fetchMeetingInfo(meetId) {
+async function fetchMeetingInfo() {
   try {
     // Fetch meeting info
-    const response = await axiosIns.get(`/api/meeting-info`, {
-      params: { meet_id: meetId },
-    });
+    // const response = await axiosIns.get(`/api/meeting-info`, {
+    //   params: { meet_id: meetId },
+    // });
 
-    const data = response.data;
+    // const data = response.data;
 
-    // Populate meeting data (defaults to null if missing)
-    diagass.value = {
-      meeting_id: data.meetID ?? null,
-      patient_id: data.patID ?? null,
+    // // Populate meeting data (defaults to null if missing)
+    // diagass.value = {
+    //   meeting_id: data.meetID ?? null,
+    //   patient_id: data.patID ?? null,
 
-    };
+    // };
 
-    console.log("✅ Meeting info fetched:", diagass.value);
+    // console.log("✅ Meeting info fetched:", diagass.value);
 
     // 🔹 Step 3: Try to fetch existing Demographic Profile
     if (diagass.value.meeting_id) {
@@ -81,6 +83,8 @@ async function fetchMeetingInfo(meetId) {
     console.error("❌ Error fetching meeting info or DA:", error);
     errorMessage.value = "Failed to load meeting info.";
     isError.value = true;
+  } finally {
+    emit('loaded');
   }
 }
 
@@ -123,17 +127,20 @@ async function saveUpdateDA() {
 }
 
 onMounted(() => {
-  if (props.consultId) fetchMeetingInfo(props.consultId);
+  fetchMeetingInfo();
 });
 
 const requiredValidator = (v) => !!v || 'This field is required'
 </script>
 
 <template>
-  <VForm ref="daform">
-    <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48" @click="() => { saveUpdateDA(); }"
-      class="fab-fixed-top">
-    </VBtn>
+  <VForm ref="daform" style="align-self: stretch; width: 100%;">
+    <VTooltip text="Save" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48" class="fab-fixed-top"
+          @click="() => { saveUpdateDA(); }" />
+      </template>
+    </VTooltip>
     <!-- <pre>diagrass vals{{ diagass }}</pre> -->
     <VRow>
       <VCol>

@@ -9,7 +9,7 @@ import { VCol, VRow, VTextarea, VTextField } from "vuetify/lib/components/index.
 // const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 
-// console.log(user.value);
+// const isLoading = ref(false)
 
 // Props — so this form can be reused for different calls
 const props = defineProps({
@@ -62,12 +62,15 @@ const meeting = ref({
   pprov: null,
 });
 
-// const meeting = ref<any>(null);
+const emit = defineEmits(['loaded'])
 
 //save/update
 const demProf = ref(null)
 
 async function fetchMeetingInfo(meetId) {
+
+  // isLoading.value = true  // 🔹 Show loading screen immediately
+
   try {
     // Fetch meeting info
     const response = await axiosIns.get(`/api/meeting-info`, {
@@ -188,6 +191,8 @@ async function fetchMeetingInfo(meetId) {
     console.error("❌ Error fetching meeting info or DP:", error);
     errorMessage.value = "Failed to load meeting info.";
     isError.value = true;
+  } finally {
+    emit('loaded');
   }
 }
 
@@ -241,16 +246,16 @@ async function saveUpdateDP() {
 const requiredValidator = (v) => !!v || 'This field is required'
 </script>
 <template>
-  <VForm ref="demProf">
-    <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48" @click="saveUpdateDP"
-      class="fab-fixed-top">
-    </VBtn>
+  <VForm ref="demProf" style="align-self: stretch; width: 100%;">
+    <VTooltip text="Save" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48" class="fab-fixed-top"
+          @click="saveUpdateDP" />
+      </template>
+    </VTooltip>
     <div class="d-flex flex-column justify-center">
     </div>
     <br></br>
-    <!-- <h5>
-      <pre>{{ meeting }}</pre>
-    </h5> -->
 
     <VRow>
       <VCol cols="12" md="6">

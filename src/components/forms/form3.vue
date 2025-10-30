@@ -9,6 +9,7 @@ import { VCheckbox, VCol, VRadioGroup, VRow, VTextField } from "vuetify/lib/comp
 const cvdform = ref<VForm>();
 const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
+const emit = defineEmits(['loaded']);
 
 // country list
 const countrylist = ref([]);
@@ -32,8 +33,7 @@ const props = defineProps({
 });
 
 const covids = ref({
-    meetId: '',
-    meeting_id: '',
+    meeting_id: props.consultId ?? '',
     employers_name: '',
     place_of_work: '',
     house_bldg_name: '',
@@ -88,7 +88,7 @@ const covids = ref({
 });
 
 const clinas = ref({
-    meeting_id: '',
+    meeting_id: props.consultId ?? '',
     days_14_prior_expose: '',
     anytime_during_expose: '',
     days_14_date_onset_illness: '',
@@ -227,27 +227,27 @@ watch(() => clinas.days_14_prior_expose, (newVal) => {
 });
 
 //save/update
-async function fetchMeetingInfo(meetId) {
+async function fetchMeetingInfo() {
     try {
-        // Fetch meeting info
-        const response = await axiosIns.get(`/api/meeting-info`, {
-            params: { meet_id: meetId },
-        });
+        // // Fetch meeting info
+        // const response = await axiosIns.get(`/api/meeting-info`, {
+        //     params: { meet_id: meetId },
+        // });
 
-        const data = response.data;
-
-
-        // Populate meeting data (defaults to null if missing)
-        covids.value = {
-            meeting_id: data.meetID ?? null,
-        };
-
-        clinas.value = {
-            meeting_id: data.meetID ?? null,
-        };
+        // const data = response.data;
 
 
-        console.log("✅ Meeting info fetched:", covids.value);
+        // // Populate meeting data (defaults to null if missing)
+        // covids.value = {
+        //     meeting_id: data.meetID ?? null,
+        // };
+
+        // clinas.value = {
+        //     meeting_id: data.meetID ?? null,
+        // };
+
+
+        // console.log("✅ Meeting info fetched:", covids.value);
 
         // 🔹 Step 3: Try to fetch existing covid screening
         if (covids.value.meeting_id) {
@@ -414,12 +414,14 @@ async function fetchMeetingInfo(meetId) {
         console.error("❌ Error fetching covid screening info:", error);
         errorMessage.value = "Failed to load covid screening info.";
         isError.value = true;
+    } finally {
+        emit('loaded');
     }
 }
 
 
 onMounted(() => {
-    if (props.consultId) fetchMeetingInfo(props.consultId);
+    if (props.consultId) fetchMeetingInfo();
     fetchCountries();
 
     if (covids.value.list_name_occasion) {
@@ -609,7 +611,7 @@ const requiredValidator = (v) => !!v || 'This field is required'
 </script>
 
 <template>
-    <VForm ref="cvdform">
+    <VForm ref="cvdform" style="align-self: stretch; width: 100%;">
         <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48"
             @click="() => { saveUpdateCV(); saveUpdateCA() }" class="fab-fixed-top">
         </VBtn>

@@ -9,6 +9,8 @@ import { VCol, VRow } from "vuetify/lib/components/index.mjs";
 const planform = ref<VForm>();
 const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
+const emit = defineEmits(['loaded'])
+
 
 // Props — so this form can be reused for different calls
 const props = defineProps({
@@ -128,6 +130,8 @@ async function fetchMeetingInfo(meetId) {
     console.error("❌ Error fetching meeting info or PM:", error);
     errorMessage.value = "Failed to load meeting info.";
     isError.value = true;
+  } finally {
+    emit('loaded');
   }
 }
 
@@ -182,10 +186,13 @@ const requiredValidator = (v) => !!v || 'This field is required'
 </script>
 
 <template>
-  <VForm ref="planform">
-    <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48" @click="() => { saveUpdatePM(); }"
-      class="fab-fixed-top">
-    </VBtn>
+  <VForm ref="planform" style="align-self: stretch; width: 100%;">
+    <VTooltip text="Save" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48" class="fab-fixed-top"
+          @click="() => { saveUpdatePM(); }" />
+      </template>
+    </VTooltip>
     <!-- <pre>planma val{{ planma }}</pre> -->
     <VRow>
       <VCol>
