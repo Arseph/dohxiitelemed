@@ -88,123 +88,116 @@ const examFields = [
 
 
 // const meeting = ref<any>(null);
-
 async function fetchMeetingInfo(meetId: number) {
   try {
-    const response = await axiosIns.get(`/api/meeting-info`, {
-      params: { meet_id: meetId },
-    });
+    // Step 1: Fetch both Clinical History (CH) and Physical Exam (PE) in parallel
+    const [chResponse, peResponse] = await Promise.all([
+      axiosIns.get(`/api/get-clinicalhistory/${meetId}`),
+      axiosIns.get(`/api/get-physicalexam/${meetId}`)
+    ]);
 
-    const data = response.data;
+    const ch = chResponse.data.data;
+    const pe = peResponse.data.data;
 
-    // DOC name 
-    const docfname = data.docfname ?? '';
-
-    // ✅ Clinical History
-    clinichis.value = {
-      meeting_id: data.meetID ?? null,
-      reason_consult: data.title ?? '',
-      date_onset_illness: data.date_onset_illness ?? '',
-      date_referral: data.date_referral ?? '',
-      facilityOptions: data.facilityOptions ?? '',
-      known_medical_history: data.known_medical_history ?? '',
-      current_medication: data.current_medication ?? '',
-      blood_type: data.blood_type ?? '',
-      clinical_status_time_consult: data.clinical_status_time_consult ?? '',
-      specific_findings: data.specific_findings ?? '',
-    };
-
-    // ✅ Physical Exam
-    physexam.value = {
-      meeting_id: data.meetID ?? null,
-      head: data.head ?? '',
-      conjunctiva: data.conjunctiva ?? '',
-      con_remarks: data.con_remarks ?? '',
-      neck: data.neck ?? '',
-      chest: data.chest ?? '',
-      breast: data.breast ?? '',
-      breast_remarks: data.breast_remarks ?? '',
-      thorax: data.thorax ?? '',
-      thorax_remarks: data.thorax_remarks ?? '',
-      abdomen: data.abdomen ?? '',
-      abdomen_remarks: data.abdomen_remarks ?? '',
-      genitals: data.genitals ?? '',
-      genital_remarks: data.genital_remarks ?? '',
-      extremities: data.extremities ?? '',
-      extremities_remarks: data.extremities_remarks ?? '',
-      others: data.others ?? '',
-      waist_circumference: data.waist_circumference ?? '',
-    };
-
-    console.log("Clinical History fetched:", clinichis.value);
-
-    // 🔹 Step 3: Try to fetch existing Clinical History
-    if (clinichis.value.meeting_id) {
-      const chResponse = await axiosIns.get(`/api/get-clinicalhistory/${clinichis.value.meeting_id}`);
-      const ch = chResponse.data.data;
-
-      if (ch) {
-        console.log("✅ Existing clinical history found:", ch);
-
-        // Merge existing ch data into meeting.value
-        clinichis.value.meeting_id = ch.meeting_id ?? null;
-        clinichis.value.reason_consult = ch.reason_consult ?? null;
-        clinichis.value.date_onset_illness = ch.date_onset_illness ?? null;
-        clinichis.value.date_referral = ch.date_referral ?? null;
-        clinichis.value.facilityOptions = ch.facility_id ?? null;
-        clinichis.value.known_medical_history = ch.known_medical_history ?? null;
-        clinichis.value.current_medication = ch.current_medication ?? null;
-        clinichis.value.blood_type = ch.blood_type ?? null;
-        clinichis.value.clinical_status_time_consult = ch.clinical_status_time_consult ?? null;
-        clinichis.value.specific_findings = ch.specific_findings ?? null;
-
-      } else {
-        console.log("ℹ️ No clinical history found for this meeting ID.");
-      }
+    // Step 2: Handle Clinical History
+    if (ch) {
+      console.log("✅ Existing clinical history found:", ch);
+      clinichis.value = {
+        meeting_id: ch.meeting_id ?? null,
+        reason_consult: ch.reason_consult ?? '',
+        date_onset_illness: ch.date_onset_illness ?? null,
+        date_referral: ch.date_referral ?? null,
+        facilityOptions: ch.facility_id ?? null,
+        known_medical_history: ch.known_medical_history ?? null,
+        current_medication: ch.current_medication ?? null,
+        blood_type: ch.blood_type ?? null,
+        clinical_status_time_consult: ch.clinical_status_time_consult ?? null,
+        specific_findings: ch.specific_findings ?? null,
+      };
+      console.log("✅ Clinical History fetched:", clinichis.value);
+    } else {
+      console.log("ℹ️ No clinical history found.");
     }
 
-    // 🔹 Step 4: Try to fetch existing physical exam
-    if (physexam.value.meeting_id) {
-      const peResponse = await axiosIns.get(`/api/get-physicalexam/${physexam.value.meeting_id}`);
-      const pe = peResponse.data.data;
-
-      if (pe) {
-        console.log("✅ Physical exam history found:", pe);
-
-        // Merge existing pe data into meeting.value
-        physexam.value.meeting_id = pe.meeting_id ?? null;
-        physexam.value.head = pe.head ?? null;
-        physexam.value.conjunctiva = pe.conjunctiva ?? null;
-        physexam.value.con_remarks = pe.con_remarks ?? null;
-        physexam.value.neck = pe.neck ?? null;
-        physexam.value.chest = pe.chest ?? null;
-        physexam.value.breast = pe.breast ?? null;
-        physexam.value.breast_remarks = pe.breast_remarks ?? null;
-        physexam.value.thorax = pe.thorax ?? null;
-        physexam.value.abdomen = pe.abdomen ?? null;
-        physexam.value.abdomen_remarks = pe.abdomen_remarks ?? null;
-        physexam.value.genitals = pe.genitals ?? null;
-        physexam.value.genital_remarks = pe.genital_remarks ?? null;
-        physexam.value.extremities = pe.extremities ?? null;
-        physexam.value.extremities_remarks = pe.extremities_remarks ?? null;
-        physexam.value.others = pe.others ?? null;
-        physexam.value.waist_circumference = pe.waist_circumference ?? null;
-
-      } else {
-        console.log("ℹ️ No physical exam  found for this meeting ID.");
-      }
+    // Step 3: Handle Physical Exam
+    if (pe) {
+      console.log("✅ Existing physical exam found:", pe);
+      physexam.value = {
+        meeting_id: pe.meeting_id ?? null,
+        head: pe.head ?? '',
+        conjunctiva: pe.conjunctiva ?? '',
+        con_remarks: pe.con_remarks ?? '',
+        neck: pe.neck ?? '',
+        chest: pe.chest ?? '',
+        breast: pe.breast ?? '',
+        breast_remarks: pe.breast_remarks ?? '',
+        thorax: pe.thorax ?? '',
+        thorax_remarks: pe.thorax_remarks ?? '',
+        abdomen: pe.abdomen ?? '',
+        abdomen_remarks: pe.abdomen_remarks ?? '',
+        genitals: pe.genitals ?? '',
+        genital_remarks: pe.genital_remarks ?? '',
+        extremities: pe.extremities ?? '',
+        extremities_remarks: pe.extremities_remarks ?? '',
+        others: pe.others ?? '',
+        waist_circumference: pe.waist_circumference ?? '',
+      };
+      console.log("✅ Physical Exam fetched:", physexam.value);
+    } else {
+      console.log("ℹ️ No physical exam found.");
     }
 
+    // Step 4: If both CH and PE are not found, fetch meeting info
+    if (!ch && !pe) {
+      console.log("ℹ️ No clinical history or physical exam found, fetching meeting info.");
+      const meetingResponse = await axiosIns.get(`/api/meeting-info`, {
+        params: { meet_id: meetId },
+      });
+      const data = meetingResponse.data;
 
+      // Populate Clinical History from meeting info
+      clinichis.value = {
+        meeting_id: data.meetID ?? null,
+        reason_consult: data.title ?? '',
+      };
+
+      // Populate Physical Exam from meeting info
+      physexam.value = {
+        meeting_id: data.meetID ?? null,
+        head: data.head ?? '',
+        conjunctiva: data.conjunctiva ?? '',
+        con_remarks: data.con_remarks ?? '',
+        neck: data.neck ?? '',
+        chest: data.chest ?? '',
+        breast: data.breast ?? '',
+        breast_remarks: data.breast_remarks ?? '',
+        thorax: data.thorax ?? '',
+        thorax_remarks: data.thorax_remarks ?? '',
+        abdomen: data.abdomen ?? '',
+        abdomen_remarks: data.abdomen_remarks ?? '',
+        genitals: data.genitals ?? '',
+        genital_remarks: data.genital_remarks ?? '',
+        extremities: data.extremities ?? '',
+        extremities_remarks: data.extremities_remarks ?? '',
+        others: data.others ?? '',
+        waist_circumference: data.waist_circumference ?? '',
+      };
+
+      console.log("✅ Meeting Info fetched and populated Clinical History & Physical Exam:", {
+        clinichis: clinichis.value,
+        physexam: physexam.value,
+      });
+    }
 
   } catch (error) {
-    console.error("Error fetching clinical history or physical exam:", error);
-    // errorMessage.value = "Failed to fetch clnical history or physical exam:";
-    // isError.value = true;
+    console.error("Error fetching clinical history, physical exam, or meeting info:", error);
+    errorMessage.value = "Failed to fetch data.";
+    isError.value = true;
   } finally {
     emit('loaded');
   }
 }
+
 
 
 onMounted(() => {

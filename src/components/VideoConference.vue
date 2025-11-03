@@ -225,18 +225,39 @@ const activeCardIconColor = ref('')
 const activeCardComponent = ref(null)
 const isLoading = ref(false)
 
-function openCard(id) {
+// 🧩 Track previously opened component
+let lastCardComponent: any = null
+
+
+function openCard(id: number) {
   const selected = cards.value.find(c => c.id === id)
   if (!selected) return
+
+  const isSameComponent = lastCardComponent === selected.component
+  lastCardComponent = selected.component
+
   drawerOpen.value = false               // close small drawer
   activeCardTitle.value = selected.title
   activeCardIcon.value = selected.icon
   activeCardIconColor.value = selected.color
   activeCardComponent.value = selected.component
-  isLoading.value = true                 // start loader before opening form
+
+  // 🔹 Handle loading logic
+  if (isSameComponent) {
+    // Option A: Instantly skip spinner
+    isLoading.value = false
+
+    // Option B: Flash loader briefly (optional)
+    // isLoading.value = true
+    // nextTick(() => (isLoading.value = false))
+  } else {
+    isLoading.value = true
+  }
+
+  // delay anim
   setTimeout(() => {
-    isDrawerOpen.value = true            // open large form drawer
-  }, 250)                                // small delay for smoother animation
+    isDrawerOpen.value = true
+  }, 250)
 }
 
 function onComponentLoaded() {

@@ -229,26 +229,6 @@ watch(() => clinas.days_14_prior_expose, (newVal) => {
 //save/update
 async function fetchMeetingInfo() {
     try {
-        // // Fetch meeting info
-        // const response = await axiosIns.get(`/api/meeting-info`, {
-        //     params: { meet_id: meetId },
-        // });
-
-        // const data = response.data;
-
-
-        // // Populate meeting data (defaults to null if missing)
-        // covids.value = {
-        //     meeting_id: data.meetID ?? null,
-        // };
-
-        // clinas.value = {
-        //     meeting_id: data.meetID ?? null,
-        // };
-
-
-        // console.log("✅ Meeting info fetched:", covids.value);
-
         // 🔹 Step 3: Try to fetch existing covid screening
         if (covids.value.meeting_id) {
             const cvResponse = await axiosIns.get(`/api/get-covidscreening/${covids.value.meeting_id}`);

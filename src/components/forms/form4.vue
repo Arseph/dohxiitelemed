@@ -43,23 +43,7 @@ watch(
 
 async function fetchMeetingInfo() {
   try {
-    // Fetch meeting info
-    // const response = await axiosIns.get(`/api/meeting-info`, {
-    //   params: { meet_id: meetId },
-    // });
-
-    // const data = response.data;
-
-    // // Populate meeting data (defaults to null if missing)
-    // diagass.value = {
-    //   meeting_id: data.meetID ?? null,
-    //   patient_id: data.patID ?? null,
-
-    // };
-
-    // console.log("✅ Meeting info fetched:", diagass.value);
-
-    // 🔹 Step 3: Try to fetch existing Demographic Profile
+    // 🔹 Step 3: Try to fetch existing diagnosis assess
     if (diagass.value.meeting_id) {
       const daResponse = await axiosIns.get(`/api/get-diagnosisassessment/${diagass.value.meeting_id}`);
       const da = daResponse.data.data;
