@@ -68,9 +68,6 @@ const emit = defineEmits(['loaded'])
 const demProf = ref(null)
 
 async function fetchMeetingInfo(meetId) {
-
-  // isLoading.value = true  // 🔹 Show loading screen immediately
-
   try {
     // Fetch meeting info
     const response = await axiosIns.get(`/api/meeting-info`, {

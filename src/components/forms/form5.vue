@@ -6,7 +6,7 @@ import { ref } from "vue";
 import { VForm } from 'vuetify/components/VForm';
 import { VCol, VRow } from "vuetify/lib/components/index.mjs";
 
-const planform = ref<VForm>();
+const planform = ref < VForm > ();
 const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 const emit = defineEmits(['loaded'])

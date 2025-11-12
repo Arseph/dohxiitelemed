@@ -998,8 +998,7 @@ const requiredValidator = (v) => !!v || 'This field is required'
                     <VCol>
                         <div v-if="clinas.days_14_prior_expose == 0" class="d-flex align-center">
                             <label class="text-body-1 font-weight-medium me-2">(If no) Place of Quarantine:</label>
-                            <VCheckbox v-model="clinas.place_quarantine" label="Home" :value="1" hide-details
-                                density="compact" />
+                            <VCheckbox v-model="clinas.place_quarantine" label="Home" hide-details density="compact" />
                         </div>
                     </VCol>
                 </VRow>

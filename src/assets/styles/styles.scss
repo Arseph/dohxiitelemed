@@ -75,7 +75,7 @@
   filter: brightness(1.1);
   background-color: color-mix(in srgb, currentColor 20%, transparent) !important;
   transition: all 0.25s ease;
-}w
+}
 
 /* Match icons with text brightness */
 .v-btn[class*='btn-'] .icon {
@@ -104,3 +104,30 @@
     width: 100vw;
     height: 75px;
 }
+
+/* ----- VTabs: Royal Blue Theme ----- */
+
+/* Individual tab buttons */
+.v-tab.royalblue-tab {
+  color: #7ea9ff !important; /* lighter royal blue text */
+  font-weight: 500;
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+/* Active tab */
+.v-tab.royalblue-tab.v-tab--selected {
+  background-color: rgba(65, 105, 225, 0.15) !important;
+  color: #4c8aff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(65, 105, 225, 0.25);
+}
+
+/* Hover effect */
+.v-tab.royalblue-tab:hover {
+  background-color: rgba(65, 105, 225, 0.1) !important;
+  color: #6e9cff !important;
+  filter: brightness(1.1);
+}
+
+
