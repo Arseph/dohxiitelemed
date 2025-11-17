@@ -1,18 +1,14 @@
 <script setup lang="ts">
-import { cStatus } from "@/components/snackbars/cStatus";
-import ErrorSnackbar from "@/components/snackbars/errors.vue";
-import SuccessSnackbar from "@/components/snackbars/success.vue";
-import { reactive, ref, watch } from "vue";
-import { VAvatar, VCol, VDivider, VForm, VIcon, VRow, VTab, VTabs, VWindow, VWindowItem } from "vuetify/components";
+import { computed, reactive, ref, watch } from "vue";
+import { VAvatar, VCol, VDivider, VForm, VIcon, VRow, VTab, VTabs, VWindow, VWindowItem, } from "vuetify/components";
 import EditPatientProfile from "./EditPatientProfile.vue";
 import Teleconsultations from "./Teleconsultations.vue";
-
-const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 
 const props = defineProps({
     patient: { type: Object, required: true },
 });
-const emit = defineEmits(["close", "updated"]);
+
+const emit = defineEmits(["close", "updated", "saved"]);
 
 // Reactive copy of patient for dynamic updates
 const localPatient = reactive({ ...props.patient });
@@ -28,12 +24,38 @@ watch(
 
 const activeTab = ref("profile"); // default active tab
 
-// Handle updates emitted from child component
+// Civil status options for mapping
+const civilStatusOptions = [
+    { title: "Single", value: "s" },
+    { title: "Married", value: "1" },
+    { title: "Widowed", value: "2" },
+    { title: "Separated", value: "3" },
+    { title: "Divorced", value: "4" },
+];
+
+// Computed title display for civil status, normalize both
+const civilStatusTitle = computed(() => {
+    if (!localPatient.civil_stat_code) return "";
+
+    const code = String(localPatient.civil_stat_code).toLowerCase(); // normalize
+    const match = civilStatusOptions.find(
+        (item) => String(item.value).toLowerCase() === code
+    );
+
+    return match ? match.title : "";
+});
+
+
 function handlePatientUpdated(updatedPatient: any) {
     Object.assign(localPatient, updatedPatient);
-    emit("updated", updatedPatient); // optional: bubble up
+    emit("close");
+    emit("saved");
 }
 
+const getImageUrl = (path: string) => {
+    if (!path) return "";
+    return `${import.meta.env.VITE_APP_BACKEND_URL}/${path}`;
+};
 </script>
 
 <template>
@@ -42,9 +64,17 @@ function handlePatientUpdated(updatedPatient: any) {
             <!-- Left Column: Sidebar Info -->
             <VCol cols="12" md="4">
                 <VRow>
+                    <!-- <pre>{{ localPatient }}</pre> -->
                     <VCol class="text-center">
-                        <VAvatar color="blue-grey-lighten-4" size="100" class="mx-auto elevation-1">
-                            <VIcon icon="tabler-user-circle" size="126" color="blue-grey-darken-2" />
+                        <VAvatar size="200" class="mx-auto elevation-1"
+                            style="border: 3px solid #1976d2; border-radius: 50%; overflow: hidden;">
+                            <template v-if="previewImage || localPatient.pat_image">
+                                <img :src="previewImage || getImageUrl(localPatient.pat_image)" alt="Profile Picture"
+                                    style="width: 100%; height: 100%; object-fit: contain; object-position: center;" />
+                            </template>
+                            <template v-else>
+                                <VIcon icon="tabler-user-circle" size="126" color="blue-grey-darken-2" />
+                            </template>
                         </VAvatar>
                     </VCol>
                 </VRow>
@@ -72,9 +102,8 @@ function handlePatientUpdated(updatedPatient: any) {
                     <VCol>Sex: <b>{{ localPatient.sex_code }}</b></VCol>
                 </VRow>
                 <VRow>
-                    <VCol>Civil Status: <b>{{ localPatient.civil_stat_code }}</b></VCol>
+                    <VCol>Civil Status: <b>{{ civilStatusTitle }}</b></VCol>
                 </VRow>
-
                 <!-- Sidebar Tabs -->
                 <VRow class="mt-4">
                     <VCol cols="12">
@@ -92,10 +121,6 @@ function handlePatientUpdated(updatedPatient: any) {
                     </VCol>
                 </VRow>
             </VCol>
-
-            <!-- Snackbars -->
-            <ErrorSnackbar :message="errorMessage" :visible="isError" @update:visible="isError = $event" />
-            <SuccessSnackbar :message="successMessage" :visible="isSuccess" @update:visible="isSuccess = $event" />
 
             <!-- Right Column: Tab Content -->
             <VCol>

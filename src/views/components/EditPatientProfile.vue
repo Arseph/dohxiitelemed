@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { cStatus } from "@/components/snackbars/cStatus";
-import ErrorSnackbar from "@/components/snackbars/errors.vue";
-import SuccessSnackbar from "@/components/snackbars/success.vue";
 import { axiosIns } from "@/plugins/axios";
 import { ref, watch } from "vue";
-import { VRow } from "vuetify/lib/components/index.mjs";
+import { VBtn, VRow, VTextField } from "vuetify/lib/components/index.mjs";
 
 const patientpform = ref<VForm>();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 const props = defineProps({
     patient: { type: Object, required: true },
 });
+
 const emit = defineEmits(["close", "updated"]);
 
 const form = ref({ ...props.patient });
@@ -52,14 +51,41 @@ const educationalAttainments = [
     { code: '07', text: 'VOCATIONAL' },
 ];
 
-const idTypes = [
-    { code: 'umid', text: 'UMID' },
-    { code: 'dl', text: "DRIVER'S LICENSE" },
-    { code: 'passport', text: 'PASSPORT ID' },
-    { code: 'postal', text: 'POSTAL ID' },
-    { code: 'tin', text: 'TIN ID' },
-    { code: 'none', text: 'NOT APPLICABLE' },
+const civilStatusOptions = [
+    { title: 'Single', value: 'S' },
+    { title: 'Married', value: 'M' },
+    { title: 'Widowed', value: 'W' },
+    { title: 'Separated', value: 'P' },
+    { title: 'Divorced', value: 'D' },
 ];
+
+
+const employmentStatusOptions = [
+    { title: 'Regular / Permanent', value: 'Regular / Permanent' },
+    { title: 'Probationary', value: 'Probationary' },
+    { title: 'Casual', value: 'Casual' },
+    { title: 'Contractual', value: 'Contractual' },
+    { title: 'Temporary', value: 'Temporary' },
+    { title: 'Part-time', value: 'Part-time' },
+    { title: 'Full-time', value: 'Full-time' },
+    { title: 'Self-Employed', value: 'Self-Employed' },
+    { title: 'Unemployed', value: 'Unemployed' },
+    { title: 'Retired', value: 'Retired' },
+    { title: 'Student', value: 'Student' },
+    { title: 'Housewife / Homemaker', value: 'Housewife / Homemaker' },
+    { title: 'Overseas Foreign Worker', value: 'Overseas Foreign Worker' },
+    { title: 'Volunteer', value: 'Volunteer' },
+    { title: 'Disabled / Not able to work', value: 'Disabled / Not able to work' },
+    { title: 'Job Order', value: 'Job Order' },
+    { title: 'Apprentice', value: 'Apprentice' },
+    { title: 'Intern', value: 'Intern' },
+    { title: 'Consultant', value: 'Consultant' },
+    { title: 'Business Owner', value: 'Business Owner' },
+    { title: 'Farmer / Agricultural Worker', value: 'Farmer / Agricultural Worker' },
+    { title: 'Fisherman', value: 'Fisherman' },
+];
+
+
 
 // country list
 const nationalityList = ref([]);
@@ -68,12 +94,18 @@ const nationalityList = ref([]);
 async function fetchCountries() {
     try {
         const response = await axiosIns.get('/api/tele/countries');
-        // Sort the data alphabetically, just in case
-        nationalityList.value = response.data.data.sort((a, b) => a.en_short_name.localeCompare(b.en_short_name));
+        // Map the data to convert num_code to string
+        nationalityList.value = response.data.data
+            .map(country => ({
+                ...country,
+                num_code: country.num_code.toString()
+            }))
+            .sort((a, b) => a.en_short_name.localeCompare(b.en_short_name));
     } catch (error) {
         console.error('Error fetching countries:', error);
     }
 }
+
 
 // region list
 const regionList = ref([]);
@@ -96,8 +128,13 @@ const cityList = ref([]);
 async function fetchCities() {
     try {
         const response = await axiosIns.get('/api/tele/cities');
-        // Sort the data alphabetically, just in case
-        cityList.value = response.data.data.sort((a, b) => a.muni_name.localeCompare(b.muni_name));
+        // Convert zipcode to string, then sort alphabetically
+        cityList.value = response.data.data
+            .map(city => ({
+                ...city,
+                zipcode: city.zipcode?.toString() || ''
+            }))
+            .sort((a, b) => a.muni_name.localeCompare(b.muni_name));
     } catch (error) {
         console.error('Error fetching cities:', error);
     }
@@ -124,28 +161,15 @@ const barangayList = ref([]);
 async function fetchBarangay() {
     try {
         const response = await axiosIns.get('/api/tele/barangays');
-        // Sort the data alphabetically, just in case
-        barangayList.value = response.data.data.sort((a, b) => a.brg_name.localeCompare(b.brg_name));
+        // Map to convert brg_psgc to string, then sort alphabetically
+        barangayList.value = response.data.data
+            .map(barangay => ({
+                ...barangay,
+                brg_psgc: barangay.brg_psgc?.toString() || ''
+            }))
+            .sort((a, b) => a.brg_name.localeCompare(b.brg_name));
     } catch (error) {
         console.error('Error fetching barangays:', error);
-    }
-}
-
-
-//conver data ype brgy
-const bgycodec = ref(null);
-
-function convertBgyCode() {
-    if (props.patient.bgycode) {
-        bgycodec.value = Number(props.patient.bgycode);
-        form.value.bgycode = bgycodec.value;
-        props.patient.bgycode = bgycodec.value;
-        console.log("[convertBgyCode] Converted bgycode:", bgycodec.value);
-    } else {
-        bgycodec.value = null;
-        form.value.bgycode = null;
-        props.patient.bgycode = null;
-        console.log("[convertBgyCode] No bgycode to convert");
     }
 }
 
@@ -175,7 +199,7 @@ async function fetchPatientProfile(patientId) {
         // Clone all fields into form.value
         form.value = { ...data };
 
-        console.log("✅ Patient profile loaded:", form.value);
+        // console.log("✅ Patient profile loaded:", form.value);
 
         successMessage.value = "Patient profile loaded successfully!";
         isSuccess.value = true;
@@ -189,6 +213,53 @@ async function fetchPatientProfile(patientId) {
 
 
 
+// async function saveChanges() {
+//     try {
+//         isSaving.value = true;
+
+//         // Validate form before submitting
+//         const valid = await patientpform.value.validate();
+//         if (!valid) {
+//             errorMessage.value = "Please correct the errors before saving.";
+//             isError.value = true;
+//             return;
+//         }
+
+//         // Build payload: clone form.value
+//         const payload = { ...form.value };
+
+//         // Optional: remove backend-managed fields so Laravel handles them
+//         delete payload.date_entered;
+//         delete payload.time_entered;
+//         delete payload.date_updated;
+//         delete payload.time_updated;
+
+//         // Optional: ensure ID is included for updates
+//         // Laravel controller will check this to update vs create
+//         if (form.value.id) {
+//             payload.id = form.value.id;
+//         }
+
+//         // Send save request
+//         await axiosIns.post('/api/patients/store-or-update', payload);
+
+//         // Success snackbar
+//         successMessage.value = "Patient information saved successfully!";
+//         isSuccess.value = true;
+
+//         // Emit events to parent
+//         emit("updated");
+//         emit("close");
+
+//     } catch (error) {
+//         console.error("Error saving patient:", error);
+//         errorMessage.value = "Failed to save patient information.";
+//         isError.value = true;
+//     } finally {
+//         isSaving.value = false;
+//     }
+// }
+
 async function saveChanges() {
     try {
         isSaving.value = true;
@@ -201,23 +272,25 @@ async function saveChanges() {
             return;
         }
 
-        // Build payload: clone form.value
-        const payload = { ...form.value };
+        // ✅ Build FormData (for file + text data)
+        const formData = new FormData();
 
-        // Optional: remove backend-managed fields so Laravel handles them
-        delete payload.date_entered;
-        delete payload.time_entered;
-        delete payload.date_updated;
-        delete payload.time_updated;
-
-        // Optional: ensure ID is included for updates
-        // Laravel controller will check this to update vs create
-        if (form.value.id) {
-            payload.id = form.value.id;
+        // Loop through all fields in the form
+        for (const key in form.value) {
+            if (form.value[key] !== null && form.value[key] !== undefined) {
+                formData.append(key, form.value[key]);
+            }
         }
 
-        // Send save request
-        await axiosIns.post('/api/patients/store-or-update', payload);
+        // If there's an uploaded image file, append it
+        if (form.value.pat_image instanceof File) {
+            formData.append("pat_image", form.value.pat_image);
+        }
+
+        // ✅ POST with multipart/form-data
+        await axiosIns.post("/api/patients/store-or-update", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
 
         // Success snackbar
         successMessage.value = "Patient information saved successfully!";
@@ -226,9 +299,9 @@ async function saveChanges() {
         // Emit events to parent
         emit("updated");
         emit("close");
-
+        isEditing.value = false;
     } catch (error) {
-        console.error("Error saving patient:", error);
+        console.error("❌ Error saving patient:", error);
         errorMessage.value = "Failed to save patient information.";
         isError.value = true;
     } finally {
@@ -236,11 +309,35 @@ async function saveChanges() {
     }
 }
 
+function cancelEdit() {
+    // optionally reload original patient data
+    isEditing.value = false;
+}
+
+//picture test
+const previewUrl = ref<string | null>(null);
+
+function onImageSelected(event: Event) {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    form.value.pat_image = file;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        previewUrl.value = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+}
+
+//lock fields
+const isEditing = ref(false);
+
+
 
 
 onMounted(async () => {
     fetchPatientProfile(form.value.id);
-    convertBgyCode();
     fetchCountries();
     fetchRegions();
     fetchCities();
@@ -250,136 +347,274 @@ onMounted(async () => {
 </script>
 
 <template>
-    <ErrorSnackbar :message="errorMessage" :visible="isError" @update:visible="isError = $event" absolute bottom left />
-    <SuccessSnackbar :message="successMessage" :visible="isSuccess" @update:visible="isSuccess = $event" absolute bottom
-        left />
     <VForm ref="patientpform">
         <h2>Patient Profile</h2>
         <!-- <pre>{{ form }}</pre> -->
         <br />
         <VRow>
             <VCol>
-                <VRow>
-                    <VCol>
-                        <VSelect v-model="form.philhealth_status_code" label="Philhealth Status:" :items="[
-                            { title: 'None', value: '0' },
-                            { title: 'Member', value: '1' },
-                            { title: 'Dependent', value: '2' },
-                        ]" item-title="title" item-value="value" variant="outlined" clearable />
-                    </VCol>
-                    <VCol>
-                        <VTextField v-model="form.pat_philhealh" label="PhilHealth ID:" />
-                    </VCol>
-                </VRow>
-                <VRow>
-                    <VCol>
-                        <VTextField v-model="form.pat_fname" label="First Name:" />
-                    </VCol>
-                    <VCol>
-                        <VTextField v-model="form.pat_mname" label="Middle Name:" />
+
+                <!-- Photo Upload -->
+                <!-- PREVIEW -->
+                <VRow v-if="previewUrl">
+                    <VCol class="d-flex justify-center">
+                        <VAvatar size="200" class="border border-success" rounded="circle">
+                            <img :src="previewUrl" alt="Preview"
+                                style="width: 100%; height: 100%; object-fit: contain; object-position: center;"
+                                :readonly="!isEditing" />
+                        </VAvatar>
                     </VCol>
                 </VRow>
                 <VRow>
                     <VCol>
-                        <VTextField v-model="form.pat_lname" label="Last Name:" />
+                        <VFileInput label="Upload Photo" accept="image/*" capture="environment"
+                            @change="onImageSelected" variant="outlined" :readonly="!isEditing" />
+                    </VCol>
+                </VRow>
+
+
+                <!-- Master & Temporary IDs -->
+                <!-- <VRow>
+                    <VCol>
+                        <VTextField v-model="form.master_patient_perm_id" label="Master Patient Permanent ID:" :readonly="!isEditing"/>
                     </VCol>
                     <VCol>
-                        <VTextField v-model="form.pat_mobile" label="Contact Number:" />
+                        <VTextField v-model="form.pat_temp_id" label="Temporary Patient ID:" :readonly="!isEditing"/>
+                    </VCol>
+                </VRow> -->
+
+                <!-- Name Details -->
+                <VRow>
+                    <VCol cols="12" md="3">
+                        <VTextField v-model="form.prefix_code" label="Prefix (Mr., Mrs., etc.):"
+                            :readonly="!isEditing" />
+                    </VCol>
+                    <VCol cols="12" md="6">
+                        <VTextField v-model="form.pat_fname" label="First Name:" :readonly="!isEditing" />
+                    </VCol>
+                    <VCol cols="12" md="3">
+                        <VTextField v-model="form.pat_mname" label="Middle Name:" :readonly="!isEditing" />
                     </VCol>
                 </VRow>
                 <VRow>
-                    <VCol>
-                        <VTextField v-model="form.pat_birthDate" label="Birth Date:" type="date" />
+                    <VCol cols="12" md="6">
+                        <VTextField v-model="form.pat_lname" label="Last Name:" :readonly="!isEditing" />
+                    </VCol>
+                    <VCol cols="12" md="3">
+                        <VTextField v-model="form.suffix_code" label="Suffix (Jr., II, etc.):" :readonly="!isEditing" />
                     </VCol>
                     <VCol>
-                        <VTextField v-model="form.sex_code" label="Sex:" />
+                        <VSelect v-model="form.sex_code" :items="sexOptions" label="Sex:" variant="outlined" clearable
+                            :readonly="!isEditing" />
                     </VCol>
                 </VRow>
+
+                <!-- Sex, Birth, Civil Status -->
                 <VRow>
                     <VCol>
-                        <VSelect v-model="form.civil_stat_code" label="Civil Status:" :items="[
-                            { title: 'Single', value: 's' },
-                            { title: 'Married', value: '1' },
-                            { title: 'Widowed', value: '2' },
-                            { title: 'Separated', value: '3' },
-                            { title: 'Divorced', value: '4' },
-                        ]" item-title="title" item-value="value" variant="outlined" clearable />
+                        <VTextField v-model="form.pat_birthDate" label="Birth Date:" type="date"
+                            :readonly="!isEditing" />
                     </VCol>
                     <VCol>
-                        <VAutocomplete v-model="form.religion_code" :items="religions" label="Religion:"
-                            item-title="text" item-value="code" clearable autocomplete />
+                        <VTextField v-model="form.pat_birthplace" label="Birthplace:" :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VSelect v-model="form.civil_stat_code" :items="civilStatusOptions" label="Civil Status:"
+                            item-title="title" item-value="value" variant="outlined" clearable :readonly="!isEditing" />
                     </VCol>
                 </VRow>
+
+                <!-- Maiden Name (if married female) -->
+                <VRow v-if="['Mrs.', 'Mrs', 'mrs.', 'mrs'].includes(form.prefix_code)">
+                    <VCol>
+                        <VTextField v-model="form.maiden_middlename" label="Maiden Middle Name:"
+                            :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VTextField v-model="form.maiden_lastname" label="Maiden Last Name:" :readonly="!isEditing" />
+                    </VCol>
+                </VRow>
+
+                <!-- Education & Occupation -->
                 <VRow>
                     <VCol>
                         <VSelect v-model="form.educattainment" :items="educationalAttainments"
-                            label="Educational Attainment:" item-title="text" item-value="code" clearable />
+                            label="Educational Attainment:" item-title="text" item-value="code" clearable
+                            :readonly="!isEditing" />
                     </VCol>
                     <VCol>
-                        <VTextField v-model="form.occupation_code" label="Occupation:" />
+                        <VSelect v-model="form.occupation_code" label="Employment Status:"
+                            :items="employmentStatusOptions" item-title="title" item-value="value" variant="outlined"
+                            clearable :readonly="!isEditing" />
                     </VCol>
                 </VRow>
                 <VRow>
                     <VCol>
-                        <VTextField v-model="form.monthly_income" label="Monthly Income:" />
+                        <VTextField v-model="form.occupation_sp" label="Specific Occupation:" :readonly="!isEditing" />
                     </VCol>
-                    <!-- <VCol>
-                        <VSelect v-model="form.id_type" :items="idTypes" label="Select ID:" item-title="text"
-                            item-value="code" clearable autocomplete :menu-props="{ maxHeight: '300' }" />
-                    </VCol> -->
+                    <VCol>
+                        <VTextField v-model="form.date_of_effectivity" label="Date of Effectivity:" type="date"
+                            :readonly="!isEditing" />
+                    </VCol>
+                </VRow>
+
+                <!-- Employer & Income -->
+                <VRow>
+                    <VCol>
+                        <VTextField v-model="form.phic_employer_name" label="Name of Employer:"
+                            :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VTextField v-model="form.phic_employer_no" label="Employer PHIC No.:" :readonly="!isEditing" />
+                    </VCol>
                 </VRow>
                 <VRow>
-                    <!-- <VCol>
-                        <VTextField v-model="form.idkyet" label="CRN:" />
-                    </VCol> -->
+                    <VCol>
+                        <VTextField type="number" v-model="form.monthly_income" label="Monthly Income:"
+                            :readonly="!isEditing" />
+                    </VCol>
                     <VCol>
                         <VAutocomplete v-model="form.nationality" :items="nationalityList" item-title="nationality"
                             item-value="num_code" label="Nationality:" outlined dense hide-details clearable
-                            persistent-hint />
+                            persistent-hint :readonly="!isEditing" />
+                    </VCol>
+                </VRow>
+
+                <!-- Tax / Religion / Ethnicity -->
+                <VRow>
+                    <VCol>
+                        <VTextField type="number" v-model="form.tax_id_num" label="TIN No.:" :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VAutocomplete v-model="form.religion_code" :items="religions" label="Religion:"
+                            item-title="text" item-value="code" clearable autocomplete :readonly="!isEditing" />
                     </VCol>
                 </VRow>
                 <VRow>
                     <VCol>
-                        <VTextField v-model="form.fhNumber" label="House no./Lot/Bldg:" />
+                        <VTextField v-model="form.IndigenousGroup" label="Indigenous Group:" :readonly="!isEditing" />
                     </VCol>
                     <VCol>
-                        <VTextField v-model="form.pat_str" label="Street:" />
+                        <VTextField v-model="form.ethnic_code" label="Ethnic Group:" clearable :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VTextField v-model="form.bloodtype_code" label="Blood Type:" clearable
+                            :readonly="!isEditing" />
+                    </VCol>
+                </VRow>
+
+                <!-- Mother's Info -->
+                <VRow>
+                    <VCol>
+                        <VTextField v-model="form.mot_fname" label="Mother’s First Name:" :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VTextField v-model="form.mot_mname" label="Mother’s Middle Name:" :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VTextField v-model="form.mot_lname" label="Mother’s Last Name:" :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VTextField v-model="form.mot_birthdate" label="Mother’s Birthdate:" type="date"
+                            :readonly="!isEditing" />
+                    </VCol>
+                </VRow>
+
+                <!-- Address -->
+                <VRow>
+                    <VCol>
+                        <VAutocomplete v-model="form.country_code" :items="nationalityList" item-title="en_short_name"
+                            item-value="num_code" label="Country:" outlined dense hide-details clearable persistent-hint
+                            :readonly="!isEditing" />
+                    </VCol>
+                </VRow>
+                <VRow>
+                    <VCol>
+                        <VTextField v-model="form.fhNumber" label="House No./Lot/Bldg:" :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VTextField v-model="form.pat_str" label="Street:" :readonly="!isEditing" />
                     </VCol>
                 </VRow>
                 <VRow>
                     <VCol>
                         <VAutocomplete v-model="form.regcode" :items="regionList" item-title="reg_desc"
                             item-value="reg_code" label="Region:" outlined dense hide-details clearable
-                            persistent-hint />
+                            :readonly="!isEditing" />
                     </VCol>
                     <VCol>
                         <VAutocomplete v-model="form.provcode" :items="provinceList" item-title="prov_name"
                             item-value="prov_code" label="Province:" outlined dense hide-details clearable
-                            persistent-hint />
+                            :readonly="!isEditing" />
                     </VCol>
                 </VRow>
                 <VRow>
                     <VCol>
-                        <VAutocomplete v-model="form.zipcode" :items="cityList" item-title="muni_name"
-                            item-value="zipcode" label="Municipality:" outlined dense hide-details clearable
-                            persistent-hint />
+                        <VAutocomplete v-model="form.citycode" :items="cityList" item-title="muni_name"
+                            item-value="zipcode" label="Municipality/City:" clearable :readonly="!isEditing" />
                     </VCol>
                     <VCol>
                         <VAutocomplete v-model="form.bgycode" :items="barangayList" item-title="brg_name"
-                            item-value="brg_psgc" label="Barangay:" outlined dense hide-details clearable
-                            persistent-hint />
+                            item-value="brg_psgc" label="Barangay:" clearable :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VTextField type="number" v-model="form.zipcode" label="ZIP Code:" :readonly="!isEditing" />
                     </VCol>
                 </VRow>
                 <VRow>
                     <VCol>
-                        <VTextField v-model="form.patient_address" label="Complete Address :" />
+                        <VTextField v-model="form.patient_address" label="Complete Address:" :readonly="!isEditing" />
                     </VCol>
                 </VRow>
+
+                <!-- Contact -->
                 <VRow>
+                    <VCol>
+                        <VTextField v-model="form.pat_email" label="Email Address:" :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VTextField type="number" v-model="form.pat_mobile" label="Mobile Number:"
+                            :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VTextField type="number" v-model="form.pat_landline" label="Landline:"
+                            :readonly="!isEditing" />
+                    </VCol>
+                </VRow>
+
+                <!-- PhilHealth Info -->
+                <VRow>
+                    <VCol>
+                        <VSelect v-model="form.philhealth_status_code" label="PhilHealth Status:" :items="[
+                            { title: 'None', value: '0' },
+                            { title: 'Member', value: '1' },
+                            { title: 'Dependent', value: '2' }
+                        ]" item-title="title" item-value="value" variant="outlined" clearable :readonly="!isEditing" />
+                    </VCol>
+                    <VCol>
+                        <VTextField v-model="form.pat_philhealth" label="PhilHealth ID:" :readonly="!isEditing" />
+                    </VCol>
+                </VRow>
+
+                <!-- Save/edit Button -->
+                <!-- <VRow>
                     <VCol class="d-flex justify-end">
-                        <VBtn color="primary" :loading="isSaving" @click="saveChanges">
-                            Save</VBtn>
-                        <!-- <VBtn variant="tonal" @click="$emit('close')">Cancel</VBtn> -->
+                        <VBtn color="primary" :loading="isSaving" @click="saveChanges">Save</VBtn>
+                    </VCol>
+                </VRow> -->
+                <VRow class="justify-end mb-4">
+                    <VCol>
+                        <VBtn v-if="!isEditing" color="primary" @click="isEditing = true">
+                            Edit
+                        </VBtn>
+
+                        <VBtn v-if="isEditing" color="success" @click="saveChanges">
+                            Save
+                        </VBtn>
+
+                        <VBtn v-if="isEditing" color="error" class="ml-2" @click="cancelEdit">
+                            Cancel
+                        </VBtn>
                     </VCol>
                 </VRow>
             </VCol>
