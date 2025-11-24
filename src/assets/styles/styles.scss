@@ -130,4 +130,76 @@
   filter: brightness(1.1);
 }
 
+//thead color
+.royalblue-table thead th {
+  background-color: rgba(65, 105, 225, 0.15) !important;
+  color: #4c8aff !important;
+  font-weight: 600;
+  transition: background-color 0.25s ease;
+}
 
+.royalblue-table thead th:hover {
+  background-color: rgba(65, 105, 225, 0.25) !important;
+  color: #6e9cff !important;
+}
+
+.royalblue-table .v-data-table-header {
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+}
+
+.green-table thead th {
+  background-color: rgba(76, 175, 80, 0.15) !important; /* translucent green */
+  color: #66bb6a !important; /* lighter green */
+  font-weight: 600;
+  transition: background-color 0.25s ease;
+}
+
+.green-table thead th:hover {
+  background-color: rgba(76, 175, 80, 0.25) !important;
+  color: #4caf50 !important;
+}
+
+.green-table .v-data-table-header {
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+}
+
+/* GREEN TONAL DIALOG TITLE */
+.dialog-title-green {
+  background-color: rgba(76, 175, 80, 0.15); /* green tonal */
+  color: #66bb6a; /* lighter green */
+  font-weight: 600;
+  border-radius: 8px 8px 0 0; /* rounded top corners */
+  padding: 12px 16px;
+  transition: background-color 0.25s ease;
+}
+
+/* Hover effect (optional) */
+.dialog-title-green:hover {
+  background-color: rgba(76, 175, 80, 0.25);
+  color: #4caf50;
+}
+
+.right-scroll {
+  height: calc(100vh - 100px); /* Adjust if needed for header spacing */
+  overflow-y: hidden; /* Prevent VCol itself from scrolling */
+}
+
+.right-scroll-container {
+  height: 100%;
+  overflow-y: auto;    /* This makes only the right column scroll */
+  padding-right: 8px;  /* Optional: avoids scrollbar overlapping content */
+}
+
+.profile-top-bar-royalblue {
+  background-color: rgba(65, 105, 225, 0.35); /* royal blue bg */
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.avatar-border-blue {
+  border: 3px solid rgba(28, 115, 255, 0.75);
+  border-radius: 5px;
+  overflow: hidden;
+}

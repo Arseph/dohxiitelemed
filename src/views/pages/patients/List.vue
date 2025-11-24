@@ -25,7 +25,7 @@ const headers = [
   { title: "Age / DOB", key: "age" },
   { title: "Barangay", key: "brg_name" },
   { title: "Contact", key: "pat_mobile" },
-  { title: "Actions", value: "actions", sortable: false },
+  // { title: "Actions", value: "actions", sortable: false },
 ];
 
 // Fetch patient data
@@ -181,25 +181,25 @@ onMounted(fetchPatients);
     </VRow>
 
     <!-- Patient Table -->
-    <VDataTable :headers="headers" :items="filteredPatients" :loading="isLoading" class="elevation-1" item-key="id"
-      hover>
+    <VDataTable :headers="headers" :items="filteredPatients" :loading="isLoading"
+      class="elevation-1 rounded green-table" item-key="id" hover>
       <template #item.age="{ item }">
         <span v-html="item.age_dob"></span> <!-- display formatted age/DOB -->
       </template>
-
-      <template #item.actions="{ item }">
-        <VBtn class="btn-teal" variant="tonal" size="small" @click="openProfileDialog(item)">
+      <template #item.name="{ item }">
+        <!-- <VBtn class="btn-teal" variant="tonal" size="small" @click="openProfileDialog(item)">
           View
-        </VBtn>
+        </VBtn> -->
+        <span v-html="item.name" @click="openProfileDialog(item)" style="cursor: pointer; color: #4c8aff;"></span>
       </template>
     </VDataTable>
 
     <!-- Add Patient Dialog -->
-    <VDialog v-model="showAddDialog" max-width="700px" persistent>
+    <VDialog v-model="showAddDialog" max-width="900px" persistent>
       <VCard>
-        <VCardTitle class="d-flex justify-space-between align-center">
+        <VCardTitle class="d-flex justify-space-between align-center dialog-title-green">
           <VIcon icon="tabler-user-plus" />
-          <span class="text-h5">Add Patient</span>
+          <span class="text-h5">Select/Add Patient</span>
           <VBtn icon="tabler-x" variant="text" color="white" @click="showAddDialog = false" />
         </VCardTitle>
 
@@ -213,8 +213,9 @@ onMounted(fetchPatients);
     <!-- Profile Dialog -->
     <VDialog v-model="showProfileDialog" persistent>
       <VCard>
-        <VCardTitle class="d-flex justify-end">
-          <VBtn icon="tabler-x" variant="text" @click="showProfileDialog = false" />
+        <VCardTitle class="d-flex justify-end profile-top-bar-royalblue">
+          <VBtn class="icon-royalblue" color="white" icon="tabler-x" variant="text"
+            @click="showProfileDialog = false" />
         </VCardTitle>
 
         <VCardText>

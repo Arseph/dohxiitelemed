@@ -66,8 +66,7 @@ const getImageUrl = (path: string) => {
                 <VRow>
                     <!-- <pre>{{ localPatient }}</pre> -->
                     <VCol class="text-center">
-                        <VAvatar size="200" class="mx-auto elevation-1"
-                            style="border: 3px solid #1976d2; border-radius: 50%; overflow: hidden;">
+                        <VAvatar size="200" class="mx-auto elevation-1 avatar-border-blue" rounded="lg" variant="tonal">
                             <template v-if="previewImage || localPatient.pat_image">
                                 <img :src="previewImage || getImageUrl(localPatient.pat_image)" alt="Profile Picture"
                                     style="width: 100%; height: 100%; object-fit: contain; object-position: center;" />
@@ -121,22 +120,23 @@ const getImageUrl = (path: string) => {
                     </VCol>
                 </VRow>
             </VCol>
-
+            <VDivider vertical class="profile-divider" thickness="3px" color="rgba(28, 115, 255, 0.75)" />
             <!-- Right Column: Tab Content -->
-            <VCol>
-                <VWindow v-model="activeTab" class="mt-2" direction="vertical" transition="custom-fade"
-                    reverse-transition="custom-fade">
+            <VCol class="right-scroll">
+                <div class="right-scroll-container">
+                    <VWindow v-model="activeTab" class="mt-2" direction="vertical">
 
-                    <!-- Profile Tab -->
-                    <VWindowItem value="profile" v-show="activeTab === 'profile'">
-                        <EditPatientProfile :patient="localPatient" @updated="handlePatientUpdated" />
-                    </VWindowItem>
+                        <!-- Profile Tab -->
+                        <VWindowItem value="profile" v-show="activeTab === 'profile'">
+                            <EditPatientProfile :patient="localPatient" @updated="handlePatientUpdated" />
+                        </VWindowItem>
 
-                    <!-- Teleconsultations Tab -->
-                    <VWindowItem value="Teleconsultations" v-show="activeTab === 'Teleconsultations'">
-                        <Teleconsultations :patient="localPatient" @updated="handlePatientUpdated" />
-                    </VWindowItem>
-                </VWindow>
+                        <!-- Teleconsultations Tab -->
+                        <VWindowItem value="Teleconsultations" v-show="activeTab === 'Teleconsultations'">
+                            <Teleconsultations :patient="localPatient" @updated="handlePatientUpdated" />
+                        </VWindowItem>
+                    </VWindow>
+                </div>
             </VCol>
         </VRow>
     </VForm>
