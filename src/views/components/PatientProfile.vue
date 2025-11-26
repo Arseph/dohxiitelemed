@@ -62,7 +62,7 @@ const getImageUrl = (path: string) => {
     <VForm>
         <VRow>
             <!-- Left Column: Sidebar Info -->
-            <VCol cols="12" md="4">
+            <VCol cols="12" md="3">
                 <VRow>
                     <!-- <pre>{{ localPatient }}</pre> -->
                     <VCol class="text-center">
@@ -77,50 +77,50 @@ const getImageUrl = (path: string) => {
                         </VAvatar>
                     </VCol>
                 </VRow>
-
-                <VRow>
-                    <VCol class="text-center">
-                        <VDivider />
-                        Patient Information
-                        <VDivider />
-                    </VCol>
-                </VRow>
-
-                <VRow>
-                    <VCol>
+            </VCol>
+            <VDivider vertical class="profile-divider" thickness="3px" color="rgba(28, 115, 255, 0.75)" />
+            <VCol dense>
+                <VRow dense>
+                    <VCol dense>
                         <h3>{{ localPatient.name }}</h3>
                     </VCol>
                 </VRow>
-                <VRow>
+                <VRow dense>
                     <VCol>{{ localPatient.age }} old</VCol>
                 </VRow>
-                <VRow>
+                <VRow dense>
                     <VCol>Date of Birth: <b>{{ localPatient.dob_formatted }}</b></VCol>
                 </VRow>
-                <VRow>
+                <VRow dense>
                     <VCol>Sex: <b>{{ localPatient.sex_code }}</b></VCol>
                 </VRow>
-                <VRow>
+                <VRow dense>
                     <VCol>Civil Status: <b>{{ civilStatusTitle }}</b></VCol>
                 </VRow>
-                <!-- Sidebar Tabs -->
+                <!-- Tabs -->
                 <VRow class="mt-4">
                     <VCol cols="12">
-                        <VTabs v-model="activeTab" class="royalblue-tabs" direction="vertical"
+                        <VTabs v-model="activeTab" class="royalblue-tabs" direction="horizontal"
                             background-color="transparent">
                             <VTab class="royalblue-tab" value="profile">
                                 <VIcon class="tab-icon" start icon="tabler-user" />
                                 Profile
                             </VTab>
-                            <VTab class="royalblue-tab" value="Teleconsultations">
+                            <VTab class="royalblue-tab" value="teleconsultations">
                                 <VIcon class="tab-icon" start icon="tabler-video" />
                                 Teleconsultations
+                            </VTab>
+                            <VTab class="royalblue-tab" value="medicalHistory">
+                                <VIcon class="tab-icon" start icon="tabler-video" />
+                                Medical History
                             </VTab>
                         </VTabs>
                     </VCol>
                 </VRow>
             </VCol>
-            <VDivider vertical class="profile-divider" thickness="3px" color="rgba(28, 115, 255, 0.75)" />
+        </VRow>
+        <VRow>
+            <VDivider horizontal class="profile-divider" thickness="3px" color="rgba(28, 115, 255, 0.75)" />
             <!-- Right Column: Tab Content -->
             <VCol class="right-scroll">
                 <div class="right-scroll-container">
@@ -132,7 +132,7 @@ const getImageUrl = (path: string) => {
                         </VWindowItem>
 
                         <!-- Teleconsultations Tab -->
-                        <VWindowItem value="Teleconsultations" v-show="activeTab === 'Teleconsultations'">
+                        <VWindowItem value="teleconsultations" v-show="activeTab === 'Teleconsultations'">
                             <Teleconsultations :patient="localPatient" @updated="handlePatientUpdated" />
                         </VWindowItem>
                     </VWindow>

@@ -463,9 +463,11 @@ function formatNumber(val: string) {
             <!-- Name Details -->
             <VRow class="mt-5">
                 <VCol cols="12" md="3">
-                    <VTextField v-model="profileformp.prefix_code" label="Prefix:"
-                        @input="() => { toUpperCase('prefix_code'); }" :readonly="!isEditing"
-                        :rules="[requiredValidator]" />
+                    <VSelect v-model="profileformp.prefix_code" :items="[
+                        { title: 'Mr.', value: 'Mr.' },
+                        { title: 'Ms.', value: 'Ms.' },
+                        { title: 'Mrs.', value: 'Mrs.' }]" label="Prefix:" variant="outlined" clearable
+                        :readonly="!isEditing" :rules="[requiredValidator]" />
                 </VCol>
                 <VCol cols="12" md="6">
                     <VTextField v-model="profileformp.pat_fname" label="First Name:" :readonly="!isEditing"
@@ -585,7 +587,7 @@ function formatNumber(val: string) {
                 <VCol>
                     <VAutocomplete v-model="profileformp.religion_code" :items="religions" label="Religion:"
                         item-title="text" item-value="code" clearable autocomplete :readonly="!isEditing" />
-                </VCol>;
+                </VCol>
             </VRow>
             <VRow>
                 <VCol cols="12" md="5">

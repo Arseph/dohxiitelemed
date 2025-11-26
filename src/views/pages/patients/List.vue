@@ -161,7 +161,7 @@ onMounted(fetchPatients);
   <ErrorSnackbar :message="errorMessage" :visible="isError" @update:visible="isError = $event" />
   <SuccessSnackbar :message="successMessage" :visible="isSuccess" @update:visible="isSuccess = $event" />
 
-  <VContainer fluid class="pa-4">
+  <VContainer fluid class="pa-4 rounded">
     <!-- Header -->
     <VRow class="mb-4" align="center" justify="space-between">
       <VCol>
@@ -211,9 +211,10 @@ onMounted(fetchPatients);
     </VDialog>
 
     <!-- Profile Dialog -->
-    <VDialog v-model="showProfileDialog" persistent>
+    <VDialog v-model="showProfileDialog" class="rounded" persistent>
       <VCard>
-        <VCardTitle class="d-flex justify-end profile-top-bar-royalblue">
+        <VCardTitle class="d-flex align-center justify-space-between profile-top-bar-royalblue">
+          <span class="absolute-center text-h4">Patient Information</span>
           <VBtn class="icon-royalblue" color="white" icon="tabler-x" variant="text"
             @click="showProfileDialog = false" />
         </VCardTitle>
