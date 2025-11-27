@@ -93,6 +93,16 @@
   border-radius: 8px;
 }
 
+/* Button floating top-left */
+.fab-fixed-top-left {
+  position: fixed;
+  top: 4rem;      /* distance from the top */
+  left: 20rem;     /* distance from the left */
+  z-index: 10000;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+}
+
 .ignore-parent-pad {
     position: relative;
     left: 50%;
@@ -198,15 +208,32 @@
   color: #4caf50;
 }
 
-.right-scroll {
-  height: calc(100vh - 100px); /* Adjust if needed for header spacing */
-  overflow-y: hidden; /* Prevent VCol itself from scrolling */
+.right2-scroll {
+  height: calc(100vh - 100px); /* adjust for header/footer */
+}
+
+.right-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .right-scroll-container {
   height: 100%;
-  overflow-y: auto;    /* This makes only the right column scroll */
-  padding-right: 8px;  /* Optional: avoids scrollbar overlapping content */
+  overflow-y: auto;
+  padding-right: 8px; /* optional spacing from scrollbar */
+}
+
+/* WebKit browsers (Chrome, Safari, Edge) */
+.right-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.right-scroll-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.right-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .profile-top-bar-royalblue {
@@ -235,3 +262,24 @@
     padding: 4px 6px !important;
 }
 
+//transtion anim
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.25s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: all 0.25s ease;
+}
+.slide-left-enter-from,
+.slide-left-leave-to {
+  transform: translateX(-20px);
+  opacity: 0;
+}

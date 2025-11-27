@@ -426,13 +426,12 @@ function formatNumber(val: string) {
 
 <template>
     <VForm ref="patientpform">
-        <h2>Patient Profile</h2>
-        <!-- <pre>{{ profileformp }}</pre> -->
-        <br />
         <VCol>
-
-            <!-- Photo Upload -->
-            <!-- PREVIEW -->
+            <VRow>
+                <VCol class="text-h4">
+                    Patient Profile
+                </VCol>
+            </VRow>
             <VRow v-if="previewUrl">
                 <VCol class="d-flex justify-center">
                     <VAvatar size="200" class="mx-auto elevation-1 avatar-border-blue" rounded="lg" variant="tonal">

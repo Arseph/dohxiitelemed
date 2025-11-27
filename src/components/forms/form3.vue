@@ -610,12 +610,11 @@ const requiredValidator = (v) => !!v || 'This field is required'
                 </h5>
             </VCol>
         </VRow> -->
-        <VRow
-            style="background-color:rgba(244, 67, 54, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
+        <VRow style="background-color:rgba(244, 67, 54, 0.15); padding: 10px;" class="rounded">
             <Vcol>
-                <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#ff7b71;">
+                <span class=" text-h5 font-weight-medium mb-2" style="color:#ff7b71;">
                     Overseas Employment Address(for Overseas Filipino Workers)
-                </h5>
+                </span>
             </Vcol>
         </VRow>
         <VRow>
@@ -666,12 +665,11 @@ const requiredValidator = (v) => !!v || 'This field is required'
         </VRow>
         <br />
         <br />
-        <VRow
-            style="background-color:rgba(244, 67, 54, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
+        <VRow style="background-color:rgba(244, 67, 54, 0.15);padding: 10px;" class="rounded">
             <Vcol>
-                <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#ff7b71">
+                <span class=" text-h5 font-weight-medium mb-2" style="color:#ff7b71">
                     Travel History
-                </h5>
+                </span>
             </Vcol>
         </VRow>
         <VRow class="align-center">
@@ -716,12 +714,11 @@ const requiredValidator = (v) => !!v || 'This field is required'
         </VRow>
         <br />
         <br />
-        <VRow
-            style="background-color:rgba(244, 67, 54, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
+        <VRow style="background-color:rgba(244, 67, 54, 0.15); padding: 10px;" class="rounded">
             <Vcol>
-                <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#ff7b71">
+                <span class=" text-h5 font-weight-medium mb-2" style="color:#ff7b71">
                     Exposure History
-                </h5>
+                </span>
             </Vcol>
         </VRow>
         <VRow class="align-center" flex>
@@ -966,12 +963,11 @@ const requiredValidator = (v) => !!v || 'This field is required'
         </VRow>
         <br />
         <br />
-        <VRow
-            style="background-color:rgba(244, 67, 54, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
+        <VRow style="background-color:rgba(244, 67, 54, 0.15); padding: 10px;" class="rounded">
             <Vcol>
-                <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#ff7b71">
+                <span class=" text-h5 font-weight-medium mb-2" style="color:#ff7b71">
                     Clinical Assessment
-                </h5>
+                </span>
             </Vcol>
         </VRow>
         <VRow>
@@ -1111,12 +1107,11 @@ const requiredValidator = (v) => !!v || 'This field is required'
         </VRow>
         <br />
         <br />
-        <VRow
-            style="background-color:rgba(244, 67, 54, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
+        <VRow style="background-color:rgba(244, 67, 54, 0.15); padding: 10px;" class="rounded">
             <Vcol>
-                <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#ff7b71">
+                <span class=" text-h5 font-weight-medium mb-2" style="color:#ff7b71">
                     Specimen Information
-                </h5>
+                </span>
             </Vcol>
         </VRow>
         <VRow>
@@ -1256,12 +1251,11 @@ const requiredValidator = (v) => !!v || 'This field is required'
         </VRow>
         <br />
         <br />
-        <VRow
-            style="background-color:rgba(244, 67, 54, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
+        <VRow style="background-color:rgba(244, 67, 54, 0.15); padding: 10px;" class="rounded">
             <Vcol>
-                <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#ff7b71">
+                <span class=" text-h5 font-weight-medium mb-2" style="color:#ff7b71">
                     Classification
-                </h5>
+                </span>
             </Vcol>
         </VRow>
         <br />
@@ -1278,12 +1272,11 @@ const requiredValidator = (v) => !!v || 'This field is required'
         </VRow>
         <br />
         <br />
-        <VRow
-            style="background-color:rgba(244, 67, 54, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
+        <VRow style="background-color:rgba(244, 67, 54, 0.15); padding: 10px;" class="rounded">
             <Vcol>
-                <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#ff7b71">
+                <span class=" text-h5 font-weight-medium mb-2" style="color:#ff7b71">
                     Outcome
-                </h5>
+                </span>
             </Vcol>
         </VRow>
         <br />

@@ -41,8 +41,19 @@ watch(
 )
 
 
-async function fetchMeetingInfo() {
+async function fetchMeetingInfo(meetId) {
   try {
+    const response = await axiosIns.get(`/api/meeting-info`, {
+      params: { meet_id: meetId },
+    });
+
+    const data = response.data;
+
+    diagass.value = {
+      meeting_id: data.meetID ?? null,
+      patient_id: data.patient_id ?? null,
+    };
+
     // 🔹 Step 3: Try to fetch existing diagnosis assess
     if (diagass.value.meeting_id) {
       const daResponse = await axiosIns.get(`/api/get-diagnosisassessment/${diagass.value.meeting_id}`);
@@ -111,7 +122,7 @@ async function saveUpdateDA() {
 }
 
 onMounted(() => {
-  fetchMeetingInfo();
+  fetchMeetingInfo(props.consultId);
 });
 
 const requiredValidator = (v) => !!v || 'This field is required'

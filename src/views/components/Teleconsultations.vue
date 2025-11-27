@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, reactive, ref } from "vue";
-import { VCard, VCol, VRow } from "vuetify/lib/components/index.mjs";
+import { VCard, VCol, VContainer, VDivider, VRow } from "vuetify/lib/components/index.mjs";
 import Form1 from "../../components/forms/form1.vue";
 import Form2 from "../../components/forms/form2.vue";
 import Form3 from "../../components/forms/form3.vue";
@@ -12,6 +12,8 @@ const props = defineProps({
 });
 
 const isLoading = ref(false);
+const formLoading = ref(false);
+
 const localPatient = reactive({ ...props.patient });
 
 const items = computed(() =>
@@ -27,10 +29,10 @@ const items = computed(() =>
 const headers = [
     { title: "Date", key: "date_meeting", style: "width:120px" },
     { title: "Time", key: "from_time", style: "width:150px" },
-    { title: "Type of Consultation", key: "category_name", style: "width:200px" },
-    { title: "Chief Complaint", key: "title", style: "width:250px" },
-    { title: "Attending Provider", key: "doctor_name", style: "width:200px" },
-    { title: "Actions", key: "actions", sortable: false, style: "width:120px" },
+    { title: "Type of Consultation", key: "category_name", style: "width:200px", align: 'center' },
+    { title: "Chief Complaint", key: "title", style: "width:250px", align: 'center' },
+    { title: "Attending Provider", key: "doctor_name", style: "width:200px", align: 'center' },
+    { title: "Actions", key: "actions", sortable: false, style: "width:120px", align: 'center' },
 ];
 
 // Card interface
@@ -51,15 +53,19 @@ const cards = ref<CardItem[]>([
     { id: 5, title: 'Plan of Management', icon: 'tabler-clipboard-check', color: 'green', component: Form5 },
 ]);
 
+
 const showTabs = ref(false);
 const selectedMeeting = ref(null);
-const tab = ref(0);
+const tab = ref(cards.value[0].id);
 
 function openDetails(item) {
     // store the actual object, not a nested ref
     selectedMeeting.value = { ...item };
     showTabs.value = true;
-    tab.value = 1; // optional: first tab, but your tabs start at id=1
+    tab.value = 1;
+    formLoading.value = true;
+
+    emit('hideColumn', true);
 }
 
 function formatMeetingDate(date) {
@@ -85,18 +91,21 @@ function formatMeetingTime(time) {
 function formatMeetingDate2(date) {
     if (!date) return '-'
     return new Date(date).toLocaleDateString('en-US', {
-        weekday: 'long',
         year: 'numeric',
         month: 'long',
         day: 'numeric'
     })
 }
 
+function onChildLoaded() {
+    formLoading.value = false;
+}
 
+const emit = defineEmits(['hideColumn']);
 </script>
 
 <template>
-    <Transition name="slide-y-transition" mode="out-in">
+    <Transition name="slide-x-transition" mode="out-in">
 
         <!-- TABLE VIEW -->
         <VCard v-if="!showTabs" key="table-view">
@@ -118,10 +127,17 @@ function formatMeetingDate2(date) {
                     -
                     {{ formatMeetingTime(item.to_time) }}
                 </template>
-
-                <!-- Actions Column -->
+                <template #item.category_name="{ item }">
+                    <span class="d-flex text-left ml-5"> {{ item.category_name }}</span>
+                </template>
+                <template #item.title="{ item }">
+                    <span class="d-flex text-left ml-5 "> {{ item.title }}</span>
+                </template>
+                <template #item.doctor_name="{ item }">
+                    <span class="d-flex text-left ml-5"> {{ item.doctor_name }}</span>
+                </template>
                 <template #item.actions="{ item }">
-                    <VBtn size="small" class="btn-blue" variant="tonal" @click="openDetails(item)">
+                    <VBtn size="small" color="info" variant="text" @click="openDetails(item)">
                         Details
                     </VBtn>
                 </template>
@@ -129,91 +145,144 @@ function formatMeetingDate2(date) {
             </VDataTable>
         </VCard>
 
-
         <!-- DETAILS VIEW -->
         <VCard v-else key="details-view">
+            <!-- <pre>{{ selectedMeeting.doctor.id }}</pre> -->
             <VRow>
-                <VCol>
-                    <VBtn color="grey" variant="tonal" class="mb-4" @click="showTabs = false">
-                        ← Back
-                    </VBtn>
-                </VCol>
-            </VRow>
-            <VRow>
-                <VCol>
+                <VCol cols="12" md="3" style="position: sticky;top: 0;">
                     <VRow>
-                        <VCol class="text-h3">
-                            Teleconsultation Details
+                        <VCol>
+                            <VBtn color="warning" variant="tonal"
+                                @click="() => { showTabs = false; emit('hideColumn', false); }" width="100%">
+                                ← Back To Teleconsultations
+                            </VBtn>
                         </VCol>
                     </VRow>
-
-                    <VRow dense>
-                        <VCol class="text-subtitle-1 text-warning">
-                            Chief Complaint: <span class="font-weight-bold">{{ selectedMeeting?.title ?? '-' }}</span>
+                    <!-- <VRow dense>
+                        <VCol class="d-flex justify-center text-h5 font-weight-bold">
+                            Patient
                         </VCol>
-                    </VRow>
-
-                    <VRow dense>
-                        <VCol class="text-subtitle-2">
-                            Date: <span class="font-weight-bold">{{ formatMeetingDate2(selectedMeeting?.date_meeting)
-                                }}</span>
-                        </VCol>
-                    </VRow>
-
-                    <VRow dense>
-                        <VCol class="text-subtitle-2">
-                            Time: <span class="font-weight-bold">{{ formatMeetingTime(selectedMeeting?.from_time)
-                                }}</span>
-                        </VCol>
-                    </VRow>
-
-                    <VRow dense>
-                        <VCol class="text-subtitle-2">
-                            Type of Consultation: <span class="font-weight-bold">{{ selectedMeeting?.category_name ??
-                                '-'
-                                }}</span>
-                        </VCol>
-                    </VRow>
-
-                    <VRow dense>
-                        <VCol class="text-subtitle-2">
-                            Attending Provider: <span class="font-weight-bold">{{ selectedMeeting?.doctor_name ?? '-'
-                                }}</span>
-                        </VCol>
-                    </VRow>
-                </VCol>
-
-                <VCol>
-                    <VRow>
-                        <VCol class="text-h3">
-                            Teleconsultation Forms
-                        </VCol>
+                        <VDivider horizontal />
                     </VRow>
                     <VRow>
                         <VCol>
-                            <VTabs v-model="tab" background-color="grey lighten-3" height="48" grow="false"
-                                variant="text" direction="vertical">
-                                <VTab v-for="card in cards" :key="card.id" :value="card.id" :class="`btn-${card.color}`"
-                                    style="min-width: 100px;">
-                                    <VIcon v-if="card.icon" :icon="card.icon" start size="20" class="mr-1" />
-                                    {{ card.title }}
-                                </VTab>
-                            </VTabs>
+                            Picture
+                        </VCol>
+                    </VRow> -->
+                    <VRow>
+                        <VCol>
+                            <VRow>
+                                <VContainer>
+                                    <VRow dense>
+                                        <VCol class="d-flex justify-center text-h5 font-weight-bold">
+                                            Teleconsultation Details
+                                        </VCol>
+                                        <VDivider horizontal />
+                                    </VRow>
+
+                                    <VRow dense>
+                                        <VCol class="text-subtitle-1 text-warning">
+                                            Chief Complaint: <span class="font-weight-bold">{{ selectedMeeting?.title ??
+                                                '-'
+                                                }}</span>
+                                        </VCol>
+                                    </VRow>
+
+                                    <VRow dense>
+                                        <VCol class="text-subtitle-2">
+                                            Date: <span class="font-weight-bold">{{
+                                                formatMeetingDate2(selectedMeeting?.date_meeting)
+                                                }}</span>
+                                        </VCol>
+                                    </VRow>
+
+                                    <VRow dense>
+                                        <VCol class="text-subtitle-2">
+                                            Time: <span class="font-weight-bold">{{
+                                                formatMeetingTime(selectedMeeting?.from_time)
+                                                }}</span>
+                                        </VCol>
+                                    </VRow>
+
+                                    <VRow dense>
+                                        <VCol class="text-subtitle-2">
+                                            Type of Consultation: <span class="font-weight-bold">{{
+                                                selectedMeeting?.category_name
+                                                ??
+                                                '-'
+                                            }}</span>
+                                        </VCol>
+                                    </VRow>
+
+                                    <VRow dense>
+                                        <VCol class="text-subtitle-2">
+                                            Attending Provider: <span class="font-weight-bold">{{
+                                                selectedMeeting?.doctor_name
+                                                ??
+                                                '-'
+                                            }}</span>
+                                        </VCol>
+                                    </VRow>
+                                </VContainer>
+                                <VCol>
+                                    <VRow dense>
+                                        <VCol class="d-flex justify-center text-h5 font-weight-bold">
+                                            Forms
+                                        </VCol>
+                                        <VDivider horizontal />
+                                    </VRow>
+                                    <VRow>
+                                        <VCol>
+                                            <VTabs v-model="tab" background-color="grey lighten-3" variant="text"
+                                                direction="vertical">
+                                                <VTab v-for="card in cards" :key="card.id" :value="card.id"
+                                                    :class="[`btn-${card.color}`, 'rounded-sm']"
+                                                    style="min-width: 100px;">
+                                                    <VIcon v-if="card.icon" :icon="card.icon" start size="20" />
+                                                    {{ card.title }}
+                                                </VTab>
+                                            </VTabs>
+                                        </VCol>
+                                    </VRow>
+                                </VCol>
+                            </VRow>
                         </VCol>
                     </VRow>
                 </VCol>
+                <VDivider vertical />
+                <VCol class="right2-scroll">
+                    <div class="right-scroll-container">
+                        <VWindow v-model="tab" direction="vertical">
+                            <VWindowItem v-for="card in cards" :key="card.id" :value="card.id">
+                                <div :class="[
+                                    `toolbar-${card.color}`,
+                                    'd-flex',
+                                    'align-center',
+                                    'px-4',
+                                    'py-2',
+                                    'justify-center',
+                                    'rounded-sm',
+                                    'text-h5'
+                                ]" style="position: sticky; top: 0; z-index: 10;">
+                                    <VIcon v-if="card.icon" :icon="card.icon" class="mr-2" />
+                                    {{ card.title }}
+                                </div>
+                                <!-- Loading State -->
+                                <div v-if="formLoading" class="d-flex justify-center align-center"
+                                    style="height: 200px;">
+                                    <VProgressCircular indeterminate size="48" color="primary" />
+                                </div>
+                                <!-- Dynamic Form Component -->
+                                <div class="pa-4" v-show="!formLoading">
+                                    <component :is="card.component" :meeting="selectedMeeting"
+                                        :consultId="selectedMeeting?.id" @loaded="onChildLoaded" />
+                                </div>
+
+                            </VWindowItem>
+                        </VWindow>
+                    </div>
+                </VCol>
             </VRow>
-
-            <br />
-            <VCard> <!-- Window Content -->
-                <VWindow v-model="tab">
-                    <VWindowItem v-for="card in cards" :key="card.id" :value="card.id">
-                        <component :is="card.component" :meeting="selectedMeeting" />
-                    </VWindowItem>
-                </VWindow>
-            </VCard>
-
         </VCard>
-
     </Transition>
 </template>

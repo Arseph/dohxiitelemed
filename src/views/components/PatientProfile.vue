@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
-import { VAvatar, VCol, VDivider, VForm, VIcon, VRow, VTab, VTabs, VWindow, VWindowItem, } from "vuetify/components";
+import { VAvatar, VCol, VForm, VIcon, VRow, VTab, VTabs, VWindow, VWindowItem } from "vuetify/components";
 import EditPatientProfile from "./EditPatientProfile.vue";
 import Teleconsultations from "./Teleconsultations.vue";
+
 
 const props = defineProps({
     patient: { type: Object, required: true },
@@ -26,7 +27,7 @@ const activeTab = ref("profile"); // default active tab
 
 // Civil status options for mapping
 const civilStatusOptions = [
-    { title: "Single", value: "s" },
+    { title: "Single", value: "0" },
     { title: "Married", value: "1" },
     { title: "Widowed", value: "2" },
     { title: "Separated", value: "3" },
@@ -56,88 +57,92 @@ const getImageUrl = (path: string) => {
     if (!path) return "";
     return `${import.meta.env.VITE_APP_BACKEND_URL}/${path}`;
 };
+
+const isHidden = ref(false)
 </script>
 
 <template>
     <VForm>
         <VRow>
             <!-- Left Column: Sidebar Info -->
-            <VCol cols="12" md="3">
-                <VRow>
-                    <!-- <pre>{{ localPatient }}</pre> -->
-                    <VCol class="text-center">
-                        <VAvatar size="200" class="mx-auto elevation-1 avatar-border-blue" rounded="lg" variant="tonal">
-                            <template v-if="previewImage || localPatient.pat_image">
-                                <img :src="previewImage || getImageUrl(localPatient.pat_image)" alt="Profile Picture"
-                                    style="width: 100%; height: 100%; object-fit: contain; object-position: center;" />
-                            </template>
-                            <template v-else>
-                                <VIcon icon="tabler-user-circle" size="126" color="blue-grey-darken-2" />
-                            </template>
-                        </VAvatar>
-                    </VCol>
-                </VRow>
-            </VCol>
-            <VDivider vertical class="profile-divider" thickness="3px" color="rgba(28, 115, 255, 0.75)" />
-            <VCol dense>
-                <VRow dense>
-                    <VCol dense>
-                        <h3>{{ localPatient.name }}</h3>
-                    </VCol>
-                </VRow>
-                <VRow dense>
-                    <VCol>{{ localPatient.age }} old</VCol>
-                </VRow>
-                <VRow dense>
-                    <VCol>Date of Birth: <b>{{ localPatient.dob_formatted }}</b></VCol>
-                </VRow>
-                <VRow dense>
-                    <VCol>Sex: <b>{{ localPatient.sex_code }}</b></VCol>
-                </VRow>
-                <VRow dense>
-                    <VCol>Civil Status: <b>{{ civilStatusTitle }}</b></VCol>
-                </VRow>
-                <!-- Tabs -->
-                <VRow class="mt-4">
-                    <VCol cols="12">
-                        <VTabs v-model="activeTab" class="royalblue-tabs" direction="horizontal"
-                            background-color="transparent">
-                            <VTab class="royalblue-tab" value="profile">
-                                <VIcon class="tab-icon" start icon="tabler-user" />
-                                Profile
-                            </VTab>
-                            <VTab class="royalblue-tab" value="teleconsultations">
-                                <VIcon class="tab-icon" start icon="tabler-video" />
-                                Teleconsultations
-                            </VTab>
-                            <VTab class="royalblue-tab" value="medicalHistory">
-                                <VIcon class="tab-icon" start icon="tabler-video" />
-                                Medical History
-                            </VTab>
-                        </VTabs>
-                    </VCol>
-                </VRow>
-            </VCol>
-        </VRow>
-        <VRow>
-            <VDivider horizontal class="profile-divider" thickness="3px" color="rgba(28, 115, 255, 0.75)" />
+            <Transition name="slide-left">
+                <VCol cols="12" md="3" v-if="!isHidden">
+                    <VRow>
+                        <!-- <pre>{{ localPatient }}</pre> -->
+                        <VCol class="text-center">
+                            <VAvatar size="175" class="mx-auto elevation-1 avatar-border-blue" rounded="lg"
+                                variant="tonal">
+                                <template v-if="previewImage || localPatient.pat_image">
+                                    <img :src="previewImage || getImageUrl(localPatient.pat_image)"
+                                        alt="Profile Picture"
+                                        style="width: 100%; height: 100%; object-fit: contain; object-position: center;" />
+                                </template>
+                                <template v-else>
+                                    <VIcon icon="tabler-user-circle" size="126" color="blue-grey-darken-2" />
+                                </template>
+                            </VAvatar>
+                        </VCol>
+                    </VRow>
+                    <VRow dense>
+                        <VCol dense class="text-h6">
+                            {{ localPatient.name }}
+                        </VCol>
+                    </VRow>
+                    <VRow dense>
+                        <VCol>{{ localPatient.age }} old</VCol>
+                    </VRow>
+                    <VRow dense>
+                        <VCol>Date of Birth: <b>{{ localPatient.dob_formatted }}</b></VCol>
+                    </VRow>
+                    <VRow dense>
+                        <VCol>Sex: <b>{{ localPatient.sex_code }}</b></VCol>
+                    </VRow>
+                    <VRow dense>
+                        <VCol>Civil Status: <b>{{ civilStatusTitle }}</b></VCol>
+                    </VRow>
+                    <!-- Tabs -->
+                    <VRow class="mt-4">
+                        <VCol cols="12">
+                            <VTabs v-model="activeTab" class="royalblue-tabs" direction="vertical"
+                                background-color="transparent">
+                                <VTab class="royalblue-tab" value="profile">
+                                    <VIcon class="tab-icon" start icon="tabler-user" />
+                                    Profile
+                                </VTab>
+                                <VTab class="royalblue-tab" value="teleconsultations">
+                                    <VIcon class="tab-icon" start icon="tabler-video" />
+                                    Teleconsultations
+                                </VTab>
+                                <VTab class="royalblue-tab" value="medicalHistory">
+                                    <VIcon class="tab-icon" start icon="tabler-video" />
+                                    Medical History
+                                </VTab>
+                            </VTabs>
+                        </VCol>
+                    </VRow>
+                </VCol>
+            </Transition>
+            <VDivider vertical length="100%" v-if="!isHidden" />
             <!-- Right Column: Tab Content -->
-            <VCol class="right-scroll">
-                <div class="right-scroll-container">
-                    <VWindow v-model="activeTab" class="mt-2" direction="vertical">
+            <Transition name="fade-slide">
+                <VCol class="right-scroll">
+                    <div class="right-scroll-container">
+                        <VWindow v-model="activeTab" class="mt-2" direction="vertical">
 
-                        <!-- Profile Tab -->
-                        <VWindowItem value="profile" v-show="activeTab === 'profile'">
-                            <EditPatientProfile :patient="localPatient" @updated="handlePatientUpdated" />
-                        </VWindowItem>
+                            <!-- Profile Tab -->
+                            <VWindowItem value="profile" v-show="activeTab === 'profile'">
+                                <EditPatientProfile :patient="localPatient" @updated="handlePatientUpdated" />
+                            </VWindowItem>
 
-                        <!-- Teleconsultations Tab -->
-                        <VWindowItem value="teleconsultations" v-show="activeTab === 'Teleconsultations'">
-                            <Teleconsultations :patient="localPatient" @updated="handlePatientUpdated" />
-                        </VWindowItem>
-                    </VWindow>
-                </div>
-            </VCol>
+                            <!-- Teleconsultations Tab -->
+                            <VWindowItem value="teleconsultations" v-show="activeTab === 'Teleconsultations'">
+                                <Teleconsultations :patient="localPatient" @updated="handlePatientUpdated"
+                                    @hideColumn="isHidden = $event" />
+                            </VWindowItem>
+                        </VWindow>
+                    </div>
+                </VCol>
+            </Transition>
         </VRow>
     </VForm>
 </template>
