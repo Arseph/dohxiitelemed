@@ -10,7 +10,7 @@ const props = defineProps({
     patient: { type: Object, required: true },
 });
 
-const emit = defineEmits(["close", "updated"]);
+const emit = defineEmits(["close", "updated","editing-changed"]);
 
 const profileformp = ref({ ...props.patient });
 const isSaving = ref(false);
@@ -19,7 +19,7 @@ const religions = [
     { code: 'AGLIP', text: 'AGLIPAY' },
     { code: 'ALLY', text: 'ALLIANCE OF BIBLE CHRISTIAN COMMUNITIES' },
     { code: 'ANGLI', text: 'ANGLICAN' },
-    { code: 'BAPTI', text: 'AGLIPAY' }, // looks like a duplicate in your PHP
+    { code: 'BAPTI', text: 'BAPTIST' },
     { code: 'BRNAG', text: 'BORN AGAIN CHRISTIAN' },
     { code: 'BUDDH', text: 'BUDDHISM' },
     { code: 'CATHO', text: 'CATHOLIC' },
@@ -95,21 +95,9 @@ const employmentStatusOptions = [
 ];
 
 const philheatlhStatusTypes = [
-    // Direct Contributors
-    { title: "Employed", value: "E" },
-    { title: "Self-Employed", value: "S" },
-    { title: "Professional Practitioner", value: "P" },
-    { title: "OFW", value: "O" },
-
-    // Indirect Contributors / Sponsored
-    { title: "Indigent / Sponsored", value: "I" },
-    { title: "Lifetime Member", value: "L" },
-    { title: "Senior Citizen", value: "C" }, // sometimes "C" or "S"
-    { title: "Persons with Disability", value: "D" },
-
     // Dependents / Others
-    { title: "Dependent", value: "X" },  // commonly "X"
-    { title: "Kasambahay", value: "K" },
+    { title: "Member", value: "1" },
+    { title: "Dependent", value: "0" },
 ];
 
 const relationshipToMember = [
@@ -227,14 +215,10 @@ watch(
     () => props.patient,
     (newVal) => {
         Object.assign(profileformp, newVal);
-
-        // Re-apply names if user ticked the checkbox
-        // if (sameAsPatient.value) {
-        //     applyPatientName();
-        // }
     },
     { immediate: true }
 );
+
 
 async function fetchPatientProfile(patientId) {
     try {
@@ -318,12 +302,14 @@ async function saveChanges() {
         isError.value = true;
     } finally {
         isSaving.value = false;
+          emit("editing-changed", false);
     }
 }
 
 function cancelEdit() {
     // optionally reload original patient data
     isEditing.value = false;
+      emit("editing-changed", false);
 }
 
 //picture test
@@ -420,12 +406,27 @@ function formatNumber(val: string) {
     if (!val) return "";
     return Number(val).toLocaleString("en-US");
 }
-
-
 </script>
-
 <template>
     <VForm ref="patientpform">
+        <VTooltip v-if="isEditing == true" text="Save" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
+          class="fab-fixed-botr"  @click="saveChanges"/>
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == true" text="Cancel" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="error" icon="tabler-x" size="48" class="fab-fixed-botr mr-15"
+          @click="cancelEdit" />
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == false" text="Edit" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-edit" size="48" class="fab-fixed-botr" rounded
+          @click="isEditing = true" />
+      </template>
+    </VTooltip>
         <VCol>
             <VRow>
                 <VCol class="text-h4">
@@ -437,14 +438,14 @@ function formatNumber(val: string) {
                     <VAvatar size="200" class="mx-auto elevation-1 avatar-border-blue" rounded="lg" variant="tonal">
                         <img :src="previewUrl" alt="Preview"
                             style="width: 100%; height: 100%; object-fit: contain; object-position: center;"
-                            :readonly="!isEditing" />
+                            :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                     </VAvatar>
                 </VCol>
             </VRow>
             <VRow>
                 <VCol>
                     <VFileInput label="Upload Photo" accept="image/*" capture="environment" @change="onImageSelected"
-                        variant="outlined" :readonly="!isEditing" />
+                        variant="outlined" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"/>
                 </VCol>
             </VRow>
 
@@ -452,10 +453,10 @@ function formatNumber(val: string) {
             <!-- Master & Temporary IDs -->
             <!-- <VRow>
                     <VCol>
-                        <VTextField v-model="profileformp.master_patient_perm_id" label="Master Patient Permanent ID:" :readonly="!isEditing"/>
+                        <VTextField v-model="profileformp.master_patient_perm_id" label="Master Patient Permanent ID:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" />
                     </VCol>
                     <VCol>
-                        <VTextField v-model="profileformp.pat_temp_id" label="Temporary Patient ID:" :readonly="!isEditing"/>
+                        <VTextField v-model="profileformp.pat_temp_id" label="Temporary Patient ID:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" />
                     </VCol>
                 </VRow> -->
 
@@ -466,31 +467,31 @@ function formatNumber(val: string) {
                         { title: 'Mr.', value: 'Mr.' },
                         { title: 'Ms.', value: 'Ms.' },
                         { title: 'Mrs.', value: 'Mrs.' }]" label="Prefix:" variant="outlined" clearable
-                        :readonly="!isEditing" :rules="[requiredValidator]" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  :rules="[requiredValidator]" />
                 </VCol>
                 <VCol cols="12" md="6">
-                    <VTextField v-model="profileformp.pat_fname" label="First Name:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.pat_fname" label="First Name:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('pat_fname'); }" :rules="[requiredValidator]" />
                 </VCol>
                 <VCol cols="12" md="3">
-                    <VTextField v-model="profileformp.pat_mname" label="Middle Name:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.pat_mname" label="Middle Name:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('pat_mname'); }" :rules="[requiredValidator]" />
                 </VCol>
             </VRow>
             <VRow class="mt-5">
                 <VCol cols="12" md="6">
-                    <VTextField v-model="profileformp.pat_lname" label="Last Name:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.pat_lname" label="Last Name:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('pat_lname'); }" :rules="[requiredValidator]" />
                 </VCol>
                 <VCol cols="12" md="3">
                     <VTextField v-model="profileformp.suffix_code" label="Suffix (Jr., II, etc.):"
-                        :readonly="!isEditing" @input="() => { toUpperCase('suffix_code'); }" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('suffix_code'); }" />
                 </VCol>
                 <VCol>
                     <VSelect v-model="profileformp.sex_code" :items="[
                         { title: 'Male', value: 'Male' },
                         { title: 'Female', value: 'Female' }]" label="Sex:" variant="outlined" clearable
-                        :readonly="!isEditing" :rules="[requiredValidator]" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  :rules="[requiredValidator]" />
                 </VCol>
             </VRow>
 
@@ -498,15 +499,15 @@ function formatNumber(val: string) {
             <VRow class="mt-5">
                 <VCol>
                     <VTextField v-model="profileformp.pat_birthDate" label="Birth Date:" type="date"
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol>
-                    <VTextField v-model="profileformp.pat_birthplace" label="Birthplace:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.pat_birthplace" label="Birthplace:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('pat_birthplace'); }" />
                 </VCol>
                 <VCol>
                     <VSelect v-model="profileformp.civil_stat_code" :items="civilStatusOptions" label="Civil Status:"
-                        item-title="title" item-value="value" variant="outlined" clearable :readonly="!isEditing" />
+                        item-title="title" item-value="value" variant="outlined" clearable :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow>
 
@@ -518,10 +519,10 @@ function formatNumber(val: string) {
                 v-if="['MRS.', 'MRS'].includes(profileformp.prefix_code) || profileformp.sex_code == 'Female' && profileformp.civil_stat_code == 1">
                 <VCol>
                     <VTextField v-model="profileformp.maiden_middlename" label="Maiden Middle Name:"
-                        :readonly="!isEditing" @input="() => { toUpperCase('maiden_middlename'); }" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('maiden_middlename'); }" />
                 </VCol>
                 <VCol>
-                    <VTextField v-model="profileformp.maiden_lastname" label="Maiden Last Name:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.maiden_lastname" label="Maiden Last Name:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('maiden_lastname'); }" />
                 </VCol>
             </VRow>
@@ -531,22 +532,22 @@ function formatNumber(val: string) {
                 <VCol>
                     <VSelect v-model="profileformp.educattainment" :items="educationalAttainments"
                         label="Educational Attainment:" item-title="text" item-value="code" clearable
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol>
                     <VSelect v-model="profileformp.occupation_code" label="Employment Status:"
                         :items="employmentStatusOptions" item-title="title" item-value="value" variant="outlined"
-                        clearable :readonly="!isEditing" @input="() => { toUpperCase('prefix_code'); }" />
+                        clearable :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('prefix_code'); }" />
                 </VCol>
             </VRow>
             <VRow>
                 <VCol>
-                    <VTextField v-model="profileformp.occupation_sp" label="Specific Occupation:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.occupation_sp" label="Specific Occupation:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('occupation_sp'); }" />
                 </VCol>
                 <VCol>
                     <VTextField v-model="profileformp.date_of_effectivity" label="Date of Effectivity:" type="date"
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow>
 
@@ -554,26 +555,26 @@ function formatNumber(val: string) {
             <VRow>
                 <VCol>
                     <VTextField v-model="profileformp.enlist_date" label="Date of Enlisted:" type="date"
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol>
                     <VTextField v-model="profileformp.phic_employer_name" label="Name of Employer:"
-                        :readonly="!isEditing" @input="() => { toUpperCase('phic_employer_name'); }" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('phic_employer_name'); }" />
                 </VCol>
             </VRow>
             <VRow>
                 <VCol>
                     <VTextField v-model="profileformp.phic_employer_no" label="Employer PHIC No.:"
-                        :readonly="!isEditing" @input="() => { toUpperCase('phic_employer_no'); }" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('phic_employer_no'); }" />
                 </VCol>
                 <VCol cols="12" md="3">
-                    <VTextField v-model="displayIncome" label="Monthly Income:" prefix="₱" :readonly="!isEditing"
+                    <VTextField v-model="displayIncome" label="Monthly Income:" prefix="₱" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="formatWithCommas" />
                 </VCol>
                 <VCol cols="12" md="3">
                     <VAutocomplete v-model="profileformp.nationality" :items="nationalityList" item-title="nationality"
                         item-value="num_code" label="Nationality:" outlined hide-details clearable persistent-hint
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow>
 
@@ -581,47 +582,47 @@ function formatNumber(val: string) {
             <VRow>
                 <VCol>
                     <VTextField type="number" v-model="profileformp.tax_id_num" label="TIN No.:"
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol>
                     <VAutocomplete v-model="profileformp.religion_code" :items="religions" label="Religion:"
-                        item-title="text" item-value="code" clearable autocomplete :readonly="!isEditing" />
+                        item-title="text" item-value="code" clearable autocomplete :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow>
             <VRow>
                 <VCol cols="12" md="5">
                     <VCheckbox v-model="profileformp.IndigenousGroup" label="Indigenous Group Member" hide-details
-                        density="compact" :true-value="'1'" :false-value="'0'" :readonly="!isEditing" />
+                        density="compact" :true-value="'1'" :false-value="'0'" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol cols="12" md="4">
                     <VTextField v-model="profileformp.ethnic_code" label="Ethnic Group:" clearable
-                        :readonly="!isEditing" @input="() => { toUpperCase('ethnic_code'); }" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('ethnic_code'); }" />
                 </VCol>
                 <VCol cols="12" md="3">
                     <VTextField v-model="profileformp.bloodtype_code" label="Blood Type:" clearable
-                        :readonly="!isEditing" @input="() => { toUpperCase('bloodtype_code'); }" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('bloodtype_code'); }" />
                 </VCol>
             </VRow>
 
             <!-- Mother's Info -->
             <VRow>
                 <VCol>
-                    <VTextField v-model="profileformp.mot_fname" label="Mother’s First Name:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.mot_fname" label="Mother’s First Name:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('mot_fname'); }" />
                 </VCol>
                 <VCol>
-                    <VTextField v-model="profileformp.mot_mname" label="Mother’s Middle Name:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.mot_mname" label="Mother’s Middle Name:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('mot_mname'); }" />
                 </VCol>
             </VRow>
             <VRow>
                 <VCol>
-                    <VTextField v-model="profileformp.mot_lname" label="Mother’s Last Name:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.mot_lname" label="Mother’s Last Name:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('mot_lname'); }" />
                 </VCol>
                 <VCol>
                     <VTextField v-model="profileformp.mot_birthdate" label="Mother’s Birthdate:" type="date"
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow>
 
@@ -629,40 +630,40 @@ function formatNumber(val: string) {
             <VRow>
                 <VCol cols="12" md="4">
                     <VTextField v-model="profileformp.family_member_code" label="Family Member Code"
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
 
                 <VCol cols="12" md="8">
                     <VTextField v-model="profileformp.family_member_sp" label="Family Member (Specify)"
-                        :readonly="!isEditing" @input="() => { toUpperCase('family_member_sp'); }" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('family_member_sp'); }" />
                 </VCol>
             </VRow>
 
             <VRow>
                 <VCol cols="12" md="3">
                     <VCheckbox v-model="profileformp.PCB_nhts" label="PCB Eligible" hide-details density="compact"
-                        :true-value="'1'" :false-value="'0'" class="ml-3" :readonly="!isEditing" />
+                        :true-value="'1'" :false-value="'0'" class="ml-3" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol cols="12" md="5">
                     <VCheckbox v-model="profileformp.cct_nhts" label="Pantawid Pamilya Member" hide-details
-                        density="compact" :true-value="'1'" :false-value="'0'" class="ml-3" :readonly="!isEditing" />
+                        density="compact" :true-value="'1'" :false-value="'0'" class="ml-3" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol cols="12" md="4">
                     <VCheckbox v-model="profileformp.nhts" label="DSWD 4Ps Member" hide-details density="compact"
-                        :true-value="'1'" :false-value="'0'" class="ml-3" :readonly="!isEditing" />
+                        :true-value="'1'" :false-value="'0'" class="ml-3" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow>
 
             <VRow class="mt-5">
                 <VCol cols="12" md="4">
-                    <VTextField v-model="profileformp.hhnumber" label="4Ps Household Number" :readonly="!isEditing" />
+                    <VTextField v-model="profileformp.hhnumber" label="4Ps Household Number" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol cols="12" md="4">
-                    <VTextField v-model="profileformp.fsNumber" label="Family Serial Number" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.fsNumber" label="Family Serial Number" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         :rules="[requiredValidator]" />
                 </VCol>
                 <VCol cols="12" md="4">
-                    <VTextField v-model="profileformp.Patient_Type" label="Patient Type" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.Patient_Type" label="Patient Type" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('Patient_Type'); }" />
                 </VCol>
             </VRow>
@@ -672,49 +673,49 @@ function formatNumber(val: string) {
                 <VCol>
                     <VAutocomplete v-model="profileformp.country_code" :items="nationalityList"
                         item-title="en_short_name" item-value="num_code" label="Country:" outlined hide-details
-                        clearable persistent-hint :readonly="!isEditing" />
+                        clearable persistent-hint :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow>
             <VRow>
                 <VCol>
-                    <VTextField v-model="profileformp.fhNumber" label="House No./Lot/Bldg:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.fhNumber" label="House No./Lot/Bldg:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('fhNumber'); }" />
                 </VCol>
                 <VCol>
-                    <VTextField v-model="profileformp.pat_str" label="Street:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.pat_str" label="Street:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('pat_str'); }" />
                 </VCol>
             </VRow>
             <VRow class="mt-5">
                 <VCol>
                     <VAutocomplete v-model="profileformp.regcode" :items="regionList" item-title="reg_desc"
-                        item-value="reg_code" label="Region:" outlined hide-details clearable :readonly="!isEditing"
+                        item-value="reg_code" label="Region:" outlined hide-details clearable :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         :rules="[requiredValidator]" />
                 </VCol>
                 <VCol>
                     <VAutocomplete v-model="profileformp.provcode" :items="provinceList" item-title="prov_name"
-                        item-value="prov_code" label="Province:" outlined hide-details clearable :readonly="!isEditing"
+                        item-value="prov_code" label="Province:" outlined hide-details clearable :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         :rules="[requiredValidator]" />
                 </VCol>
             </VRow>
             <VRow>
                 <VCol>
                     <VAutocomplete v-model="profileformp.citycode" :items="cityList" item-title="muni_name"
-                        item-value="zipcode" label="Municipality/City:" clearable :readonly="!isEditing"
+                        item-value="zipcode" label="Municipality/City:" clearable :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         :rules="[requiredValidator]" />
                 </VCol>
                 <VCol>
                     <VAutocomplete v-model="profileformp.bgycode" :items="barangayList" item-title="brg_name"
-                        item-value="brg_psgc" label="Barangay:" clearable :readonly="!isEditing"
+                        item-value="brg_psgc" label="Barangay:" clearable :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         :rules="[requiredValidator]" />
                 </VCol>
                 <VCol>
-                    <VTextField type="number" v-model="profileformp.zipcode" label="ZIP Code:" :readonly="!isEditing" />
+                    <VTextField type="number" v-model="profileformp.zipcode" label="ZIP Code:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow>
             <VRow>
                 <VCol>
-                    <VTextField v-model="profileformp.patient_address" label="Complete Address:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.patient_address" label="Complete Address:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('patient_address'); }" />
                 </VCol>
             </VRow>
@@ -722,16 +723,16 @@ function formatNumber(val: string) {
             <!-- Contact -->
             <VRow>
                 <VCol>
-                    <VTextField v-model="profileformp.pat_email" label="Email Address:" :readonly="!isEditing"
+                    <VTextField v-model="profileformp.pat_email" label="Email Address:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" 
                         @input="() => { toUpperCase('pat_email'); }" />
                 </VCol>
                 <VCol>
                     <VTextField type="number" v-model="profileformp.pat_mobile" label="Mobile Number:"
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol>
                     <VTextField type="number" v-model="profileformp.pat_landline" label="Landline:"
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow>
 
@@ -739,76 +740,76 @@ function formatNumber(val: string) {
             <VRow>
                 <VCol>
                     <VCheckbox v-model="profileformp.phic_member" label="PhilHealth Member" hide-details
-                        density="compact" :true-value="'1'" :false-value="'0'" class="ml-3" :readonly="!isEditing" />
+                        density="compact" :true-value="'1'" :false-value="'0'" class="ml-3" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol>
-                    <VTextField v-model="profileformp.pat_philhealth" label="PhilHealth ID.:" :readonly="!isEditing" />
+                    <VTextField v-model="profileformp.pat_philhealth" label="PhilHealth ID.:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol cols="12" md="4">
                     <VTextField v-model="profileformp.phil_sub_code" label="Philhealth Subcode"
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow>
             <VRow>
                 <VCol>
                     <VSelect v-model="profileformp.philhealth_status_code" :items="philheatlhStatusTypes"
                         label="PhilHealth Type:" item-title="title" item-value="value" variant="outlined" clearable
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol cols="12" md="4">
                     <VSelect v-model="profileformp.type_of_membership" label="PhilHealth Category:" :items="[
                         { title: 'Direct Contributor', value: 'Direct Contributor' },
                         { title: 'Indirect Contributors', value: 'Indirect Contributors' }
-                    ]" item-title="title" item-value="value" variant="outlined" clearable :readonly="!isEditing" />
+                    ]" item-title="title" item-value="value" variant="outlined" clearable :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol cols="12" md="4">
                     <VSelect v-model="profileformp.phic_stat" label="Philhealth Status" :items="[
                         { title: 'Active', value: '1' },
                         { title: 'Inactive', value: '0' }]" item-title="title" item-value="value" variant="outlined"
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow>
             <!-- <VRow>
                 <VCol>
                     <VCheckbox v-model="sameAsPatient" label="Member Name as Patient Name" density="compact"
-                        @change="applyPatientName" :readonly="!isEditing" />
+                        @change="applyPatientName" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
             </VRow> -->
 
-            <div v-if="profileformp.philhealth_status_code === 'X'" class="mt-3 mb-1" style="color:#1976d2">If
+            <div v-if="profileformp.philhealth_status_code === '0'" class="mt-3 mb-1" style="color:#1976d2">If
                 Dependent:
             </div>
-            <VRow v-if="profileformp.philhealth_status_code === 'X'">
+            <VRow v-if="profileformp.philhealth_status_code === '0'">
                 <VCol>
                     <VRow>
                         <VCol cols="12" md="6">
                             <VSelect v-model="profileformp.pDependentType_code" :items="relationshipToMember"
                                 label="Relationship to Member:" item-title="text" item-value="code" variant="outlined"
-                                clearable :readonly="!isEditing" />
+                                clearable :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                         </VCol>
                         <VCol cols="12" md="6">
                             <VTextField v-model="profileformp.pMemberFname" label="Member First Name:"
-                                :readonly="!isEditing" @input="() => { toUpperCase('pMemberFname'); }" />
+                                :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('pMemberFname'); }" />
                         </VCol>
                     </VRow>
                     <VRow>
                         <VCol cols="12" md="">
                             <VTextField v-model="profileformp.pMemberMname" label="Member Middle Name:"
-                                :readonly="!isEditing" @input="() => { toUpperCase('pMemberMname'); }" />
+                                :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('pMemberMname'); }" />
                         </VCol>
                         <VCol cols="12" md="6">
                             <VTextField v-model="profileformp.pMemberLname" label="Member Last Name:"
-                                :readonly="!isEditing" @input="() => { toUpperCase('pMemberLname'); }" />
+                                :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('pMemberLname'); }" />
                         </VCol>
                     </VRow>
                     <VRow v-if="profileformp.philhealth_status_code === 'X'">
                         <VCol cols="12" md="6">
                             <VTextField type="date" v-model="profileformp.pMemberBdate" label="Member Birth Date:"
-                                :readonly="!isEditing" />
+                                :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                         </VCol>
                         <VCol>
                             <VTextField v-model="profileformp.pMemberSuffix" label="Member Suffix"
-                                :readonly="!isEditing" @input="() => { toUpperCase('pMemberSuffix'); }" />
+                                :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  @input="() => { toUpperCase('pMemberSuffix'); }" />
                         </VCol>
                         <VCol>
                             <VSelect v-model="profileformp.pMemberSex" label="Member Sex" :items="[
@@ -821,31 +822,31 @@ function formatNumber(val: string) {
             <VRow>
                 <VCol>
                     <VTextField type="date" v-model="profileformp.PHIEsubmitted_date" label="PHIE Submit Date:"
-                        :readonly="!isEditing" />
+                        :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
                 <VCol class="d-flex">
                     <VCheckbox v-model="profileformp.validated" label="Validated" hide-details density="compact"
-                        :true-value="'1'" :false-value="'0'" :readonly="!isEditing" />
+                        :true-value="'1'" :false-value="'0'" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                     <VCheckbox v-model="profileformp.PHIESYNC" label="Synced" hide-details density="compact"
-                        :true-value="'1'" :false-value="'0'" class="ml-3" :readonly="!isEditing" />
+                        :true-value="'1'" :false-value="'0'" class="ml-3" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
-            </VRow>
-            <VRow class="justify-end mb-4">
-                <VCol>
-                    <VBtn v-if="!isEditing" color="primary" @click="isEditing = true">
-                        Edit
-                    </VBtn>
-
-                    <VBtn v-if="isEditing" color="success" @click="saveChanges">
-                        Save
-                    </VBtn>
-                    <VBtn v-if="isEditing" color="error" class="ml-2" @click="cancelEdit">
-                        Cancel
-                    </VBtn>
-                </VCol>
-            </VRow>
-            <VRow>
             </VRow>
         </VCol>
     </VForm>
 </template>
+<style lang="css" scoped>
+.custom-disabled {
+  pointer-events: none;     
+  opacity: .8;              
+  cursor: text;       
+}
+
+.custom-disabled:hover,
+.custom-disabled:focus,
+.custom-disabled .v-input__control:hover,
+.custom-disabled .v-input__control:focus {
+  background-color: #f9f9f9 !important;
+  border-color: #ccc !important;
+  box-shadow: none !important;
+}
+</style>

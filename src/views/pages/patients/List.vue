@@ -211,12 +211,12 @@ onMounted(fetchPatients);
     </VDialog>
 
     <!-- Profile Dialog -->
-    <VDialog v-model="showProfileDialog" class="rounded" persistent>
+    <VDialog v-model="showProfileDialog" class="rounded" length="100%" persistent>
       <VCard>
         <VCardTitle class="d-flex align-center justify-space-between profile-top-bar-royalblue">
           <span class="absolute-center text-h4">Patient Information</span>
-          <VBtn class="icon-royalblue" color="white" icon="tabler-x" variant="text"
-            @click="showProfileDialog = false" />
+          <VBtn color="black" icon="tabler-x" variant="text"
+            @click="showProfileDialog = false" rounded/>
         </VCardTitle>
 
         <VCardText>

@@ -167,6 +167,7 @@ async function saveUpdatePM() {
     // Success response handling
     successMessage.value = "Saved  plan of management.";
     isSuccess.value = true;
+    cancelEdit();
 
   } catch (error) {
     console.error("Error Saving plan of management:", error);
@@ -182,32 +183,52 @@ onMounted(() => {
 
 });
 
-const requiredValidator = (v) => !!v || 'This field is required'
+const requiredValidator = (v) => !!v || 'This field is required';
+const isEditing = ref(false);
+
+function cancelEdit() {
+  isEditing.value = false;
+}
 </script>
 
 <template>
   <VForm ref="planform" style="align-self: stretch; width: 100%;">
-    <VTooltip text="Save" location="top">
+    <VTooltip v-if="isEditing == true" text="Save" location="top">
       <template #activator="{ props }">
-        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48" class="fab-fixed-top"
-          @click="() => { saveUpdatePM(); }" />
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
+          class="fab-fixed-botr"  @click="() => { saveUpdatePM(); }"/>
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == true" text="Cancel" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="error" icon="tabler-x" size="48" class="fab-fixed-botr mr-15"
+          @click="cancelEdit" />
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == false" text="Edit" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-edit" size="48" class="fab-fixed-botr" rounded
+          @click="isEditing = true" />
       </template>
     </VTooltip>
     <!-- <pre>planma val{{ planma }}</pre> -->
     <VRow>
       <VCol>
         <VTextarea v-model="planma.plan_management" outlined dense hide-details auto-grow rows="2"
-          label="Plan of Management:" :rules="[requiredValidator]" />
+          label="Plan of Management:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }"/>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="planma.prescription" outlined dense hide-details auto-grow rows="2" label="Prescription:"
-          @click="showDialog = true" readonly :rules="[requiredValidator]" />
+          @click="showDialog = true" readonly :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }"/>
       </VCol>
     </VRow>
     <VDialog v-model="showDialog">
-      <VDataTable :headers="headers" :items="prescriptions">
+      <VDataTable :headers="headers" :items="prescriptions" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }">
         <template #item="{ item }">
           <tr @click="selectPrescription(item)" style="cursor: pointer;">
             <td>{{ item.presc_code }}</td>
@@ -223,33 +244,29 @@ const requiredValidator = (v) => !!v || 'This field is required'
     <VRow>
       <VCol>
         <VTextarea v-model="planma.referral" outlined dense hide-details auto-grow rows="2" label="Referral:"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }"/>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="planma.disposition" outlined dense hide-details auto-grow rows="2" label="Disposition:"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }"/>
       </VCol>
     </VRow>
-    <!-- <VCard class="pa-4" elevation="2">
-    <VSheet class="d-flex align-center justify-center border rounded" color="grey-lighten-3" height="150">
-      <span class="text-grey">Signature pad will appear here</span>
-    </VSheet>
-  </VCard>
-  <VTextField />
-  <div class="d-flex align-center justify-center"><label>Name & Signature of Physician</label></div>
-  <br></br> -->
     <VRow>
       <VCol>
         <VTextarea v-model="planma.license_no" outlined dense hide-details auto-grow rows="2" label="License #:"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }"/>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="planma.prof_tax_receipt" outlined dense hide-details auto-grow rows="2"
-          label="Professional Tax Receipt:" />
+          label="Professional Tax Receipt:" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }"/>
       </VCol>
     </VRow>
   </VForm>

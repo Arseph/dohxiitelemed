@@ -238,6 +238,8 @@ async function saveUpdateCH() {
     // Success response handling
     successMessage.value = "Saved  Clinical history.";
     isSuccess.value = true;
+    cancelEdit();
+
 
   } catch (error) {
     console.error("Error Saving Clinical History:", error);
@@ -297,15 +299,34 @@ async function saveUpdatePE() {
   }
 }
 
-const requiredValidator = (v) => !!v || 'This field is required'
+const requiredValidator = (v) => !!v || 'This field is required';
+
+const isEditing = ref(false);
+
+function cancelEdit() {
+  isEditing.value = false;
+}
+
 </script>
 
 <template>
   <VForm ref="clinform" style="align-self: stretch; width: 100%;">
-    <VTooltip text="Save All" location="top">
+    <VTooltip v-if="isEditing == true" text="Save" location="top">
       <template #activator="{ props }">
-        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48" class="fab-fixed-top"
-          @click="() => { saveUpdateCH(); saveUpdatePE(); }" />
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
+          class="fab-fixed-botr" @click="() => { saveUpdateCH(); saveUpdatePE(); }" />
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == true" text="Cancel" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="error" icon="tabler-x" size="48" class="fab-fixed-botr mr-15"
+          @click="cancelEdit" />
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == false" text="Edit" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-edit" size="48" class="fab-fixed-botr" rounded
+          @click="isEditing = true" />
       </template>
     </VTooltip>
     <div class="d-flex flex-column justify-center">
@@ -317,54 +338,59 @@ const requiredValidator = (v) => !!v || 'This field is required'
     <VRow>
       <VCol cols="12" md="12">
         <VTextarea v-model="clinichis.reason_consult" outlined dense hide-details auto-grow rows="2"
-          label="Reason for Teleconsultation:" :rules="[requiredValidator]" />
+          label="Reason for Teleconsultation:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="clinichis.date_referral" type="date" outlined dense hide-details
-          label="Date of Referral:" />
+        <VTextField v-model="clinichis.date_referral" type="date" outlined dense hide-details label="Date of Referral:"
+          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol>
         <VTextField v-model="clinichis.date_onset_illness" type="date" outlined dense hide-details
-          label="Date of Onset of Illness:" :rules="[requiredValidator]" />
+          label="Date of Onset of Illness:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VAutocomplete v-model="clinichis.facilityOptions" :items="facilityOptions" item-title="facilityname"
           item-value="id" label="Name of Referral Health Facility (if Applicable):" outlined dense hide-details
-          clearable persistent-hint />
+          clearable persistent-hint :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="clinichis.known_medical_history" outlined dense hide-details auto-grow rows="2"
-          label="Known Medical Condition/s & Medical History:" :rules="[requiredValidator]" />
+          label="Known Medical Condition/s & Medical History:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextField v-model="clinichis.current_medication" outlined dense hide-details label="Current Medications:"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextField v-model="clinichis.blood_type" outlined dense hide-details label="Blood Type:"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="clinichis.specific_findings" outlined dense hide-details auto-grow rows="2"
-          label="Specific Findings:" :rules="[requiredValidator]" />
+          label="Specific Findings:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="clinichis.clinical_status_time_consult" outlined dense hide-details auto-grow rows="2"
-          label="Clinical Status at the Time of Consult:" :rules="[requiredValidator]" />
+          label="Clinical Status at the Time of Consult:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <br />
@@ -379,28 +405,30 @@ const requiredValidator = (v) => !!v || 'This field is required'
     <VRow>
       <VCol>
         <VTextarea v-model="physexam.head" outlined dense hide-details auto-grow rows="2" label="Head:"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow v-for="(item, index) in examFields" :key="index">
       <VCol>
         <!-- Field -->
         <VTextField v-model="physexam[item.field]" outlined dense hide-details :label="item.label + ':'" class="mb-2"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
         <!-- Remarks (hidden for Neck and Chest) -->
         <VTextarea v-if="item.field !== 'neck' && item.field !== 'chest'" v-model="physexam[item.remark]" outlined dense
-          hide-details auto-grow rows="2" :label="item.label + ' Remarks:'" />
+          hide-details auto-grow rows="2" :label="item.label + ' Remarks:'" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="physexam.others" outlined dense hide-details auto-grow rows="2" label="Others: " />
+        <VTextarea v-model="physexam.others" outlined dense hide-details auto-grow rows="2" label="Others: "
+          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="physexam.waist_circumference" outlined dense hide-details auto-grow rows="2"
-          label="Waist Circumference: " />
+          label="Waist Circumference: " :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
   </VForm>

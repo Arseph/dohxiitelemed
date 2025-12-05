@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from "vue";
 import { VAvatar, VCol, VForm, VIcon, VRow, VTab, VTabs, VWindow, VWindowItem } from "vuetify/components";
 import EditPatientProfile from "./EditPatientProfile.vue";
 import Teleconsultations from "./Teleconsultations.vue";
+import MedicalHistory from "./MedicalHistory.vue";
 
 
 const props = defineProps({
@@ -58,7 +59,15 @@ const getImageUrl = (path: string) => {
     return `${import.meta.env.VITE_APP_BACKEND_URL}/${path}`;
 };
 
-const isHidden = ref(false)
+const isHidden = ref(false);
+
+const profileKey = ref(0);
+
+watch(activeTab, (val) => {
+    if (val === 'profile') {
+        profileKey.value++ }
+    });
+
 </script>
 
 <template>
@@ -66,7 +75,7 @@ const isHidden = ref(false)
         <VRow>
             <!-- Left Column: Sidebar Info -->
             <Transition name="slide-left">
-                <VCol cols="12" md="3" v-if="!isHidden">
+                <VCol cols="12" md="3" v-if="!isHidden" style="position: sticky; top: 0; height: 100%; overflow: hidden;">
                     <VRow>
                         <!-- <pre>{{ localPatient }}</pre> -->
                         <VCol class="text-center">
@@ -113,7 +122,7 @@ const isHidden = ref(false)
                                     <VIcon class="tab-icon" start icon="tabler-video" />
                                     Teleconsultations
                                 </VTab>
-                                <VTab class="royalblue-tab" value="medicalHistory">
+                                <VTab class="royalblue-tab" value="medicalhistory">
                                     <VIcon class="tab-icon" start icon="tabler-video" />
                                     Medical History
                                 </VTab>
@@ -125,18 +134,24 @@ const isHidden = ref(false)
             <VDivider vertical length="100%" v-if="!isHidden" />
             <!-- Right Column: Tab Content -->
             <Transition name="fade-slide">
-                <VCol class="right-scroll">
+                <VCol>
                     <div class="right-scroll-container">
                         <VWindow v-model="activeTab" class="mt-2" direction="vertical">
 
                             <!-- Profile Tab -->
                             <VWindowItem value="profile" v-show="activeTab === 'profile'">
-                                <EditPatientProfile :patient="localPatient" @updated="handlePatientUpdated" />
+                                <EditPatientProfile :key="profileKey" :patient="localPatient"
+                                    @updated="handlePatientUpdated" />
                             </VWindowItem>
 
                             <!-- Teleconsultations Tab -->
-                            <VWindowItem value="teleconsultations" v-show="activeTab === 'Teleconsultations'">
+                            <VWindowItem value="teleconsultations" v-show="activeTab === 'teleconsultations'">
                                 <Teleconsultations :patient="localPatient" @updated="handlePatientUpdated"
+                                    @hideColumn="isHidden = $event" />
+                            </VWindowItem>
+                            
+                            <VWindowItem value="medicalhistory" v-show="activeTab === 'medicalhistory'">
+                                <MedicalHistory :patient="localPatient" @updated="handlePatientUpdated"
                                     @hideColumn="isHidden = $event" />
                             </VWindowItem>
                         </VWindow>
