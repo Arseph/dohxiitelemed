@@ -10,6 +10,11 @@ export default [
     to: { name: 'tele.index' },
     icon: { icon: 'tabler-video' },
   },
+  {
+    title: 'Patients',
+    to: { name: 'patients.index' },
+    icon: { icon: 'tabler-users' },
+  },
 ]
 
 

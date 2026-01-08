@@ -6,6 +6,7 @@ import { RouteRecordRaw } from "vue-router";
 const modules = [,
   { name: "homes", singular: "home" },
   { name: "tele", singular: "tele" },
+  { name: "patients", singular: "patient" },
 ];
 
 // Generate routes dynamically based on the modules array
@@ -56,6 +57,7 @@ const generatedRoutes: Array<RouteRecordRaw> = modules.flatMap((module) => [
     component: () => import(`../../views/pages/${module.name}/Consultation.vue`),
   },
 ]);
+
 async function loadComponent(moduleName: string) {
   try {
     return await import(`../../views/pages/${moduleName}/List.vue`);

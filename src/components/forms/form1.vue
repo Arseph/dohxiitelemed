@@ -9,7 +9,7 @@ import { VCol, VRow, VTextarea, VTextField } from "vuetify/lib/components/index.
 // const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 
-// console.log(user.value);
+// const isLoading = ref(false)
 
 // Props — so this form can be reused for different calls
 const props = defineProps({
@@ -19,8 +19,52 @@ const props = defineProps({
   },
 });
 
+const philheatlhStatusTypes = [
+    // Dependents / Others
+    { title: "Member", value: "1" },
+    { title: "Dependent", value: "0" },
+];
+
+const civilStatusOptions = [
+  { title: 'Single', value: '0' },
+  { title: 'Married', value: '1' },
+  { title: 'Widowed', value: '2' },
+  { title: 'Separated', value: '3' },
+  { title: 'Divorced', value: '4' },
+];
+
+const educationalAttainments = [
+  { code: '01', text: 'ELEMENTARY EDUCATION' },
+  { code: '02', text: 'HIGH SCHOOL EDUCATION' },
+  { code: '03', text: 'COLLEGE' },
+  { code: '04', text: 'POSTGRADUATE PROGRAM' },
+  { code: '05', text: 'NO FORMAL EDUCATION' },
+  { code: '06', text: 'NOT APPLICABLE' },
+  { code: '07', text: 'VOCATIONAL' },
+];
+
+// country list
+const nationalityList = ref([]);
+
+// Fetch countries
+async function fetchCountries() {
+  try {
+    const response = await axiosIns.get('/api/tele/countries');
+    // Map the data to convert num_code to string
+    nationalityList.value = response.data.data
+      .map(country => ({
+        ...country,
+        num_code: country.num_code.toString()
+      }))
+      .sort((a, b) => a.en_short_name.localeCompare(b.en_short_name));
+  } catch (error) {
+    console.error('Error fetching countries:', error);
+  }
+}
+
 const meeting = ref({
   // savedID: props.consultId,
+  facID: null,
   meetID: null,
   name_physician: null,
   name_physician2: null,
@@ -62,7 +106,73 @@ const meeting = ref({
   pprov: null,
 });
 
-// const meeting = ref<any>(null);
+const emit = defineEmits(['loaded'])
+
+// barangay list
+const barangayList = ref([]);
+
+// Fetch barangay
+async function fetchBarangay() {
+  try {
+    const response = await axiosIns.get('/api/tele/barangays');
+    // Map to convert brg_psgc to string, then sort alphabetically
+    barangayList.value = response.data.data
+      .map(barangay => ({
+        ...barangay,
+        brg_psgc: barangay.brg_psgc?.toString() || ''
+      }))
+      .sort((a, b) => a.brg_name.localeCompare(b.brg_name));
+  } catch (error) {
+    console.error('Error fetching barangays:', error);
+  }
+}
+
+// region list
+const regionList = ref([]);
+
+// Fetch region
+async function fetchRegions() {
+  try {
+    const response = await axiosIns.get('/api/tele/regions');
+    // Sort the data alphabetically, just in case
+    regionList.value = response.data.data.sort((a, b) => a.reg_desc.localeCompare(b.reg_desc));
+  } catch (error) {
+    console.error('Error fetching regions:', error);
+  }
+}
+
+// city list
+const cityList = ref([]);
+
+// Fetch city
+async function fetchCities() {
+  try {
+    const response = await axiosIns.get('/api/tele/cities');
+    // Convert zipcode to string, then sort alphabetically
+    cityList.value = response.data.data
+      .map(city => ({
+        ...city,
+        zipcode: city.zipcode?.toString() || ''
+      }))
+      .sort((a, b) => a.muni_name.localeCompare(b.muni_name));
+  } catch (error) {
+    console.error('Error fetching cities:', error);
+  }
+}
+
+// province list
+const provinceList = ref([]);
+
+// Fetch province
+async function fetchProvince() {
+  try {
+    const response = await axiosIns.get('/api/tele/provinces');
+    // Sort the data alphabetically, just in case
+    provinceList.value = response.data.data.sort((a, b) => a.prov_name.localeCompare(b.prov_name));
+  } catch (error) {
+    console.error('Error fetching provinces:', error);
+  }
+}
 
 //save/update
 const demProf = ref(null)
@@ -107,19 +217,25 @@ async function fetchMeetingInfo(meetId) {
       .join(', ');
 
     // --- Patient address ---
-    const house_no = data.house_no ?? null;
-    const street = data.street ?? null;
-    const pbrgyname = data.pbrgyname ?? null;
-    const pmuniname = data.pmuniname ?? null;
-    const pprov = data.pprov ?? null;
-    const region = data.region ?? null;
+    const house_no = data.hhnumber ?? null;
+    const street = data.pat_str ?? null;
+    const pbrgyname = data.bgycode ?? null;
+    const pmuniname = data.citycode ?? null;
+    const pprov = data.provcode ?? null;
+    const region = data.regcode ?? null;
 
-    const patientfulladd = [house_no, street, pbrgyname, pmuniname, pprov, region ? `Region ${region}` : null]
+    
+    const pfabrgyname = data.pbrgyname ?? null;
+    const pfamuniname = data.pmuniname ?? null;
+    const pfaprov = data.pprov ?? null;
+
+    const patientfulladd = [house_no, street, pfabrgyname, pfamuniname, pfaprov, region ? `Region ${region}` : null]
       .filter(Boolean)
       .join(', ');
 
     // Populate meeting data (defaults to null if missing)
     meeting.value = {
+      facID: data.facID ?? null,
       meetID: data.meetID ?? null,
       name_physician,
       name_physician2,
@@ -131,31 +247,31 @@ async function fetchMeetingInfo(meetId) {
       prior_tele_proper: null,
       is_patient_accompanied: null,
       case_no: data.meetID ?? null,
-      phic_status: data.phic_status ?? null,
-      phic_id: data.phic_id ?? null,
-      fname: data.fname ?? null,
-      mname: data.mname ?? null,
-      lname: data.lname ?? null,
-      phone_no: data.contact ?? null,
-      dob: data.dob ?? null,
-      sex: data.sex ?? null,
-      civil_status: data.civil_status ?? null,
-      religion: data.religion ?? null,
-      edu_attain: data.edu_attain ?? null,
-      occupation: data.occupation ?? null,
+      phic_status: data.philhealth_status_code ?? null,
+      phic_id: data.pat_philhealth ?? null,
+      fname: data.pat_fname ?? null,
+      mname: data.pat_mname ?? null,
+      lname: data.pat_lname ?? null,
+      phone_no: data.pat_mobile ?? null,
+      dob: data.pat_birthDate ?? null,
+      sex: data.sex_code ?? null,
+      civil_status: data.civil_stat_code ?? null,
+      religion: data.religion_code ?? null,
+      edu_attain: data.educattainment ?? null,
+      occupation: data.occupation_sp ?? null,
       monthly_income: data.monthly_income ?? null,
       id_type: data.id_type ?? null,
       id_type_no: data.id_type_no ?? null,
-      nationality_id: data.nationality_id ?? null,
-      house_no,
-      street,
-      region,
+      nationality_id: data.nationality ?? null,
+      house_no: house_no ?? null,
+      street: street ?? null,
+      region: region ?? null,
       pbrgyname,
       pmuniname,
       pprov,
-      province: data.province ?? null,
-      muni_name: pmuniname ?? null,
-      brgy: data.brgy ?? null,
+      province: prov_name ?? null,
+      muni_name: muni_name ?? null,
+      brgy: brg_name ?? null,
       patientfulladd,
       name_of_companion: null,
       relationship: null,
@@ -188,12 +304,19 @@ async function fetchMeetingInfo(meetId) {
     console.error("❌ Error fetching meeting info or DP:", error);
     errorMessage.value = "Failed to load meeting info.";
     isError.value = true;
+  } finally {
+    emit('loaded');
   }
 }
 
-
 onMounted(() => {
   if (props.consultId) fetchMeetingInfo(props.consultId);
+  fetchCountries();
+  fetchRegions();
+  fetchCities();
+  fetchBarangay();
+  fetchProvince();
+
 });
 
 async function saveUpdateDP() {
@@ -229,6 +352,7 @@ async function saveUpdateDP() {
     // Success response handling
     successMessage.value = "Saved demographic profile.";
     isSuccess.value = true;
+    cancelEdit();
 
   } catch (error) {
     console.error("Error Saving Demographic Profile:", error);
@@ -238,47 +362,67 @@ async function saveUpdateDP() {
   }
 }
 
-const requiredValidator = (v) => !!v || 'This field is required'
+const requiredValidator = (v) => !!v || 'This field is required';
+
+const isEditing = ref(false);
+
+function cancelEdit() {
+  isEditing.value = false;
+}
+
 </script>
 <template>
-  <VForm ref="demProf">
-    <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48" @click="saveUpdateDP"
-      class="fab-fixed-top">
-    </VBtn>
+  <VForm ref="demProf" style="align-self: stretch; width: 100%;">
+    <VTooltip v-if="isEditing == true" text="Save" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
+          class="fab-fixed-botr" @click="saveUpdateDP" />
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == true" text="Cancel" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="error" icon="tabler-x" size="48" class="fab-fixed-botr mr-15"
+          @click="cancelEdit" />
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == false" text="Edit" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-edit" size="48" class="fab-fixed-botr" rounded
+          @click="isEditing = true" />
+      </template>
+    </VTooltip>
     <div class="d-flex flex-column justify-center">
     </div>
     <br></br>
-    <!-- <h5>
-      <pre>{{ meeting }}</pre>
-    </h5> -->
 
     <VRow>
       <VCol cols="12" md="6">
         <VTextField v-model="meeting.name_physician" outlined dense hide-details label="Name of physician:"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol cols="12" md="6" class="centered-col">
         <VTextField type="datetime-local" v-model="meeting.datetimemeet" outlined dense hide-details
-          label="Date and Time of Teleconsultation" />
+          label="Date and Time of Teleconsultation" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea auto-grow rows="2" v-model="meeting.facility_full_address" outlined dense hide-details
-          label="Name and Address of Health Facility (if applicable):" />
+          label="Name and Address of Health Facility (if applicable):" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol cols="12" md="6" class="centered-col">
         <VTextField v-model="meeting.tele_partner_platform" label="Name of Telemedicine Partner (if applicable):"
-          outlined dense hint="If none, Indicate telemedicine platform being used:" />
+          outlined dense hint="If none, Indicate telemedicine platform being used:"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow class="align-center">
       <VCol>
         <VRadioGroup v-model="meeting.prior_tele_proper"
           label="Prior to teleconsultation proper, obtain patient consent:" inline :rules="[
-            v => v === 0 || v === 1 ? true : 'This field is required']">
+            v => v === 0 || v === 1 ? true : 'This field is required']" :class="{ 'custom-disabled': !isEditing }">
           <VRadio label="Yes" :value="1" />
           <VRadio label="No" :value="0" />
         </VRadioGroup>
@@ -288,7 +432,7 @@ const requiredValidator = (v) => !!v || 'This field is required'
       <VCol>
         <VRadioGroup v-model="meeting.is_patient_accompanied"
           label="Is patient accompanied/assisted by another person during the consultation: " inline :rules="[
-            v => v === 0 || v === 1 ? true : 'This field is required']">
+            v => v === 0 || v === 1 ? true : 'This field is required']" :class="{ 'custom-disabled': !isEditing }">
           <VRadio label="Yes" :value="1" />
           <VRadio label="No" :value="0" />
         </VRadioGroup>
@@ -301,14 +445,16 @@ const requiredValidator = (v) => !!v || 'This field is required'
       <VCol inline>
         <div class="d-flex align-center">
           <label class="mr-2">Case #:</label>
-          <VTextField v-model="meeting.case_no" outlined dense hide-details disabled :rules="[requiredValidator]" />
+          <VTextField v-model="meeting.case_no" outlined dense hide-details disabled :rules="[requiredValidator]"
+            :class="{ 'custom-disabled': !isEditing }" />
         </div>
       </VCol>
     </VRow>
     <VRow class="align-center">
       <VCol>
-        <VSelect v-model="meeting.phic_status" :items="['Member', 'Dependent', 'None']" label="PhilHealth Status:"
-          outlined dense hide-details />
+        <VSelect v-model="meeting.phic_status" :items="philheatlhStatusTypes" label="PhilHealth Type:"
+          item-title="title" item-value="value" variant="outlined" clearable :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol>
         <VTextField v-model="meeting.phic_id" outlined dense hide-details label="PhilHealth ID:" disabled />
@@ -316,66 +462,72 @@ const requiredValidator = (v) => !!v || 'This field is required'
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="meeting.fname" outlined dense hide-details label="First Name: " />
+        <VTextField v-model="meeting.fname" outlined dense hide-details label="First Name: "
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol>
-        <VTextField v-model="meeting.mname" outlined dense hide-details label="Middle Name: " />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextField v-model="meeting.lname" outlined dense hide-details label="Last Name: " />
-      </VCol>
-      <VCol>
-        <VTextField v-model="meeting.phone_no" outlined dense hide-details label="Contact Number: " />
+        <VTextField v-model="meeting.mname" outlined dense hide-details label="Middle Name: "
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="meeting.dob" type="date" outlined dense hide-details label="Birth Date: " />
+        <VTextField v-model="meeting.lname" outlined dense hide-details label="Last Name: "
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol>
-        <VSelect v-model="meeting.sex" :items="['Male', 'Female']" label="Sex:" outlined dense hide-details />
+        <VTextField v-model="meeting.phone_no" outlined dense hide-details label="Contact Number: "
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VSelect v-model="meeting.civil_status" :items="['Single', 'Married', 'Divorced', 'Separated']"
-          label="Civil Status:" outlined dense hide-details />
+        <VTextField v-model="meeting.dob" type="date" outlined dense hide-details label="Birth Date: "
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol>
-        <VTextField v-model="meeting.religion" outlined dense hide-details label="Religion:" />
+        <VSelect v-model="meeting.sex" :items="['Male', 'Female']" label="Sex:" outlined dense hide-details
+          :class="{ 'custom-disabled': !isEditing }" />
+      </VCol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VSelect v-model="meeting.civil_status" :items="civilStatusOptions" label="Civil Status:" item-title="title"
+          item-value="value" variant="outlined" clearable :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
+      </VCol>
+      <VCol>
+        <VTextField v-model="meeting.religion" outlined dense hide-details label="Religion:"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <!-- Show only when Married or Divorced -->
     <VRow v-if="['Married', 'Divorced', 'Separated'].includes(meeting.civil_status)">
       <VCol>
-        <VTextField v-model="meeting.relationship" outlined dense hide-details label="Relationship" />
+        <VTextField v-model="meeting.relationship" outlined dense hide-details label="Relationship"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <!-- Show only when Married or Divorced -->
       <VCol>
-        <VTextField v-model="meeting.name_of_companion" outlined dense hide-details label="Name of Companion" />
+        <VTextField v-model="meeting.name_of_companion" outlined dense hide-details label="Name of Companion"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VSelect v-model="meeting.edu_attain" :items="[
-          'NOT APPLICABLE',
-          'COLLEGE',
-          'ELEMENTARY EDUCATION',
-          'HIGH SCHOOL EDUCATION',
-          'NO FORMAL EDUCATION',
-          'POSTGRADUATE PROGRAM',
-          'VOCATIONAL',
-        ]" label="Educational Attainment: " outlined dense hide-details />
+        <VSelect v-model="meeting.edu_attain" :items="educationalAttainments" label="Educational Attainment:"
+          item-title="text" item-value="code" clearable :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol>
-        <VTextField v-model="meeting.occupation" outlined dense hide-details label="Occupation: " />
+        <VTextField v-model="meeting.occupation" outlined dense hide-details label="Occupation: "
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="meeting.monthly_income" outlined dense hide-details label="Monthly Income: " />
+        <VTextField v-model="meeting.monthly_income" outlined dense hide-details label="Monthly Income: "
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol>
         <VSelect v-model="meeting.id_type" :items="[
@@ -385,49 +537,57 @@ const requiredValidator = (v) => !!v || 'This field is required'
           'PASSPORT ID',
           'POSTAL ID',
           'TIN ID',
-        ]" label="Select ID: " outlined dense hide-details />
+        ]" label="Select ID: " outlined dense hide-details :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="meeting.id_type_no" outlined dense hide-details label="CRN: " />
+        <VTextField v-model="meeting.id_type_no" outlined dense hide-details label="CRN: "
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol>
-        <VSelect v-model="meeting.nationality_id" :items="['Filipino', 'others']" label="Nationality: " outlined dense
-          hide-details />
-      </VCol>
-    </VRow>
-    <VRow>
-      <VCol>
-        <VTextField v-model="meeting.house_no" outlined dense hide-details label="House no./Lot/Bldg: " />
-      </VCol>
-      <VCol>
-        <VTextField v-model="meeting.street" outlined dense hide-details label="Street: " />
+        <VAutocomplete v-model="meeting.nationality_id" :items="nationalityList" item-title="nationality"
+          item-value="num_code" label="Nationality:" outlined hide-details clearable persistent-hint
+          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="meeting.region" outlined dense hide-details label="Region: " />
+        <VTextField v-model="meeting.house_no" outlined dense hide-details label="House no./Lot/Bldg: "
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol>
-        <VSelect v-model="meeting.pprov" :items="['SOUTH COTABATO', 'others']" label="Province: " outlined dense
-          hide-details />
+        <VTextField v-model="meeting.street" outlined dense hide-details label="Street: "
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VSelect v-model="meeting.pmuniname" :items="['KORONADAL', 'others']" label="Municipality: " outlined dense
-          hide-details />
+        <VAutocomplete v-model="meeting.region" :items="regionList" item-title="reg_desc" item-value="reg_code"
+          label="Region:" outlined hide-details clearable :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" :rules="[requiredValidator]" />
       </VCol>
       <VCol>
-        <VSelect v-model="meeting.pbrgyname" :items="['PARAISO', 'others']" label="Barangay: " outlined dense
-          hide-details />
+        <VAutocomplete v-model="meeting.pprov" :items="provinceList" item-title="prov_name" item-value="prov_code"
+          label="Province:" outlined hide-details clearable :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" :rules="[requiredValidator]" />
+      </VCol>
+    </VRow>
+    <VRow>
+      <VCol>
+        <VAutocomplete v-model="meeting.pmuniname" :items="cityList" item-title="muni_name" item-value="zipcode"
+          label="Municipality/City:" clearable :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }"
+          :rules="[requiredValidator]" />
+      </VCol>
+      <VCol>
+        <VAutocomplete v-model="meeting.pbrgyname" :items="barangayList" item-title="brg_name" item-value="brg_psgc"
+          label="Barangay:" clearable :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <label>Complete Address :</label>
-        <VTextarea v-model="meeting.patientfulladd" row="2" outlined />
+        <VTextarea v-model="meeting.patientfulladd" row="2" outlined :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
   </VForm>

@@ -9,6 +9,8 @@ import { VCol, VRow } from "vuetify/lib/components/index.mjs";
 const daform = ref<VForm>();
 const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
+const emit = defineEmits(['loaded'])
+
 
 // Props — so this form can be reused for different calls
 const props = defineProps({
@@ -20,7 +22,7 @@ const props = defineProps({
 
 const diagass = ref({
   // savedID: props.consultId,
-  meeting_id: '',
+  meeting_id: props.consultId ?? '',
   patient_id: '',
   summary_assess: '',
   diagnosis: '',
@@ -41,23 +43,18 @@ watch(
 
 async function fetchMeetingInfo(meetId) {
   try {
-    // Fetch meeting info
     const response = await axiosIns.get(`/api/meeting-info`, {
       params: { meet_id: meetId },
     });
 
     const data = response.data;
 
-    // Populate meeting data (defaults to null if missing)
     diagass.value = {
       meeting_id: data.meetID ?? null,
-      patient_id: data.patID ?? null,
-
+      patient_id: data.patient_id ?? null,
     };
 
-    console.log("✅ Meeting info fetched:", diagass.value);
-
-    // 🔹 Step 3: Try to fetch existing Demographic Profile
+    // 🔹 Step 3: Try to fetch existing diagnosis assess
     if (diagass.value.meeting_id) {
       const daResponse = await axiosIns.get(`/api/get-diagnosisassessment/${diagass.value.meeting_id}`);
       const da = daResponse.data.data;
@@ -81,6 +78,8 @@ async function fetchMeetingInfo(meetId) {
     console.error("❌ Error fetching meeting info or DA:", error);
     errorMessage.value = "Failed to load meeting info.";
     isError.value = true;
+  } finally {
+    emit('loaded');
   }
 }
 
@@ -113,6 +112,7 @@ async function saveUpdateDA() {
     // Success response handling
     successMessage.value = "Saved  Diagnosis / Assessment.";
     isSuccess.value = true;
+    cancelEdit();
 
   } catch (error) {
     console.error("Error Saving Diagnosis / Assessment:", error);
@@ -123,28 +123,50 @@ async function saveUpdateDA() {
 }
 
 onMounted(() => {
-  if (props.consultId) fetchMeetingInfo(props.consultId);
+  fetchMeetingInfo(props.consultId);
 });
 
-const requiredValidator = (v) => !!v || 'This field is required'
+const requiredValidator = (v) => !!v || 'This field is required';
+
+const isEditing = ref(false);
+
+function cancelEdit() {
+  isEditing.value = false;
+}
 </script>
 
 <template>
-  <VForm ref="daform">
-    <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48" @click="() => { saveUpdateDA(); }"
-      class="fab-fixed-top">
-    </VBtn>
+  <VForm ref="daform" style="align-self: stretch; width: 100%;">
+    <VTooltip v-if="isEditing == true" text="Save" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
+          class="fab-fixed-botr" @click="() => { saveUpdateDA(); }" />
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == true" text="Cancel" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="error" icon="tabler-x" size="48" class="fab-fixed-botr mr-15"
+          @click="cancelEdit" />
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == false" text="Edit" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-edit" size="48" class="fab-fixed-botr" rounded
+          @click="isEditing = true" />
+      </template>
+    </VTooltip>
     <!-- <pre>diagrass vals{{ diagass }}</pre> -->
     <VRow>
       <VCol>
         <VTextarea v-model="diagass.summary_assess" outlined dense hide-details auto-grow rows="2"
-          label="Summary of Assessment Findings:" :rules="[requiredValidator]" />
+          label="Summary of Assessment Findings:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="diagass.diagnosis" outlined dense hide-details auto-grow rows="2" label="Diagnosis:"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow class="align-center" flex>
@@ -154,20 +176,23 @@ const requiredValidator = (v) => !!v || 'This field is required'
         </label>
         <div class="d-flex align-center">
           <VRadioGroup v-model="diagass.clinical_classification" inline hide-details density="compact"
-            :rules="[v => v === 2 || v === 0 || v === 1 ? true : 'This field is required']">
+            :rules="[v => v === 2 || v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
+            :class="{ 'custom-disabled': !isEditing }">
             <VRadio label="Covid-19 Case" :value="1" />
             <VRadio label="Non-Covid-19 Case" :value="0" />
           </VRadioGroup>
         </div>
       </VCol>
     </VRow>
-    <VRow v-if="diagass.clinical_classification == 1" class="align-center" flex>
+    <VRow v-if="diagass.clinical_classification == 1" class="align-center" flex :readonly="!isEditing"
+      :class="{ 'custom-disabled': !isEditing }">
       <VCol class="d-flex align-center">
         <label>
           If Covid-19 Case:
         </label>
         <div class="d-flex align-center">
-          <VRadioGroup v-model="diagass.if_covid" inline hide-details density="compact">
+          <VRadioGroup v-model="diagass.if_covid" inline hide-details density="compact" :readonly="!isEditing"
+            :class="{ 'custom-disabled': !isEditing }">
             <VRadio label="Suspected Cases " :value="0" />
             <VRadio label="Probable Case " :value="1" />
             <VRadio label="Confirmed Case " :value="2" />

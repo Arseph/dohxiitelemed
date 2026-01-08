@@ -1,72 +1,122 @@
 /* Button and Icon Color Styles */
-.v-btn.btn-teal, .toolbar-teal, .icon-teal {
+.v-btn.btn-teal,
+.toolbar-teal,
+.icon-teal {
   background-color: rgba(0, 137, 123, 0.15) !important;
-  color: #22a699 !important; /* lighter teal */
+  color: #22a699 !important;
+  /* lighter teal */
 }
 
-.v-btn.btn-slate, .toolbar-slate, .icon-slate {
+.v-btn.btn-slate,
+.toolbar-slate,
+.icon-slate {
   background-color: rgba(71, 85, 105, 0.15) !important;
-  color: #6b7b91 !important; /* lighter slate */
+  color: #6b7b91 !important;
+  /* lighter slate */
 }
 
-.v-btn.btn-maroon, .toolbar-maroon, .icon-maroon {
+.v-btn.btn-maroon,
+.toolbar-maroon,
+.icon-maroon {
   background-color: rgba(123, 30, 30, 0.15) !important;
-  color: #a84747 !important; /* lighter maroon */
+  color: #a84747 !important;
+  /* lighter maroon */
 }
 
-.v-btn.btn-amber, .toolbar-amber, .icon-amber {
+.v-btn.btn-amber,
+.toolbar-amber,
+.icon-amber {
   background-color: rgba(255, 179, 0, 0.2) !important;
-  color: #ffca33 !important; /* lighter amber */
+  color: #ffca33 !important;
+  /* lighter amber */
 }
 
-.v-btn.btn-emerald, .toolbar-emerald, .icon-emerald {
+.v-btn.btn-emerald,
+.toolbar-emerald,
+.icon-emerald {
   background-color: rgba(46, 125, 50, 0.15) !important;
-  color: #49a956 !important; /* lighter emerald */
+  color: #49a956 !important;
+  /* lighter emerald */
 }
 
-.v-btn.btn-white, .toolbar-white, .icon-white {
+.v-btn.btn-white,
+.toolbar-white,
+.icon-white {
   background-color: rgba(255, 255, 255, 0.15) !important;
-  color: #fafafa !important; /* light gray */
+  color: #fafafa !important;
+  /* light gray */
 }
 
-.v-btn.btn-violet, .toolbar-violet, .icon-violet {
-  background-color: rgba(138, 43, 226, 0.15) !important; /* violet bg */
-  color: #b980ff !important; /* lighter violet */
+.v-btn.btn-violet,
+.toolbar-violet,
+.icon-violet {
+  background-color: rgba(138, 43, 226, 0.15) !important;
+  /* violet bg */
+  color: #b980ff !important;
+  /* lighter violet */
 }
 
-.v-btn.btn-magenta, .toolbar-magenta, .icon-magenta {
-  background-color: rgba(255, 0, 128, 0.15) !important; /* magenta bg */
-  color: #ff66b3 !important; /* lighter magenta */
+.v-btn.btn-magenta,
+.toolbar-magenta,
+.icon-magenta {
+  background-color: rgba(255, 0, 128, 0.15) !important;
+  /* magenta bg */
+  color: #ff66b3 !important;
+  /* lighter magenta */
 }
 
-.v-btn.btn-royalblue, .toolbar-royalblue, .icon-royalblue {
-  background-color: rgba(65, 105, 225, 0.15) !important; /* royal blue bg */
-  color: #7ea9ff !important; /* lighter royal blue */
+.v-btn.btn-royalblue,
+.toolbar-royalblue,
+.icon-royalblue {
+  background-color: rgba(65, 105, 225, 0.15) !important;
+  /* royal blue bg */
+  color: #7ea9ff !important;
+  /* lighter royal blue */
 }
 
-.v-btn.btn-orange, .toolbar-orange, .icon-orange {
-  background-color: rgba(255, 140, 0, 0.2) !important; /* orange bg */
-  color: #ffb266 !important; /* lighter orange */
+.v-btn.btn-orange,
+.toolbar-orange,
+.icon-orange {
+  background-color: rgba(255, 140, 0, 0.2) !important;
+  /* orange bg */
+  color: #ffb266 !important;
+  /* lighter orange */
 }
 
-.v-btn.btn-red, .toolbar-red, .icon-red {
-  background-color: rgba(244, 67, 54, 0.15) !important; /* red bg */
-  color: #ff7b71 !important; /* lighter red */
+.v-btn.btn-red,
+.toolbar-red,
+.icon-red {
+  background-color: rgba(244, 67, 54, 0.15) !important;
+  /* red bg */
+  color: #ff7b71 !important;
+  /* lighter red */
 }
 
-.v-btn.btn-blue, .toolbar-blue, .icon-blue {
-  background-color: rgba(33, 150, 243, 0.15) !important; /* translucent blue */
-  color: #5bb6ff !important; /* lighter blue */
+.v-btn.btn-blue,
+.toolbar-blue,
+.icon-blue {
+  background-color: rgba(33, 150, 243, 0.15) !important;
+  /* translucent blue */
+  color: #5bb6ff !important;
+  /* lighter blue */
 }
 
-.v-btn.btn-yellow, .toolbar-yellow, .icon-yellow {
-  background-color: rgba(255, 235, 59, 0.2) !important; /* translucent yellow */
-  color: #fff176 !important; /* lighter yellow */
+.v-btn.btn-yellow,
+.toolbar-yellow,
+.icon-yellow {
+  background-color: rgba(255, 235, 59, 0.2) !important;
+  /* translucent yellow */
+  color: #fff176 !important;
+  /* lighter yellow */
 }
 
-.v-btn.btn-green, .toolbar-green, .icon-green {
-  background-color: rgba(76, 175, 80, 0.15) !important; /* green bg */
-  color: #66bb6a !important; /* lighter green */
+.v-btn.btn-green,
+.toolbar-green,
+.icon-green {
+  background-color: rgba(76, 175, 80, 0.15) !important;
+  /* green bg */
+  color: #66bb6a !important;
+  /* lighter green */
 }
 
 /* Hover effects: deepen background slightly */
@@ -75,7 +125,7 @@
   filter: brightness(1.1);
   background-color: color-mix(in srgb, currentColor 20%, transparent) !important;
   transition: all 0.25s ease;
-}w
+}
 
 /* Match icons with text brightness */
 .v-btn[class*='btn-'] .icon {
@@ -84,23 +134,233 @@
 }
 
 //button float
-.fab-fixed-top {
+.fab-fixed-botr {
   position: fixed;
   top: 92%;
-  right: 2rem; 
+  right: 2rem;
   z-index: 10000;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.52);
+  border-radius: 8px;
+}
+
+/* Button floating top-left */
+.fab-fixed-top-left {
+  position: fixed;
+  top: 4rem;
+  /* distance from the top */
+  left: 20rem;
+  /* distance from the left */
+  z-index: 10000;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
   border-radius: 8px;
 }
 
 .ignore-parent-pad {
-    position: relative;
-    left: 50%;
-    right: 50%;
-    margin-top: 25px;
-    margin-bottom: 10px;
-    margin-left: -22rem;
-    margin-right: -10vw;
-    width: 100vw;
-    height: 75px;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-top: 25px;
+  margin-bottom: 10px;
+  margin-left: -22rem;
+  margin-right: -10vw;
+  width: 100vw;
+  height: 75px;
+}
+
+/* ----- VTabs: Royal Blue Theme ----- */
+
+/* Individual tab buttons */
+.v-tab.royalblue-tab {
+  color: #7ea9ff !important;
+  /* lighter royal blue text */
+  font-weight: 500;
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+/* Active tab */
+.v-tab.royalblue-tab.v-tab--selected {
+  background-color: rgba(65, 105, 225, 0.15) !important;
+  color: #4c8aff !important;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(65, 105, 225, 0.25);
+}
+
+/* Hover effect */
+.v-tab.royalblue-tab:hover {
+  background-color: rgba(65, 105, 225, 0.1) !important;
+  color: #6e9cff !important;
+  filter: brightness(1.1);
+}
+
+//thead color
+.royalblue-table thead th {
+  background-color: rgba(65, 105, 225, 0.15) !important;
+  color: #4c8aff !important;
+  font-weight: 600;
+  transition: background-color 0.25s ease;
+}
+
+.royalblue-table thead th:hover {
+  background-color: rgba(65, 105, 225, 0.25) !important;
+  color: #6e9cff !important;
+}
+
+.royalblue-table .v-data-table-header {
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+}
+
+.green-table thead th {
+  background-color: rgba(76, 175, 80, 0.15) !important;
+  /* translucent green */
+  color: #66bb6a !important;
+  /* lighter green */
+  font-weight: 600;
+  transition: background-color 0.25s ease;
+}
+
+.green-table thead th:hover {
+  background-color: rgba(76, 175, 80, 0.25) !important;
+  color: #4caf50 !important;
+}
+
+.green-table .v-data-table-header {
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+}
+
+.orange-table thead th {
+  background-color: rgba(255, 140, 0, 0.15) !important;
+  /* light orange bg */
+  color: #ffb266 !important;
+  /* lighter orange text */
+  font-weight: 600;
+  transition: background-color 0.25s ease;
+}
+
+.orange-table thead th:hover {
+  background-color: rgba(255, 140, 0, 0.25) !important;
+  /* stronger orange on hover */
+  color: #ffc48a !important;
+  /* brighter hover text */
+}
+
+.orange-table .v-data-table-header {
+  border-radius: 10px 10px 0 0;
+  overflow: hidden;
+}
+
+/* GREEN TONAL DIALOG TITLE */
+.dialog-title-green {
+  background-color: rgba(76, 175, 80, 0.15);
+  /* green tonal */
+  color: #66bb6a;
+  /* lighter green */
+  font-weight: 600;
+  border-radius: 8px 8px 0 0;
+  /* rounded top corners */
+  padding: 12px 16px;
+  transition: background-color 0.25s ease;
+}
+
+/* Hover effect (optional) */
+.dialog-title-green:hover {
+  background-color: rgba(76, 175, 80, 0.25);
+  color: #4caf50;
+}
+
+.right2-scroll {
+  height: calc(100vh - 100px);
+  background-color: rgba(0, 0, 0, 0.0);
+}
+
+.right-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.right-scroll-container {
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 8px;
+  /* optional spacing from scrollbar */
+
+}
+
+.right-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.right-scroll-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.right-scroll-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.profile-top-bar-royalblue {
+  background-color: rgba(65, 105, 225, 0.35);
+  /* royal blue bg */
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+.avatar-border-blue {
+  border: 3px solid rgba(28, 115, 255, 0.75);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.small-table {
+  font-size: 13px;
+}
+
+.small-table th {
+  font-size: 12px !important;
+  padding: 4px 6px !important;
+}
+
+.small-table td {
+  font-size: 12px !important;
+  padding: 4px 6px !important;
+}
+
+//transtion anim
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.25s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: all 0.25s ease;
+}
+
+.slide-left-enter-from,
+.slide-left-leave-to {
+  transform: translateX(-20px);
+  opacity: 0;
+}
+
+.custom-disabled {
+  pointer-events: none;     
+  opacity: .8;              
+  cursor: text;       
+}
+
+.custom-disabled:hover,
+.custom-disabled:focus,
+.custom-disabled .v-input__control:hover,
+.custom-disabled .v-input__control:focus {
+  background-color: #f9f9f9 !important;
+  border-color: #ccc !important;
+  box-shadow: none !important;
 }

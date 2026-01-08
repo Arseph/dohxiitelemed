@@ -23,7 +23,7 @@ const fetchTele = async () => {
     docCat.value = response.data.telecat
     patient.value = response.data.patients.map((pat: any) => ({
       id: pat.id,
-      name: `${pat.fname} ${pat.mname ?? ''} ${pat.lname}`.replace(/\s+/g, ' ').trim(),
+      name: `${pat.pat_fname} ${pat.pat_mname ?? ''} ${pat.pat_lname}`.replace(/\s+/g, ' ').trim(),
     }))
     start.value = response.data?.data
     active.value =  response.data?.active_user?.id

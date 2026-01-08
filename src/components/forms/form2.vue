@@ -9,6 +9,8 @@ import { VCol, VRow, VTextField } from "vuetify/lib/components/index.mjs";
 const clinform = ref<VForm>();
 const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
+const emit = defineEmits(['loaded'])
+
 
 
 console.log(user.value);
@@ -86,121 +88,116 @@ const examFields = [
 
 
 // const meeting = ref<any>(null);
-
 async function fetchMeetingInfo(meetId: number) {
   try {
-    const response = await axiosIns.get(`/api/meeting-info`, {
-      params: { meet_id: meetId },
-    });
+    // Step 1: Fetch both Clinical History (CH) and Physical Exam (PE) in parallel
+    const [chResponse, peResponse] = await Promise.all([
+      axiosIns.get(`/api/get-clinicalhistory/${meetId}`),
+      axiosIns.get(`/api/get-physicalexam/${meetId}`)
+    ]);
 
-    const data = response.data;
+    const ch = chResponse.data.data;
+    const pe = peResponse.data.data;
 
-    // DOC name 
-    const docfname = data.docfname ?? '';
-
-    // ✅ Clinical History
-    clinichis.value = {
-      meeting_id: data.meetID ?? null,
-      reason_consult: data.title ?? '',
-      date_onset_illness: data.date_onset_illness ?? '',
-      date_referral: data.date_referral ?? '',
-      facilityOptions: data.facilityOptions ?? '',
-      known_medical_history: data.known_medical_history ?? '',
-      current_medication: data.current_medication ?? '',
-      blood_type: data.blood_type ?? '',
-      clinical_status_time_consult: data.clinical_status_time_consult ?? '',
-      specific_findings: data.specific_findings ?? '',
-    };
-
-    // ✅ Physical Exam
-    physexam.value = {
-      meeting_id: data.meetID ?? null,
-      head: data.head ?? '',
-      conjunctiva: data.conjunctiva ?? '',
-      con_remarks: data.con_remarks ?? '',
-      neck: data.neck ?? '',
-      chest: data.chest ?? '',
-      breast: data.breast ?? '',
-      breast_remarks: data.breast_remarks ?? '',
-      thorax: data.thorax ?? '',
-      thorax_remarks: data.thorax_remarks ?? '',
-      abdomen: data.abdomen ?? '',
-      abdomen_remarks: data.abdomen_remarks ?? '',
-      genitals: data.genitals ?? '',
-      genital_remarks: data.genital_remarks ?? '',
-      extremities: data.extremities ?? '',
-      extremities_remarks: data.extremities_remarks ?? '',
-      others: data.others ?? '',
-      waist_circumference: data.waist_circumference ?? '',
-    };
-
-    console.log("Clinical History fetched:", clinichis.value);
-
-    // 🔹 Step 3: Try to fetch existing Clinical History
-    if (clinichis.value.meeting_id) {
-      const chResponse = await axiosIns.get(`/api/get-clinicalhistory/${clinichis.value.meeting_id}`);
-      const ch = chResponse.data.data;
-
-      if (ch) {
-        console.log("✅ Existing clinical history found:", ch);
-
-        // Merge existing ch data into meeting.value
-        clinichis.value.meeting_id = ch.meeting_id ?? null;
-        clinichis.value.reason_consult = ch.reason_consult ?? null;
-        clinichis.value.date_onset_illness = ch.date_onset_illness ?? null;
-        clinichis.value.date_referral = ch.date_referral ?? null;
-        clinichis.value.facilityOptions = ch.facility_id ?? null;
-        clinichis.value.known_medical_history = ch.known_medical_history ?? null;
-        clinichis.value.current_medication = ch.current_medication ?? null;
-        clinichis.value.blood_type = ch.blood_type ?? null;
-        clinichis.value.clinical_status_time_consult = ch.clinical_status_time_consult ?? null;
-        clinichis.value.specific_findings = ch.specific_findings ?? null;
-
-      } else {
-        console.log("ℹ️ No clinical history found for this meeting ID.");
-      }
+    // Step 2: Handle Clinical History
+    if (ch) {
+      console.log("✅ Existing clinical history found:", ch);
+      clinichis.value = {
+        meeting_id: ch.meeting_id ?? null,
+        reason_consult: ch.reason_consult ?? '',
+        date_onset_illness: ch.date_onset_illness ?? null,
+        date_referral: ch.date_referral ?? null,
+        facilityOptions: ch.facility_id ?? null,
+        known_medical_history: ch.known_medical_history ?? null,
+        current_medication: ch.current_medication ?? null,
+        blood_type: ch.blood_type ?? null,
+        clinical_status_time_consult: ch.clinical_status_time_consult ?? null,
+        specific_findings: ch.specific_findings ?? null,
+      };
+      console.log("✅ Clinical History fetched:", clinichis.value);
+    } else {
+      console.log("ℹ️ No clinical history found.");
     }
 
-    // 🔹 Step 4: Try to fetch existing physical exam
-    if (physexam.value.meeting_id) {
-      const peResponse = await axiosIns.get(`/api/get-physicalexam/${physexam.value.meeting_id}`);
-      const pe = peResponse.data.data;
-
-      if (pe) {
-        console.log("✅ Physical exam history found:", pe);
-
-        // Merge existing pe data into meeting.value
-        physexam.value.meeting_id = pe.meeting_id ?? null;
-        physexam.value.head = pe.head ?? null;
-        physexam.value.conjunctiva = pe.conjunctiva ?? null;
-        physexam.value.con_remarks = pe.con_remarks ?? null;
-        physexam.value.neck = pe.neck ?? null;
-        physexam.value.chest = pe.chest ?? null;
-        physexam.value.breast = pe.breast ?? null;
-        physexam.value.breast_remarks = pe.breast_remarks ?? null;
-        physexam.value.thorax = pe.thorax ?? null;
-        physexam.value.abdomen = pe.abdomen ?? null;
-        physexam.value.abdomen_remarks = pe.abdomen_remarks ?? null;
-        physexam.value.genitals = pe.genitals ?? null;
-        physexam.value.genital_remarks = pe.genital_remarks ?? null;
-        physexam.value.extremities = pe.extremities ?? null;
-        physexam.value.extremities_remarks = pe.extremities_remarks ?? null;
-        physexam.value.others = pe.others ?? null;
-        physexam.value.waist_circumference = pe.waist_circumference ?? null;
-
-      } else {
-        console.log("ℹ️ No physical exam  found for this meeting ID.");
-      }
+    // Step 3: Handle Physical Exam
+    if (pe) {
+      console.log("✅ Existing physical exam found:", pe);
+      physexam.value = {
+        meeting_id: pe.meeting_id ?? null,
+        head: pe.head ?? '',
+        conjunctiva: pe.conjunctiva ?? '',
+        con_remarks: pe.con_remarks ?? '',
+        neck: pe.neck ?? '',
+        chest: pe.chest ?? '',
+        breast: pe.breast ?? '',
+        breast_remarks: pe.breast_remarks ?? '',
+        thorax: pe.thorax ?? '',
+        thorax_remarks: pe.thorax_remarks ?? '',
+        abdomen: pe.abdomen ?? '',
+        abdomen_remarks: pe.abdomen_remarks ?? '',
+        genitals: pe.genitals ?? '',
+        genital_remarks: pe.genital_remarks ?? '',
+        extremities: pe.extremities ?? '',
+        extremities_remarks: pe.extremities_remarks ?? '',
+        others: pe.others ?? '',
+        waist_circumference: pe.waist_circumference ?? '',
+      };
+      console.log("✅ Physical Exam fetched:", physexam.value);
+    } else {
+      console.log("ℹ️ No physical exam found.");
     }
 
+    // Step 4: If both CH and PE are not found, fetch meeting info
+    if (!ch && !pe) {
+      console.log("ℹ️ No clinical history or physical exam found, fetching meeting info.");
+      const meetingResponse = await axiosIns.get(`/api/meeting-info`, {
+        params: { meet_id: meetId },
+      });
+      const data = meetingResponse.data;
 
+      // Populate Clinical History from meeting info
+      clinichis.value = {
+        meeting_id: data.meetID ?? null,
+        reason_consult: data.title ?? '',
+      };
+
+      // Populate Physical Exam from meeting info
+      physexam.value = {
+        meeting_id: data.meetID ?? null,
+        head: data.head ?? '',
+        conjunctiva: data.conjunctiva ?? '',
+        con_remarks: data.con_remarks ?? '',
+        neck: data.neck ?? '',
+        chest: data.chest ?? '',
+        breast: data.breast ?? '',
+        breast_remarks: data.breast_remarks ?? '',
+        thorax: data.thorax ?? '',
+        thorax_remarks: data.thorax_remarks ?? '',
+        abdomen: data.abdomen ?? '',
+        abdomen_remarks: data.abdomen_remarks ?? '',
+        genitals: data.genitals ?? '',
+        genital_remarks: data.genital_remarks ?? '',
+        extremities: data.extremities ?? '',
+        extremities_remarks: data.extremities_remarks ?? '',
+        others: data.others ?? '',
+        waist_circumference: data.waist_circumference ?? '',
+      };
+
+      console.log("✅ Meeting Info fetched and populated Clinical History & Physical Exam:", {
+        clinichis: clinichis.value,
+        physexam: physexam.value,
+      });
+    }
 
   } catch (error) {
-    console.error("Error fetching clinical history or physical exam:", error);
-    // errorMessage.value = "Failed to fetch clnical history or physical exam:";
-    // isError.value = true;
+    console.error("Error fetching clinical history, physical exam, or meeting info:", error);
+    errorMessage.value = "Failed to fetch data.";
+    isError.value = true;
+  } finally {
+    emit('loaded');
   }
 }
+
 
 
 onMounted(() => {
@@ -241,6 +238,8 @@ async function saveUpdateCH() {
     // Success response handling
     successMessage.value = "Saved  Clinical history.";
     isSuccess.value = true;
+    cancelEdit();
+
 
   } catch (error) {
     console.error("Error Saving Clinical History:", error);
@@ -300,14 +299,36 @@ async function saveUpdatePE() {
   }
 }
 
-const requiredValidator = (v) => !!v || 'This field is required'
+const requiredValidator = (v) => !!v || 'This field is required';
+
+const isEditing = ref(false);
+
+function cancelEdit() {
+  isEditing.value = false;
+}
+
 </script>
 
 <template>
-  <VForm ref="clinform">
-    <VBtn variant="tonal" color="success" icon="tabler-device-floppy" size="48"
-      @click="() => { saveUpdateCH(); saveUpdatePE(); }" class="fab-fixed-top">
-    </VBtn>
+  <VForm ref="clinform" style="align-self: stretch; width: 100%;">
+    <VTooltip v-if="isEditing == true" text="Save" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
+          class="fab-fixed-botr" @click="() => { saveUpdateCH(); saveUpdatePE(); }" />
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == true" text="Cancel" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="error" icon="tabler-x" size="48" class="fab-fixed-botr mr-15"
+          @click="cancelEdit" />
+      </template>
+    </VTooltip>
+    <VTooltip v-if="isEditing == false" text="Edit" location="top">
+      <template #activator="{ props }">
+        <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-edit" size="48" class="fab-fixed-botr" rounded
+          @click="isEditing = true" />
+      </template>
+    </VTooltip>
     <div class="d-flex flex-column justify-center">
     </div>
     <h5>
@@ -315,93 +336,99 @@ const requiredValidator = (v) => !!v || 'This field is required'
     </h5>
     <br></br>
     <VRow>
-      <VCol>
+      <VCol cols="12" md="12">
         <VTextarea v-model="clinichis.reason_consult" outlined dense hide-details auto-grow rows="2"
-          label="Reason for Teleconsultation:" :rules="[requiredValidator]" />
+          label="Reason for Teleconsultation:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextField v-model="clinichis.date_referral" type="date" outlined dense hide-details
-          label="Date of Referral:" />
+        <VTextField v-model="clinichis.date_referral" type="date" outlined dense hide-details label="Date of Referral:"
+          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol>
         <VTextField v-model="clinichis.date_onset_illness" type="date" outlined dense hide-details
-          label="Date of Onset of Illness:" :rules="[requiredValidator]" />
+          label="Date of Onset of Illness:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VAutocomplete v-model="clinichis.facilityOptions" :items="facilityOptions" item-title="facilityname"
           item-value="id" label="Name of Referral Health Facility (if Applicable):" outlined dense hide-details
-          clearable persistent-hint />
+          clearable persistent-hint :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="clinichis.known_medical_history" outlined dense hide-details auto-grow rows="2"
-          label="Known Medical Condition/s & Medical History:" :rules="[requiredValidator]" />
+          label="Known Medical Condition/s & Medical History:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextField v-model="clinichis.current_medication" outlined dense hide-details label="Current Medications:"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextField v-model="clinichis.blood_type" outlined dense hide-details label="Blood Type:"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="clinichis.specific_findings" outlined dense hide-details auto-grow rows="2"
-          label="Specific Findings:" :rules="[requiredValidator]" />
+          label="Specific Findings:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="clinichis.clinical_status_time_consult" outlined dense hide-details auto-grow rows="2"
-          label="Clinical Status at the Time of Consult:" :rules="[requiredValidator]" />
+          label="Clinical Status at the Time of Consult:" :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <br />
     <br />
-    <VRow
-      style="background-color: rgba(255, 0, 128, 0.15); padding-top: 4%; padding-left: 4%; padding-bottom: 2%; border-radius: 5px;">
+    <VRow style="background-color: rgba(255, 0, 128, 0.15); padding: 10px;" class="rounded">
       <Vcol>
-        <h5 class=" text-h5 font-weight-medium mb-2" style="margin-left: -10px; color:#ff66b3">
+        <span class=" text-h5 font-weight-medium mb-2" style=" color:#ff66b3">
           Physical Examination (Inspection)
-        </h5>
+        </span>
       </Vcol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="physexam.head" outlined dense hide-details auto-grow rows="2" label="Head:"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow v-for="(item, index) in examFields" :key="index">
       <VCol>
         <!-- Field -->
         <VTextField v-model="physexam[item.field]" outlined dense hide-details :label="item.label + ':'" class="mb-2"
-          :rules="[requiredValidator]" />
+          :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
         <!-- Remarks (hidden for Neck and Chest) -->
         <VTextarea v-if="item.field !== 'neck' && item.field !== 'chest'" v-model="physexam[item.remark]" outlined dense
-          hide-details auto-grow rows="2" :label="item.label + ' Remarks:'" />
+          hide-details auto-grow rows="2" :label="item.label + ' Remarks:'" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="physexam.others" outlined dense hide-details auto-grow rows="2" label="Others: " />
+        <VTextarea v-model="physexam.others" outlined dense hide-details auto-grow rows="2" label="Others: "
+          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
         <VTextarea v-model="physexam.waist_circumference" outlined dense hide-details auto-grow rows="2"
-          label="Waist Circumference: " />
+          label="Waist Circumference: " :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
   </VForm>

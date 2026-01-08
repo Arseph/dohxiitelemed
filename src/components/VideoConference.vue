@@ -17,6 +17,8 @@
               <!-- Notebook Button -->
               <VBtn variant="tonal" icon="tabler-notebook" color="success" :class="smAndDown ? 'mt-3' : 'ma-3'"
                 :size="smAndDown ? 'small' : 'x-large'" @click="drawerOpen = true" />
+              <!-- check call duration value -->
+              <!-- <p>{{ callDuration }}</p> -->
               <VMenu location="top">
                 <template #activator="{ props }">
                   <VBtn v-if="videoEnabled" v-bind="props" variant="tonal" icon="tabler-video" color="warning"
@@ -106,8 +108,13 @@
         </VToolbar>
         <VDivider />
         <VCard flat>
-          <VCardText>
+          <!-- <VCardText>
             <component :is="activeCardComponent" :consultId="activeMeetingId" />
+          </VCardText> -->
+          <VCardText class="d-flex justify-center align-center" style="min-height: 200px;">
+            <v-progress-circular v-if="isLoading" indeterminate color="primary" size="48" />
+            <component v-show="!isLoading" :is="activeCardComponent" :consultId="activeMeetingId"
+              @loaded="onComponentLoaded" />
           </VCardText>
         </VCard>
       </VNavigationDrawer>
@@ -160,6 +167,8 @@
   </VDialog>
   <ErrorSnackbar :message="errorMessage" :visible="isError" @update:visible="isError = $event" />
   <SuccessSnackbar :message="successMessage" :visible="isSuccess" @update:visible="isSuccess = $event" />
+  <WarningSnackbar :message="warningMessage" location="top center" :visible="isWarning"
+    @update:visible="isWarning = $event" />
 </template>
 
 <script lang="ts" setup>
@@ -167,6 +176,8 @@
 import { cStatus } from "@/components/snackbars/cStatus";
 import ErrorSnackbar from "@/components/snackbars/errors.vue";
 import SuccessSnackbar from "@/components/snackbars/success.vue";
+import WarningSnackbar from "@/components/snackbars/warning.vue";
+
 import { axiosIns } from "@/plugins/axios";
 import { io } from "socket.io-client";
 import { onBeforeUnmount, onMounted, ref } from "vue";
@@ -178,11 +189,13 @@ import Form3 from "./forms/form3.vue";
 import Form4 from "./forms/form4.vue";
 import Form5 from "./forms/form5.vue";
 
-
+let warningTriggered = false
 
 const props = defineProps<{
   conid: any;
 }>();
+
+const callDuration = ref<number | null>(null);
 
 interface CardItem {
   id: number;
@@ -210,18 +223,45 @@ const activeCardTitle = ref('')
 const activeCardIcon = ref('')
 const activeCardIconColor = ref('')
 const activeCardComponent = ref(null)
+const isLoading = ref(false)
 
-function openCard(id) {
+// 🧩 Track previously opened component
+let lastCardComponent: any = null
+
+
+function openCard(id: number) {
   const selected = cards.value.find(c => c.id === id)
   if (!selected) return
+
+  const isSameComponent = lastCardComponent === selected.component
+  lastCardComponent = selected.component
+
   drawerOpen.value = false               // close small drawer
   activeCardTitle.value = selected.title
   activeCardIcon.value = selected.icon
   activeCardIconColor.value = selected.color
   activeCardComponent.value = selected.component
+
+  // 🔹 Handle loading logic
+  if (isSameComponent) {
+    // Option A: Instantly skip spinner
+    isLoading.value = false
+
+    // Option B: Flash loader briefly (optional)
+    // isLoading.value = true
+    // nextTick(() => (isLoading.value = false))
+  } else {
+    isLoading.value = true
+  }
+
+  // delay anim
   setTimeout(() => {
-    isDrawerOpen.value = true            // open large form drawer
-  }, 250)                                // small delay for smoother animation
+    isDrawerOpen.value = true
+  }, 250)
+}
+
+function onComponentLoaded() {
+  isLoading.value = false
 }
 
 function closeCard() {
@@ -229,10 +269,8 @@ function closeCard() {
   drawerOpen.value = true
 }
 
-// const activeCardTitle = computed(() => activeCard.value?.title || "");
-// const activeCardComponent = computed(() => activeCard.value?.component || null);
 
-const { isError, errorMessage, isSuccess, successMessage } = cStatus();
+const { isError, errorMessage, isSuccess, successMessage, isWarning, warningMessage } = cStatus();
 const { smAndDown } = useDisplay();
 const colSize = ref(12);
 const isStartDialog = ref(true);
@@ -402,6 +440,9 @@ async function startCall() {
     const response = await axiosIns.get(`/api/start-consult`, {
       params: { consult_id: props.conid },
     });
+
+    const data = response.data;
+
     if (response.data.is_finished) {
       alert("Teleconsultation Finished!");
       return;
@@ -409,6 +450,23 @@ async function startCall() {
 
     // ✅ store meeting id
     activeMeetingId.value = response.data.id;
+
+    // ✅ Calculate call duration (in seconds)
+    const dateMeeting = data.date_meeting; // e.g. "2025-10-29"
+    const from = data.from_time
+      ? new Date(`${dateMeeting}T${data.from_time}`)
+      : null;
+    const to = data.to_time
+      ? new Date(`${dateMeeting}T${data.to_time}`)
+      : null;
+
+    let durationSeconds = null;
+
+    if (from && to && !isNaN(from.getTime()) && !isNaN(to.getTime())) {
+      durationSeconds = (to.getTime() - from.getTime()) / 1000;
+    }
+
+    callDuration.value = durationSeconds;
 
     setCallStartTime(response.data.start_time);
     localStream = await navigator.mediaDevices.getUserMedia({
@@ -605,6 +663,14 @@ const startTimer = () => {
       const start = new Date(callStartTime.value).getTime();
       const now = Date.now();
       elapsedSeconds.value = Math.floor((now - start) / 1000);
+
+      // Check for 5-minute warning)
+      if (!warningTriggered && elapsedSeconds.value >= callDuration.value - (5 * 60)) {
+        warningMessage.value = "Less that 5 minutes remaining!";
+        isWarning.value = true;
+        warningTriggered = true;
+        // console.log("Less that 5 minutes remaining!");
+      }
     }
   }, 1000);
 };
@@ -621,6 +687,7 @@ const formatTime = (secs: number) => {
   const s = String(secs % 60).padStart(2, "0");
   return `${h}:${m}:${s}`;
 };
+
 const closeTab = () => {
   window.close();
 };

@@ -15,7 +15,6 @@
       density="compact"
       class="mb-4"
     />
-
     <VDataTable
       :headers="headers"
       :items="filteredData"
