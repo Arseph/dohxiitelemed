@@ -165,6 +165,22 @@
       </VCardText>
     </VCard>
   </VDialog>
+  <VOverlay v-model="isProcessingVideo" persistent class="d-flex align-center justify-center" style="height: 100vh;">
+    <VCard elevation="12" class="pa-6 text-center">
+      <VCardText>
+        <VProgressCircular indeterminate color="primary" size="56" width="5" class="mb-6" />
+
+        <h3 class="mb-2">
+          Processing Consultation Recording
+        </h3>
+
+        <p class="text-body-2 text-medium-emphasis">
+          Please wait while we securely save the session video.<br />
+          Do not close or refresh this page.
+        </p>
+      </VCardText>
+    </VCard>
+  </VOverlay>
   <ErrorSnackbar :message="errorMessage" :visible="isError" @update:visible="isError = $event" />
   <SuccessSnackbar :message="successMessage" :visible="isSuccess" @update:visible="isSuccess = $event" />
   <WarningSnackbar :message="warningMessage" location="top center" :visible="isWarning"
@@ -562,36 +578,87 @@ const startRecording = () => {
   mediaRecorder.start();
 };
 
+// const stopCall = async () => {
+//   if (!confirm("⚠️ Are you sure you want to stop the call?")) {
+//     return;
+//   }
+
+//   if (mediaRecorder && mediaRecorder.state !== "inactive") {
+//     mediaRecorder.stop();
+
+//     mediaRecorder.onstop = async () => {
+//       const blob = new Blob(recordedChunks, { type: "video/webm" });
+
+//       const formData = new FormData();
+//       formData.append("consult_id", props.conid);
+//       formData.append("video", blob, "video-conference.webm");
+
+//       try {
+//         const response = await axiosIns.post(`/api/stop-consult`, formData, {
+//           headers: {
+//             "Content-Type": "multipart/form-data",
+//           },
+//         });
+//         stopTimer();
+//         callEnded.value = true;
+//       } catch (error) {
+//         alert("❌ Failed to upload video");
+//         console.error(error);
+//       }
+//     };
+//   }
+// };
+
+const isProcessingVideo = ref(false);
+
 const stopCall = async () => {
-  if (!confirm("⚠️ Are you sure you want to stop the call?")) {
-    return;
-  }
+  if (!confirm("⚠️ Are you sure you want to stop the call?")) return;
 
   if (mediaRecorder && mediaRecorder.state !== "inactive") {
-    mediaRecorder.stop();
 
+    isProcessingVideo.value = true;
+
+    // Assign onstop BEFORE stopping
     mediaRecorder.onstop = async () => {
+
+      if (!recordedChunks || recordedChunks.length === 0) {
+        alert("⚠️ No video recorded!");
+        return;
+      }
+
       const blob = new Blob(recordedChunks, { type: "video/webm" });
+      console.log("Blob size:", blob.size); // check size
+      if (blob.size === 0) {
+        alert("⚠️ Empty video, cannot upload");
+        return;
+      }
 
       const formData = new FormData();
-      formData.append("consult_id", props.conid);
+      formData.append("consult_id", Number(props.conid));
       formData.append("video", blob, "video-conference.webm");
 
+      // Debug FormData entries
+      for (const [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
+
       try {
-        const response = await axiosIns.post(`/api/stop-consult`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        const response = await axiosIns.post(`/api/stop-consult`, formData);
         stopTimer();
         callEnded.value = true;
+        isProcessingVideo.value = false;
+        console.log("✅ Video uploaded:", response.data);
       } catch (error) {
         alert("❌ Failed to upload video");
-        console.error(error);
+        console.error(error.response?.data || error);
+        isProcessingVideo.value = false;
       }
     };
+
+    mediaRecorder.stop(); // stop AFTER assigning onstop
   }
 };
+
 
 function selectMic(deviceId: string) {
   selectedMic.value = deviceId;

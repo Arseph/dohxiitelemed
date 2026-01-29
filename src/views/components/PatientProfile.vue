@@ -139,7 +139,7 @@ watch(activeTab, (val) => {
                         <VWindow v-model="activeTab" class="mt-2" direction="vertical">
 
                             <!-- Profile Tab -->
-                            <VWindowItem value="profile" v-show="activeTab === 'profile'">
+                            <VWindowItem value="profile" v-show="activeTab === 'profile'" style="opacity: 1;">
                                 <EditPatientProfile :key="profileKey" :patient="localPatient"
                                     @updated="handlePatientUpdated" />
                             </VWindowItem>

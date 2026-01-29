@@ -7,34 +7,17 @@
   <!-- Data Table -->
   <div v-else>
     <!-- Search Box -->
-    <VTextField
-      v-model="search"
-      label="Search Teleconsultation"
-      prepend-inner-icon="tabler-search"
-      variant="outlined"
-      density="compact"
-      class="mb-4"
-    />
-    <VDataTable
-      :headers="headers"
-      :items="filteredData"
-      :items-per-page="5"
-      class="elevation-1"
-    >
+    <VTextField v-model="search" label="Search Teleconsultation" prepend-inner-icon="tabler-search" variant="outlined"
+      density="compact" class="mb-4" />
+    <VDataTable :headers="headers" :items="filteredData" :items-per-page="5" class="elevation-1">
       <template #item.facility="{ item }">
-        <VBadge
-          dot
-          location="start center"
-          offset-x="2"
-          color="primary"
-          class="me-3"
-        >
+        <VBadge dot location="start center" offset-x="2" color="primary" class="me-3">
           <span class="ms-4">{{ item.facility.facilityname }}</span>
         </VBadge>
       </template>
 
       <template #item.actions="{ item }">
-        <VBtn size="small" color="primary"@click="openSetSchedule(item)">
+        <VBtn size="small" color="primary" @click="openSetSchedule(item)">
           Set Schedule
         </VBtn>
       </template>
@@ -48,7 +31,7 @@
       </VCardTitle>
 
       <VCardText>
-        <AcceptDec :data="selectedItem" />
+        <AcceptDec :data="selectedItem" @close="setModal = false" />
       </VCardText>
     </VCard>
   </VDialog>
@@ -78,7 +61,7 @@ const filteredData = computed(() => {
   )
 })
 const openSetSchedule = (item: any) => {
-    selectedItem.value = item
-    setModal.value = !setModal.value
+  selectedItem.value = item
+  setModal.value = !setModal.value
 }
 </script>

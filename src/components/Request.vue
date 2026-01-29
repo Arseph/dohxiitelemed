@@ -36,7 +36,7 @@ const fetchDoctorCat = async (facilityId: number) => {
     const response = await axiosIns.get(`/api/get-doctors-facility`, {
       params: { fac_id: selectedFacility.value, cat_id: selectedCategory.value }
     })
-    if(response.data.length > 0) {
+    if (response.data.length > 0) {
       doctors.value = response.data.map((doc: any) => ({
         id: doc.id,
         name: `${doc.fname} ${doc.mname ?? ''} ${doc.lname}`.replace(/\s+/g, ' ').trim(),
@@ -51,8 +51,20 @@ const fetchDoctorCat = async (facilityId: number) => {
   }
 }
 
+const emit = defineEmits<{
+  (e: 'close'): void
+}>()
+
+const isSubmitting = ref(false)
+const isAccepted = ref(false)
+
 const handleSubmit = async () => {
+
+  if (isSubmitting.value || isAccepted.value) return
+
   try {
+    isSubmitting.value = true
+
     const payload = {
       facility_id: selectedFacility.value,
       tele_cate_id: selectedCategory.value,
@@ -63,11 +75,15 @@ const handleSubmit = async () => {
     await axiosIns.post(`/api/sched-pending`, payload)
     successMessage.value = "Successfully Request Teleconsultation.";
     isSuccess.value = true;
+    isAccepted.value = true
+    setTimeout(() => emit('close'), 800)
   } catch (error) {
-      errorMessage.value =
+    errorMessage.value =
       error.response?.data?.message ||
       "Something went wrong. Please try again.";
-      isError.value = true;
+    isError.value = true;
+  } finally {
+    isSubmitting.value = false
   }
 }
 </script>
@@ -77,83 +93,46 @@ const handleSubmit = async () => {
     <VRow>
       <!-- Facility -->
       <VCol cols="12">
-        <VSelect
-          v-model="selectedFacility"
-          :items="props.facilities"
-          item-title="facilityname"
-          item-value="id"
-          label="Facility"
-          placeholder="Select Facility"
-        />
+        <VAutocomplete v-model="selectedFacility" :items="props.facilities" item-title="facilityname" item-value="id"
+          label="Facility" placeholder="Select Facility" />
 
       </VCol>
 
       <!-- Doctor Category -->
       <VCol cols="12" v-if="selectedFacility">
-        <VSelect
-          v-model="selectedCategory"
-          :items="props.docCat"
-          item-title="category_name"
-          item-value="id"
-          label="Doctor Category"
-          placeholder="Select Category"
-          @update:model-value="fetchDoctorCat"
-        />
+        <VSelect v-model="selectedCategory" :items="props.docCat" item-title="category_name" item-value="id"
+          label="Doctor Category" placeholder="Select Category" @update:model-value="fetchDoctorCat" />
       </VCol>
 
       <!-- Doctor -->
       <VCol cols="12" v-if="doctors.length > 0">
-        <VSelect
-          v-model="selectedDoctor"
-          :items="doctors"
-          item-title="name"
-          item-value="id"
-          label="Doctor"
-          placeholder="Select Doctor"
-        />
+        <VSelect v-model="selectedDoctor" :items="doctors" item-title="name" item-value="id" label="Doctor"
+          placeholder="Select Doctor" />
       </VCol>
 
       <!-- Patient -->
       <VCol cols="12" v-if="selectedDoctor">
-        <VSelect
-          v-model="selectedPatient"
-          :items="props.patient"
-          item-title="name"
-          item-value="id"
-          label="Patient"
-          placeholder="Select Patient"
-        />
+        <VSelect v-model="selectedPatient" :items="props.patient" item-title="name" item-value="id" label="Patient"
+          placeholder="Select Patient" />
       </VCol>
 
       <!-- Chief Complaint -->
       <VCol cols="12" v-if="selectedPatient">
-        <AppTextField
-          v-model="chiefComplaint"
-          label="Chief Complaint"
-          placeholder="Enter complaint"
-        />
+        <AppTextField v-model="chiefComplaint" label="Chief Complaint" placeholder="Enter complaint" />
       </VCol>
 
       <VCol cols="12" class="d-flex justify-end gap-4">
         <VCardActions>
-            <VBtn type="reset" color="secondary" variant="tonal">
-              Reset
-            </VBtn>
-            <VBtn type="submit" color="success" variant="tonal">
-              Submit
-            </VBtn>
+          <VBtn type="reset" color="secondary" variant="tonal">
+            Reset
+          </VBtn>
+          <VBtn type="submit" color="success" variant="tonal" :disabled="isSubmitting || isAccepted">
+            Submit
+          </VBtn>
         </VCardActions>
       </VCol>
     </VRow>
   </VForm>
-  <ErrorSnackbar
-    :message="errorMessage"
-    :visible="isError"
-    @update:visible="isError = $event"
-  />
-  <SuccessSnackbar
-    :message="successMessage"
-    :visible="isSuccess"
-    @update:visible="isSuccess = $event"
-  />
+  <ErrorSnackbar :message="errorMessage" :visible="isError" @update:visible="isError = $event" />
+  <SuccessSnackbar :message="successMessage" :visible="isSuccess" @update:visible="isSuccess = $event" />
 </template>

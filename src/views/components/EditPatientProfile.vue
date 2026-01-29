@@ -408,6 +408,7 @@ function formatNumber(val: string) {
 }
 </script>
 <template>
+    <VCard>
     <VForm ref="patientpform">
         <VTooltip v-if="isEditing == true" text="Save" location="top">
       <template #activator="{ props }">
@@ -833,20 +834,6 @@ function formatNumber(val: string) {
             </VRow>
         </VCol>
     </VForm>
+    </VCard>
 </template>
-<style lang="css" scoped>
-.custom-disabled {
-  pointer-events: none;     
-  opacity: .8;              
-  cursor: text;       
-}
 
-.custom-disabled:hover,
-.custom-disabled:focus,
-.custom-disabled .v-input__control:hover,
-.custom-disabled .v-input__control:focus {
-  background-color: #f9f9f9 !important;
-  border-color: #ccc !important;
-  box-shadow: none !important;
-}
-</style>

@@ -20,9 +20,9 @@ const props = defineProps({
 });
 
 const philheatlhStatusTypes = [
-    // Dependents / Others
-    { title: "Member", value: "1" },
-    { title: "Dependent", value: "0" },
+  // Dependents / Others
+  { title: "Member", value: "1" },
+  { title: "Dependent", value: "0" },
 ];
 
 const civilStatusOptions = [
@@ -61,6 +61,32 @@ async function fetchCountries() {
     console.error('Error fetching countries:', error);
   }
 }
+
+const religions = [
+  { code: 'AGLIP', text: 'AGLIPAY' },
+  { code: 'ALLY', text: 'ALLIANCE OF BIBLE CHRISTIAN COMMUNITIES' },
+  { code: 'ANGLI', text: 'ANGLICAN' },
+  { code: 'BAPTI', text: 'BAPTIST' },
+  { code: 'BRNAG', text: 'BORN AGAIN CHRISTIAN' },
+  { code: 'BUDDH', text: 'BUDDHISM' },
+  { code: 'CATHO', text: 'CATHOLIC' },
+  { code: 'XTIAN', text: 'CHRISTIAN' },
+  { code: 'CHOG', text: 'CHURCH OF GOD' },
+  { code: 'EVANG', text: 'EVANGELICAL' },
+  { code: 'IGNIK', text: 'IGLESIA NI CRISTO' },
+  { code: 'MUSLI', text: 'ISLAM' },
+  { code: 'JEWIT', text: 'JEHOVAHS WITNESS' },
+  { code: 'MORMO', text: 'LDS-MORMONS' },
+  { code: 'LRCM', text: 'LIFE RENEWAL CHRISTIAN MINISTRY' },
+  { code: 'LUTHR', text: 'LUTHERAN' },
+  { code: 'METOD', text: 'METHODIST' },
+  { code: 'PENTE', text: 'PENTECOSTAL' },
+  { code: 'PROTE', text: 'PROTESTANT' },
+  { code: 'SVDAY', text: 'SEVENTH DAY ADVENTIST' },
+  { code: 'UCCP', text: 'UCCP' },
+  { code: 'UNKNO', text: 'UNKNOWN' },
+  { code: 'WESLY', text: 'WESLEYAN' },
+];
 
 const meeting = ref({
   // savedID: props.consultId,
@@ -224,7 +250,7 @@ async function fetchMeetingInfo(meetId) {
     const pprov = data.provcode ?? null;
     const region = data.regcode ?? null;
 
-    
+
     const pfabrgyname = data.pbrgyname ?? null;
     const pfamuniname = data.pmuniname ?? null;
     const pfaprov = data.pprov ?? null;
@@ -497,8 +523,8 @@ function cancelEdit() {
           :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol>
-        <VTextField v-model="meeting.religion" outlined dense hide-details label="Religion:"
-          :class="{ 'custom-disabled': !isEditing }" />
+        <VAutocomplete v-model="meeting.religion" :items="religions" label="Religion:" item-title="text"
+          item-value="code" clearable autocomplete :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <!-- Show only when Married or Divorced -->
