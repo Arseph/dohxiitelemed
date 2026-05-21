@@ -6,6 +6,8 @@
     "moduleResolution": "node",
     "isolatedModules": true,
     "strict": true,
+    // "checkJs": false,
+    // "noImplicitAny": false,
     "jsx": "preserve",
     "jsxFactory": "h",
     "jsxFragmentFactory": "Fragment",
@@ -73,5 +75,5 @@
   "exclude": [
     "./dist",
     "./node_modules"
-  ]
+  ],
 }

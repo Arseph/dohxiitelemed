@@ -198,7 +198,6 @@ import { axiosIns } from "@/plugins/axios";
 import { io } from "socket.io-client";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useDisplay } from "vuetify";
-import { VCol } from "vuetify/lib/components/index.mjs";
 import Form1 from "./forms/form1.vue";
 import Form2 from "./forms/form2.vue";
 import Form3 from "./forms/form3.vue";
@@ -326,6 +325,7 @@ onMounted(async () => {
   await loadDevices();
   await restartStream();
   // ✅ 1. Connect to signaling server
+  // socket = io("http://10.10.124.140:3000", {
   socket = io("https://telemed-dev.dohsox.com", {
     path: "/socket.io",
     transports: ["websocket"],
@@ -371,24 +371,18 @@ onMounted(async () => {
       peerConnection.close();
     }
   });
-  if (peerConnection) {
-    peerConnection.onconnectionstatechange = () => {
-      if (
-        peerConnection.connectionState === "disconnected" ||
-        peerConnection.connectionState === "failed" ||
-        peerConnection.connectionState === "closed"
-      ) {
-        // cleanup UI
-        peerConnection.close();
-      }
-    };
-  }
+
   startRecording();
 });
 
 onBeforeUnmount(() => {
   if (peerConnection) peerConnection.close();
   if (socket) socket.disconnect();
+  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  stopTimer();
+  if (hideTimeout) clearTimeout(hideTimeout);
+  document.removeEventListener("keydown", handleKeydown);
+  document.removeEventListener("fullscreenchange", handleFullscreenChange);
 });
 
 function createPeerConnection() {
@@ -405,6 +399,17 @@ function createPeerConnection() {
   peerConnection.ontrack = (event) => {
     if (remoteVideo.value) {
       remoteVideo.value.srcObject = event.streams[0];
+    }
+  };
+
+  // Handle connection state changes
+  peerConnection.onconnectionstatechange = () => {
+    if (
+      peerConnection.connectionState === "disconnected" ||
+      peerConnection.connectionState === "failed" ||
+      peerConnection.connectionState === "closed"
+    ) {
+      peerConnection.close();
     }
   };
 
@@ -468,27 +473,32 @@ async function startCall() {
     activeMeetingId.value = response.data.id;
 
     // ✅ Calculate call duration (in seconds)
-    const dateMeeting = data.date_meeting; // e.g. "2025-10-29"
-    const from = data.from_time
-      ? new Date(`${dateMeeting}T${data.from_time}`)
-      : null;
-    const to = data.to_time
-      ? new Date(`${dateMeeting}T${data.to_time}`)
-      : null;
+    const dateMeeting = data.date_meeting;
+    const from = data.from_time ? new Date(`${dateMeeting}T${data.from_time}`) : null;
+    const to = data.to_time ? new Date(`${dateMeeting}T${data.to_time}`) : null;
 
     let durationSeconds = null;
-
     if (from && to && !isNaN(from.getTime()) && !isNaN(to.getTime())) {
       durationSeconds = (to.getTime() - from.getTime()) / 1000;
     }
-
     callDuration.value = durationSeconds;
 
     setCallStartTime(response.data.start_time);
-    localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: true,
-    });
+
+    // ✅ Stop preview stream reference (stream itself stays alive as localStream)
+    if (localVideoPreview.value) {
+      localVideoPreview.value.srcObject = null;
+    }
+
+    // ✅ Reuse the existing localStream acquired in the dialog (preserves selected devices)
+    // If for some reason it doesn't exist yet, fall back to getStream()
+    if (!localStream) {
+      localStream = await getStream();
+    }
+
+    // Apply current toggle states to the reused stream
+    localStream.getVideoTracks().forEach(t => (t.enabled = videoEnabled.value));
+    localStream.getAudioTracks().forEach(t => (t.enabled = audioEnabled.value));
 
     if (localVideo.value) {
       localVideo.value.srcObject = localStream;
@@ -507,7 +517,6 @@ async function startCall() {
     isStartDialog.value = false;
   } catch (error) {
     console.error(error);
-  } finally {
   }
 }
 const toggleVideo = () => {
@@ -527,6 +536,14 @@ const toggleAudio = () => {
 };
 
 const loadDevices = async () => {
+  // Must request permission first — enumerateDevices returns empty labels without it
+  try {
+    const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    tempStream.getTracks().forEach(t => t.stop()); // release immediately; restartStream will re-acquire
+  } catch (err) {
+    console.warn("Permission request failed:", err);
+  }
+
   const devices = await navigator.mediaDevices.enumerateDevices();
   cameras.value = devices.filter((d) => d.kind === "videoinput");
   microphones.value = devices.filter((d) => d.kind === "audioinput");
@@ -540,12 +557,18 @@ const loadDevices = async () => {
   }
 };
 
-const canvas = document.createElement("canvas");
-const ctx = canvas.getContext("2d");
+let canvas: HTMLCanvasElement | null = null;
+let ctx: CanvasRenderingContext2D | null = null;
 let canvasStream: MediaStream;
 
 const startRecording = () => {
   if (!localVideo.value || !remoteVideo.value) return;
+
+  // Lazily create canvas so it's always in a browser context
+  if (!canvas) {
+    canvas = document.createElement("canvas");
+    ctx = canvas.getContext("2d");
+  }
 
   // Set canvas size to match video layout
   canvas.width = 1280;
