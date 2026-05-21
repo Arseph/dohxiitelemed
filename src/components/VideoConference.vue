@@ -165,6 +165,22 @@
       </VCardText>
     </VCard>
   </VDialog>
+  <VOverlay v-model="isProcessingVideo" persistent class="d-flex align-center justify-center" style="height: 100vh;">
+    <VCard elevation="12" class="pa-6 text-center">
+      <VCardText>
+        <VProgressCircular indeterminate color="primary" size="56" width="5" class="mb-6" />
+
+        <h3 class="mb-2">
+          Processing Consultation Recording
+        </h3>
+
+        <p class="text-body-2 text-medium-emphasis">
+          Please wait while we securely save the session video.<br />
+          Do not close or refresh this page.
+        </p>
+      </VCardText>
+    </VCard>
+  </VOverlay>
   <ErrorSnackbar :message="errorMessage" :visible="isError" @update:visible="isError = $event" />
   <SuccessSnackbar :message="successMessage" :visible="isSuccess" @update:visible="isSuccess = $event" />
   <WarningSnackbar :message="warningMessage" location="top center" :visible="isWarning"
@@ -182,7 +198,6 @@ import { axiosIns } from "@/plugins/axios";
 import { io } from "socket.io-client";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useDisplay } from "vuetify";
-import { VCol } from "vuetify/lib/components/index.mjs";
 import Form1 from "./forms/form1.vue";
 import Form2 from "./forms/form2.vue";
 import Form3 from "./forms/form3.vue";
@@ -310,6 +325,7 @@ onMounted(async () => {
   await loadDevices();
   await restartStream();
   // ✅ 1. Connect to signaling server
+  // socket = io("http://10.10.124.140:3000", {
   socket = io("https://telemed-dev.dohsox.com", {
     path: "/socket.io",
     transports: ["websocket"],
@@ -355,24 +371,18 @@ onMounted(async () => {
       peerConnection.close();
     }
   });
-  if (peerConnection) {
-    peerConnection.onconnectionstatechange = () => {
-      if (
-        peerConnection.connectionState === "disconnected" ||
-        peerConnection.connectionState === "failed" ||
-        peerConnection.connectionState === "closed"
-      ) {
-        // cleanup UI
-        peerConnection.close();
-      }
-    };
-  }
+
   startRecording();
 });
 
 onBeforeUnmount(() => {
   if (peerConnection) peerConnection.close();
   if (socket) socket.disconnect();
+  if (localStream) localStream.getTracks().forEach(t => t.stop());
+  stopTimer();
+  if (hideTimeout) clearTimeout(hideTimeout);
+  document.removeEventListener("keydown", handleKeydown);
+  document.removeEventListener("fullscreenchange", handleFullscreenChange);
 });
 
 function createPeerConnection() {
@@ -389,6 +399,17 @@ function createPeerConnection() {
   peerConnection.ontrack = (event) => {
     if (remoteVideo.value) {
       remoteVideo.value.srcObject = event.streams[0];
+    }
+  };
+
+  // Handle connection state changes
+  peerConnection.onconnectionstatechange = () => {
+    if (
+      peerConnection.connectionState === "disconnected" ||
+      peerConnection.connectionState === "failed" ||
+      peerConnection.connectionState === "closed"
+    ) {
+      peerConnection.close();
     }
   };
 
@@ -452,27 +473,32 @@ async function startCall() {
     activeMeetingId.value = response.data.id;
 
     // ✅ Calculate call duration (in seconds)
-    const dateMeeting = data.date_meeting; // e.g. "2025-10-29"
-    const from = data.from_time
-      ? new Date(`${dateMeeting}T${data.from_time}`)
-      : null;
-    const to = data.to_time
-      ? new Date(`${dateMeeting}T${data.to_time}`)
-      : null;
+    const dateMeeting = data.date_meeting;
+    const from = data.from_time ? new Date(`${dateMeeting}T${data.from_time}`) : null;
+    const to = data.to_time ? new Date(`${dateMeeting}T${data.to_time}`) : null;
 
     let durationSeconds = null;
-
     if (from && to && !isNaN(from.getTime()) && !isNaN(to.getTime())) {
       durationSeconds = (to.getTime() - from.getTime()) / 1000;
     }
-
     callDuration.value = durationSeconds;
 
     setCallStartTime(response.data.start_time);
-    localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: true,
-    });
+
+    // ✅ Stop preview stream reference (stream itself stays alive as localStream)
+    if (localVideoPreview.value) {
+      localVideoPreview.value.srcObject = null;
+    }
+
+    // ✅ Reuse the existing localStream acquired in the dialog (preserves selected devices)
+    // If for some reason it doesn't exist yet, fall back to getStream()
+    if (!localStream) {
+      localStream = await getStream();
+    }
+
+    // Apply current toggle states to the reused stream
+    localStream.getVideoTracks().forEach(t => (t.enabled = videoEnabled.value));
+    localStream.getAudioTracks().forEach(t => (t.enabled = audioEnabled.value));
 
     if (localVideo.value) {
       localVideo.value.srcObject = localStream;
@@ -491,7 +517,6 @@ async function startCall() {
     isStartDialog.value = false;
   } catch (error) {
     console.error(error);
-  } finally {
   }
 }
 const toggleVideo = () => {
@@ -511,6 +536,14 @@ const toggleAudio = () => {
 };
 
 const loadDevices = async () => {
+  // Must request permission first — enumerateDevices returns empty labels without it
+  try {
+    const tempStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    tempStream.getTracks().forEach(t => t.stop()); // release immediately; restartStream will re-acquire
+  } catch (err) {
+    console.warn("Permission request failed:", err);
+  }
+
   const devices = await navigator.mediaDevices.enumerateDevices();
   cameras.value = devices.filter((d) => d.kind === "videoinput");
   microphones.value = devices.filter((d) => d.kind === "audioinput");
@@ -524,12 +557,18 @@ const loadDevices = async () => {
   }
 };
 
-const canvas = document.createElement("canvas");
-const ctx = canvas.getContext("2d");
+let canvas: HTMLCanvasElement | null = null;
+let ctx: CanvasRenderingContext2D | null = null;
 let canvasStream: MediaStream;
 
 const startRecording = () => {
   if (!localVideo.value || !remoteVideo.value) return;
+
+  // Lazily create canvas so it's always in a browser context
+  if (!canvas) {
+    canvas = document.createElement("canvas");
+    ctx = canvas.getContext("2d");
+  }
 
   // Set canvas size to match video layout
   canvas.width = 1280;
@@ -562,36 +601,87 @@ const startRecording = () => {
   mediaRecorder.start();
 };
 
+// const stopCall = async () => {
+//   if (!confirm("⚠️ Are you sure you want to stop the call?")) {
+//     return;
+//   }
+
+//   if (mediaRecorder && mediaRecorder.state !== "inactive") {
+//     mediaRecorder.stop();
+
+//     mediaRecorder.onstop = async () => {
+//       const blob = new Blob(recordedChunks, { type: "video/webm" });
+
+//       const formData = new FormData();
+//       formData.append("consult_id", props.conid);
+//       formData.append("video", blob, "video-conference.webm");
+
+//       try {
+//         const response = await axiosIns.post(`/api/stop-consult`, formData, {
+//           headers: {
+//             "Content-Type": "multipart/form-data",
+//           },
+//         });
+//         stopTimer();
+//         callEnded.value = true;
+//       } catch (error) {
+//         alert("❌ Failed to upload video");
+//         console.error(error);
+//       }
+//     };
+//   }
+// };
+
+const isProcessingVideo = ref(false);
+
 const stopCall = async () => {
-  if (!confirm("⚠️ Are you sure you want to stop the call?")) {
-    return;
-  }
+  if (!confirm("⚠️ Are you sure you want to stop the call?")) return;
 
   if (mediaRecorder && mediaRecorder.state !== "inactive") {
-    mediaRecorder.stop();
 
+    isProcessingVideo.value = true;
+
+    // Assign onstop BEFORE stopping
     mediaRecorder.onstop = async () => {
+
+      if (!recordedChunks || recordedChunks.length === 0) {
+        alert("⚠️ No video recorded!");
+        return;
+      }
+
       const blob = new Blob(recordedChunks, { type: "video/webm" });
+      console.log("Blob size:", blob.size); // check size
+      if (blob.size === 0) {
+        alert("⚠️ Empty video, cannot upload");
+        return;
+      }
 
       const formData = new FormData();
-      formData.append("consult_id", props.conid);
+      formData.append("consult_id", Number(props.conid));
       formData.append("video", blob, "video-conference.webm");
 
+      // Debug FormData entries
+      for (const [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
+
       try {
-        const response = await axiosIns.post(`/api/stop-consult`, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        });
+        const response = await axiosIns.post(`/api/stop-consult`, formData);
         stopTimer();
         callEnded.value = true;
+        isProcessingVideo.value = false;
+        console.log("✅ Video uploaded:", response.data);
       } catch (error) {
         alert("❌ Failed to upload video");
-        console.error(error);
+        console.error(error.response?.data || error);
+        isProcessingVideo.value = false;
       }
     };
+
+    mediaRecorder.stop(); // stop AFTER assigning onstop
   }
 };
+
 
 function selectMic(deviceId: string) {
   selectedMic.value = deviceId;

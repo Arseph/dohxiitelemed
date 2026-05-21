@@ -288,12 +288,16 @@ async function saveUpdatePE() {
     const response = await axiosIns.post('/api/save-physicalexam', payload); //no route yet
 
     // Success response handling
-    successMessage.value = "Saved Physical Exam.";
+    setTimeout(function () {
+      successMessage.value = "Saved Physical Exam.";
+    }, 1050);
     isSuccess.value = true;
 
   } catch (error) {
     console.error("Error Saving Physical Exam:", error);
-    errorMessage.value = "Failed to save Physical Exam.";
+    setTimeout(function () {
+      errorMessage.value = "Failed to save Physical Exam.";
+    }, 1050);
     isError.value = true;
 
   }

@@ -26,12 +26,12 @@ const fetchTele = async () => {
       name: `${pat.pat_fname} ${pat.pat_mname ?? ''} ${pat.pat_lname}`.replace(/\s+/g, ' ').trim(),
     }))
     start.value = response.data?.data
-    active.value =  response.data?.active_user?.id
-    pending.value =  response.data?.data_req
-    req.value =  response.data?.data_my_req
+    active.value = response.data?.active_user?.id
+    pending.value = response.data?.data_req
+    req.value = response.data?.data_my_req
     console.log(req.value)
   } catch (error) {
-  } finally { 
+  } finally {
   }
 };
 const activeModal = ref<string | null>(null)
@@ -74,26 +74,12 @@ onUnmounted(() => {
 
 <template>
   <VRow>
-    <VCol
-      cols="5"
-      md="5"
-      sm="5"
-    >
+    <VCol cols="5" md="5" sm="5">
       <VRow>
-        <VCol
-          v-for="(data, index) in logisticData"
-          :key="index"
-          cols="12"
-          md="12"
-          sm="12"
-        >
-          <VCard
-            class="logistics-card-statistics cursor-pointer"
+        <VCol v-for="(data, index) in logisticData" :key="index" cols="12" md="12" sm="12">
+          <VCard class="logistics-card-statistics cursor-pointer"
             :style="data.isHover ? `border-block-end-color: rgb(var(--v-theme-${data.color}))` : `border-block-end-color: rgba(var(--v-theme-${data.color}),0.38)`"
-            @mouseenter="data.isHover = true"
-            @mouseleave="data.isHover = false"
-            @click="swipeSpecific(data.swipe)"
-          >
+            @mouseenter="data.isHover = true" @mouseleave="data.isHover = false" @click="swipeSpecific(data.swipe)">
             <VCardText>
               <div class="d-flex align-center justify-center gap-x-4 mb-1">
                 <VAvatar variant="tonal" :color="data.color" rounded>
@@ -108,37 +94,32 @@ onUnmounted(() => {
         </VCol>
       </VRow>
     </VCol>
-    <VCol
-      cols="7"
-      md="7"
-      sm="7"
-    >
-      <VCard class="bg-cover bg-center"
-        style="background-image: url('https://picsum.photos/800/400?blur=2');">
+    <VCol cols="7" md="7" sm="7">
+      <VCard class="bg-cover bg-center" style="background-image: url('https://picsum.photos/800/400?blur=2');">
         <VCardItem>
-           <div class="d-flex align-center justify-center gap-x-4 mb-1">
-             <h1 class="text-white">{{ time }}</h1><br></br>
-            </div>
-            <div class="d-flex align-center justify-center gap-x-4 mb-1">
-              <h3 class="text-white">{{ date }}</h3>
-           </div>
+          <div class="d-flex align-center justify-center gap-x-4 mb-1">
+            <h1 class="text-white">{{ time }}</h1><br></br>
+          </div>
+          <div class="d-flex align-center justify-center gap-x-4 mb-1">
+            <h3 class="text-white">{{ date }}</h3>
+          </div>
         </VCardItem>
       </VCard>
       <swiper-container ref="swiperEl" :loop="false" slides-per-view="1">
         <!-- Slide 1 -->
         <swiper-slide>
-            <h1 class="text-h5 mt-6 mb-6">
-              <VIcon icon="tabler-video" size="28" class="mr-3" />
-              Today's Teleconsultation
-            </h1>
-            <Start :data="start" :active_id="active" />
+          <h1 class="text-h5 mt-6 mb-6">
+            <VIcon icon="tabler-video" size="28" class="mr-3" />
+            Today's Teleconsultation
+          </h1>
+          <Start :data="start" :active_id="active" />
         </swiper-slide>
 
         <!-- Slide 2 -->
         <swiper-slide>
           <h1 class="text-h5 mt-6 mb-6">
             <VIcon icon="tabler-video" size="28" class="mr-3" />
-           Join Teleconsultation
+            Join Teleconsultation
           </h1>
           <Join :data="start" :active_id="active" />
         </swiper-slide>
@@ -155,15 +136,9 @@ onUnmounted(() => {
           <h1 class="text-h5 mt-6 mb-6">
             <VIcon icon="tabler-video" size="28" class="mr-3" />
             Request Teleconsultation
-            <VBtn
-              icon="tabler-plus"
-              variant="tonal"
-              color="success"
-              rounded
-              class="ml-6"
-              @click="openModal('schedule')"
-            />
-            <RequestPal :data="req"/>
+            <VBtn icon="tabler-plus" variant="tonal" color="success" rounded class="ml-6"
+              @click="openModal('schedule')" />
+            <RequestPal :data="req" />
           </h1>
         </swiper-slide>
       </swiper-container>
@@ -179,7 +154,7 @@ onUnmounted(() => {
         <span v-if="activeModal === 'start'">Start Consultation</span>
         <span v-else-if="activeModal === 'join'">Join Teleconsultation</span>
         <span v-else-if="activeModal === 'schedule'">Request Teleconsultation</span>
-         <span v-else-if="activeModal === 'pending'">Pending Teleconsultation</span>
+        <span v-else-if="activeModal === 'pending'">Pending Teleconsultation</span>
       </VCardTitle>
 
       <VCardText>
@@ -191,7 +166,7 @@ onUnmounted(() => {
           🔗 Enter meeting details to join your teleconsultation.
         </div>
         <div v-else-if="activeModal === 'schedule'">
-          <Request :facilities="facilities" :docCat="docCat" :patient="patient"/>
+          <Request :facilities="facilities" :docCat="docCat" :patient="patient" @close="closeModal" />
         </div>
       </VCardText>
     </VCard>
@@ -226,4 +201,3 @@ onUnmounted(() => {
   }
 }
 </style>
-

@@ -2,7 +2,7 @@
 import { cStatus } from "@/components/snackbars/cStatus";
 import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
-import { ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { VForm } from 'vuetify/components/VForm';
 import { VCol, VRow } from "vuetify/lib/components/index.mjs";
 
@@ -30,15 +30,18 @@ const diagass = ref({
   if_covid: '',
 });
 
-// Watch for changes
+// Watch for changes — strict: only clear if_covid when classification is explicitly NOT Covid (not null/empty)
 watch(
   () => diagass.value.clinical_classification,
   (newVal) => {
-    if (newVal != 1) {
+    if (newVal !== 1) {
       diagass.value.if_covid = ''
     }
   }
 )
+
+// Computed
+const isCovidCase = computed(() => diagass.value.clinical_classification === 1)
 
 
 async function fetchMeetingInfo(meetId) {
@@ -126,7 +129,11 @@ onMounted(() => {
   fetchMeetingInfo(props.consultId);
 });
 
-const requiredValidator = (v) => !!v || 'This field is required';
+// Validators
+// ✅ handles 0 as a valid value (!!0 === false, so the old validator would reject 0)
+const requiredValidator = (v: any) => (v !== '' && v !== null && v !== undefined) || 'This field is required';
+// For radio groups where value is a number (0/1/2)
+const radioRequiredValidator = (v: any) => (v === 0 || v === 1 || v === 2) ? true : 'This field is required';
 
 const isEditing = ref(false);
 
@@ -158,47 +165,62 @@ function cancelEdit() {
     <!-- <pre>diagrass vals{{ diagass }}</pre> -->
     <VRow>
       <VCol>
-        <VTextarea v-model="diagass.summary_assess" outlined dense hide-details auto-grow rows="2"
-          label="Summary of Assessment Findings:" :rules="[requiredValidator]" :readonly="!isEditing"
-          :class="{ 'custom-disabled': !isEditing }" />
+        <VTextarea v-model="diagass.summary_assess" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
+          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+          <template #label><span class="req-label">Summary of Assessment Findings</span></template>
+        </VTextarea>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="diagass.diagnosis" outlined dense hide-details auto-grow rows="2" label="Diagnosis:"
-          :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+        <VTextarea v-model="diagass.diagnosis" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
+          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+          <template #label><span class="req-label">Diagnosis</span></template>
+        </VTextarea>
       </VCol>
     </VRow>
     <VRow class="align-center" flex>
       <VCol class="d-flex align-center">
-        <label>
-          Clinical Classification:
+        <label class="req-label">
+          Clinical Classification
         </label>
         <div class="d-flex align-center">
-          <VRadioGroup v-model="diagass.clinical_classification" inline hide-details density="compact"
-            :rules="[v => v === 2 || v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
-            :class="{ 'custom-disabled': !isEditing }">
+          <VRadioGroup v-model="diagass.clinical_classification" inline density="compact"
+            :rules="[radioRequiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
             <VRadio label="Covid-19 Case" :value="1" />
             <VRadio label="Non-Covid-19 Case" :value="0" />
           </VRadioGroup>
         </div>
       </VCol>
     </VRow>
-    <VRow v-if="diagass.clinical_classification == 1" class="align-center" flex :readonly="!isEditing"
-      :class="{ 'custom-disabled': !isEditing }">
+    <VRow v-if="isCovidCase" class="align-center" flex>
       <VCol class="d-flex align-center">
-        <label>
-          If Covid-19 Case:
+        <label class="req-label">
+          If Covid-19 Case
         </label>
         <div class="d-flex align-center">
-          <VRadioGroup v-model="diagass.if_covid" inline hide-details density="compact" :readonly="!isEditing"
+          <VRadioGroup v-model="diagass.if_covid" inline density="compact"
+            :rules="isCovidCase ? [radioRequiredValidator] : []" :readonly="!isEditing"
             :class="{ 'custom-disabled': !isEditing }">
-            <VRadio label="Suspected Cases " :value="0" />
-            <VRadio label="Probable Case " :value="1" />
-            <VRadio label="Confirmed Case " :value="2" />
+            <VRadio label="Suspected Cases" :value="0" />
+            <VRadio label="Probable Case" :value="1" />
+            <VRadio label="Confirmed Case" :value="2" />
           </VRadioGroup>
         </div>
       </VCol>
     </VRow>
   </VForm>
 </template>
+
+<style>
+.req-label::after {
+  content: " *";
+  color: #f44336;
+  font-weight: bold;
+}
+
+.custom-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+</style>

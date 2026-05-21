@@ -2,7 +2,7 @@
 import { cStatus } from "@/components/snackbars/cStatus";
 import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
-import { ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { VForm } from 'vuetify/components/VForm';
 import { VCheckbox, VCol, VRadioGroup, VRow, VTextField } from "vuetify/lib/components/index.mjs";
 
@@ -84,7 +84,7 @@ const covids = ref({
     wp_company_name: '',
     wp_date_last_expose: '',
     wp_address: '',
-    list_name_occasion: ''
+    list_name_occasion: 'N/A'
 });
 
 const clinas = ref({
@@ -207,22 +207,103 @@ watch(speOthersList, (newList) => {
         .join(',');
 }, { deep: true });
 
-// v-ifs changed
-watch(() => covids.known_covid_case, (newVal) => {
-    if (newVal === 0) {
-        covids.date_contact_known_covid_case = '';
+// v-ifs changed — fixed: use covids.value / clinas.value (they are refs)
+watch(() => covids.value.known_covid_case, (newVal) => {
+    if (newVal !== 1) {
+        covids.value.date_contact_known_covid_case = '';
     }
 });
 
-watch(() => clinas.days_14_prior_expose, (newVal) => {
-    if (newVal != 1) {
-        clinas.days_14_date_onset_illness = '';
+watch(() => clinas.value.days_14_prior_expose, (newVal) => {
+    if (newVal !== 1) {
+        clinas.value.days_14_date_onset_illness = '';
+    }
+    if (newVal !== 0) {
+        clinas.value.place_quarantine = '';
     }
 });
 
-watch(() => clinas.days_14_prior_expose, (newVal) => {
-    if (newVal != 0) {
-        clinass.place_quarantine = '';
+// Clear accommodation sub-fields when accomodation !== 1
+watch(() => covids.value.accomodation, (newVal) => {
+    if (newVal !== 1) {
+        covids.value.acco_specify_type = '';
+        covids.value.acco_address = '';
+        covids.value.acco_date_last_expose = '';
+        covids.value.acco_name = '';
+        covids.value.acco_name_type = '';
+    }
+});
+
+// Clear food establishment sub-fields when food_establishment !== 1
+watch(() => covids.value.food_establishment, (newVal) => {
+    if (newVal !== 1) {
+        covids.value.food_es_specify_type = '';
+        covids.value.food_es_address = '';
+        covids.value.food_es_date_last_expose = '';
+        covids.value.food_es_name = '';
+        covids.value.food_es_name_type = '';
+    }
+});
+
+// Clear store sub-fields when store !== 1
+watch(() => covids.value.store, (newVal) => {
+    if (newVal !== 1) {
+        covids.value.store_specify_type = '';
+        covids.value.store_address = '';
+        covids.value.store_date_last_expose = '';
+        covids.value.store_name = '';
+        covids.value.store_name_type = '';
+    }
+});
+
+// Clear facility sub-fields when facility !== 1
+watch(() => covids.value.facility, (newVal) => {
+    if (newVal !== 1) {
+        covids.value.fac_specify_type = '';
+        covids.value.fac_address = '';
+        covids.value.fac_significant_other = '';
+        covids.value.fac_date_last_expose = '';
+        covids.value.fac_name = '';
+        covids.value.fac_name_type = '';
+    }
+});
+
+// Clear event sub-fields when event !== 1
+watch(() => covids.value.event, (newVal) => {
+    if (newVal !== 1) {
+        covids.value.event_specify_type = '';
+        covids.value.event_date_last_expose = '';
+        covids.value.event_place = '';
+    }
+});
+
+// Clear workplace sub-fields when workplace !== 1
+watch(() => covids.value.workplace, (newVal) => {
+    if (newVal !== 1) {
+        covids.value.wp_company_name = '';
+        covids.value.wp_date_last_expose = '';
+        covids.value.wp_address = '';
+    }
+});
+
+// Clear xray_date when xray !== 1
+watch(() => clinas.value.xray, (newVal) => {
+    if (newVal !== 1) {
+        clinas.value.xray_date = '';
+    }
+});
+
+// Clear lmp when pregnant !== 1
+watch(() => clinas.value.pregnant, (newVal) => {
+    if (newVal !== 1) {
+        clinas.value.lmp = '';
+    }
+});
+
+// Clear history_specify when history_illness !== 1
+watch(() => clinas.value.history_illness, (newVal) => {
+    if (newVal !== 1) {
+        clinas.value.history_specify = '';
     }
 });
 
@@ -576,20 +657,42 @@ async function saveUpdateCA() {
         const response = await axiosIns.post('/api/save-covidassessment', payload); //no route controller yet
 
         // Success response handling
-        successMessage.value = "Saved covid-19 assessment.";
+        setTimeout(function () {
+            successMessage.value = "Saved covid-19 assessment.";
+        }, 1050);
         isSuccess.value = true;
         cancelEdit();
 
 
     } catch (error) {
         console.error("Error Saving covid-19 assessment:", error);
-        errorMessage.value = "Failed to save covid-19 assessment.";
+        setTimeout(function () {
+            errorMessage.value = "Failed to save covid-19 assessment.";
+        }, 1050);
         isError.value = true;
 
     }
 }
 
-const requiredValidator = (v) => !!v || 'This field is required';
+const requiredValidator = (v: any) => (v !== '' && v !== null && v !== undefined) || 'This field is required';
+const requiredRadio = (v: any) => (v === 0 || v === 1 || v === 2) ? true : 'This field is required';
+const phoneValidator = (v: string) => !v || /^[0-9+\-\s()]{7,15}$/.test(v) || 'Enter a valid phone number';
+const dateValidator = (v: string) => !v || /^\d{4}-\d{2}-\d{2}$/.test(v) || 'Enter a valid date';
+
+// Computed visibility flags — sub-fields shown only when parent = Yes (1)
+const travelYes = computed(() => covids.value.history_travel_country_symptoms === 1);
+const knownCovidYes = computed(() => covids.value.known_covid_case === 1);
+const accoYes = computed(() => covids.value.accomodation === 1);
+const foodYes = computed(() => covids.value.food_establishment === 1);
+const storeYes = computed(() => covids.value.store === 1);
+const facilityYes = computed(() => covids.value.facility === 1);
+const eventYes = computed(() => covids.value.event === 1);
+const workplaceYes = computed(() => covids.value.workplace === 1);
+const prior14Yes = computed(() => clinas.value.days_14_prior_expose === 1);
+const prior14No = computed(() => clinas.value.days_14_prior_expose === 0);
+const xrayYes = computed(() => clinas.value.xray === 1);
+const pregnantYes = computed(() => clinas.value.pregnant === 1);
+const historyIllnessYes = computed(() => clinas.value.history_illness === 1);
 
 const isEditing = ref(false);
 
@@ -632,57 +735,62 @@ function cancelEdit() {
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="covids.employers_name" outlined dense hide-details label="Employer's Name:"
+                <VTextField v-model="covids.employers_name" outlined dense label="Employer's Name"
+                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+
+                </VTextField>
+            </VCol>
+        </VRow>
+        <VRow>
+            <VCol>
+                <VTextField v-model="covids.place_of_work" outlined dense label="Place of Work" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                </VTextField>
+            </VCol>
+        </VRow>
+        <VRow>
+            <VCol>
+                <VTextField v-model="covids.house_bldg_name" outlined dense label="House #/Bldg Name:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="covids.place_of_work" outlined dense hide-details label="Place Of Work:"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-            </VCol>
-        </VRow>
-        <VRow>
-            <VCol>
-                <VTextField v-model="covids.house_bldg_name" outlined dense hide-details label="House #/Bldg Name:"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-            </VCol>
-        </VRow>
-        <VRow>
-            <VCol>
-                <VTextField v-model="covids.street" outlined dense hide-details label="Street:" :readonly="!isEditing"
+                <VTextField v-model="covids.street" outlined dense label="Street:" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="covids.municipal" outlined dense hide-details label="City/Municipality:"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField v-model="covids.municipal" outlined dense label="City/Municipality:" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="covids.province" outlined dense hide-details label="Province/State:"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField v-model="covids.province" outlined dense label="Province/State:" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
             <VCol>
                 <VAutocomplete v-model="covids.country_id" :items="countrylist" item-title="en_short_name"
-                    item-value="num_code" label="Country:" outlined dense hide-details clearable persistent-hint
+                    item-value="num_code" label="Country:" outlined dense clearable persistent-hint
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="covids.office_phone_no" outlined dense hide-details label="Office Phone No:"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField v-model="covids.office_phone_no" outlined dense :rules="[phoneValidator]"
+                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" label="Office Phone No.">
+                </VTextField>
             </VCol>
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="covids.cellphone_no" outlined dense hide-details label="Office Cellphone No:"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField v-model="covids.cellphone_no" outlined dense :rules="[phoneValidator]"
+                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" label="Cellphon No.">
+                </VTextField>
             </VCol>
         </VRow>
         <br />
@@ -696,48 +804,68 @@ function cancelEdit() {
         </VRow>
         <VRow class="align-center">
             <VCol>
-                <label>
+                <label class="req-label">
                     History of Travel/Visit/Work in other countries with known COVID-19 transmission
-                    14 days prior to onset of signs and symptoms:
+                    14 days prior to onset of signs and symptoms
                 </label>
-                <VRadioGroup v-model="covids.history_travel_country_symptoms" inline hide-details density="compact"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+                <VRadioGroup v-model="covids.history_travel_country_symptoms" inline density="compact"
+                    :rules="[v => v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label="Yes" :value="1" />
                     <VRadio label="No" :value="0" />
                 </VRadioGroup>
             </VCol>
         </VRow>
-        <VRow>
-            <VCol>
-                <VTextField v-model="covids.port_of_exit" outlined dense hide-details label="Port of Exit:"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-            </VCol>
-        </VRow>
-        <VRow>
-            <VCol>
-                <VTextField v-model="covids.airline_sea_vessel" outlined dense hide-details label="Airline/Sea Vessel:"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-            </VCol>
-        </VRow>
-        <VRow>
-            <VCol>
-                <VTextField v-model="covids.flight_vessel_no" outlined dense hide-details label="Flight/Vessel #:"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-            </VCol>
-        </VRow>
-        <VRow>
-            <VCol>
-                <VTextField type="date" v-model="covids.date_departure" outlined dense hide-details
-                    label="Date of Departure:" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-            </VCol>
-        </VRow>
-        <VRow>
-            <VCol>
-                <VTextField type="date" v-model="covids.date_arrival_ph" outlined dense hide-details
-                    label="Date of Arrival in Philippines:" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
-            </VCol>
-        </VRow>
+        <!-- Travel sub-fields: only shown when history_travel = Yes -->
+        <template v-if="travelYes">
+            <VRow>
+                <VCol>
+                    <VTextField v-model="covids.port_of_exit" outlined dense
+                        :rules="travelYes ? [requiredValidator] : []" :readonly="!isEditing"
+                        :class="{ 'custom-disabled': !isEditing }">
+                        <template #label><span class="req-label">Port of Exit</span></template>
+                    </VTextField>
+                </VCol>
+            </VRow>
+            <VRow>
+                <VCol>
+                    <VTextField v-model="covids.airline_sea_vessel" outlined dense
+                        :rules="travelYes ? [requiredValidator] : []" :readonly="!isEditing"
+                        :class="{ 'custom-disabled': !isEditing }">
+                        <template #label><span class="req-label">Airline/Sea Vessel</span></template>
+                    </VTextField>
+                </VCol>
+            </VRow>
+            <VRow>
+                <VCol>
+                    <VTextField v-model="covids.flight_vessel_no" outlined dense :readonly="!isEditing"
+                        :class="{ 'custom-disabled': !isEditing }">
+                        <template #label><span>Flight/Vessel #</span></template>
+                    </VTextField>
+                </VCol>
+            </VRow>
+            <VRow>
+                <VCol>
+                    <VTextField type="date" v-model="covids.date_departure" outlined dense
+                        :rules="travelYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                        :class="{ 'custom-disabled': !isEditing }">
+                        <template #label><span class="req-label">Date of Departure</span></template>
+                    </VTextField>
+                </VCol>
+            </VRow>
+            <VRow>
+                <VCol>
+                    <VTextField type="date" v-model="covids.date_arrival_ph" outlined dense
+                        :rules="travelYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                        :class="{ 'custom-disabled': !isEditing }">
+                        <template #label><span class="req-label">Date of Arrival in Philippines</span></template>
+                    </VTextField>
+                </VCol>
+            </VRow>
+        </template>
+        <template v-else-if="covids.history_travel_country_symptoms === 0">
+            <!-- Hidden placeholders when No: still need spacer so layout is consistent -->
+        </template>
         <br />
         <br />
         <VRow style="background-color:rgba(244, 67, 54, 0.15); padding: 10px;" class="rounded">
@@ -754,18 +882,21 @@ function cancelEdit() {
                         Known Covid-19 Case:
                     </label>
 
-                    <VRadioGroup v-model="covids.known_covid_case" inline hide-details density="compact"
-                        :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+                    <VRadioGroup v-model="covids.known_covid_case" inline density="compact" :readonly="!isEditing"
+                        :class="{ 'custom-disabled': !isEditing }" :rules="[
+                            v => v === 0 || v === 1 || v === 2 ? true : 'This field is required']">
                         <VRadio label="Yes" :value="1" />
                         <VRadio label="No" :value="0" />
                         <VRadio label="Unknown" :value="2" />
                     </VRadioGroup>
                 </div>
                 <br />
-                <VTextField type="date" v-if="covids.known_covid_case == 1"
-                    v-model="covids.date_contact_known_covid_case" outlined dense hide-details
-                    label="(If yes) Date of Contact with Known Covid-19 Case:" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField type="date" v-if="knownCovidYes" v-model="covids.date_contact_known_covid_case" outlined
+                    dense :rules="knownCovidYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">(If yes) Date of Contact with Known Covid-19
+                            Case</span></template>
+                </VTextField>
             </VCol>
         </VRow>
         <br></br>
@@ -777,8 +908,8 @@ function cancelEdit() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Accommodation</label>
 
-                    <VRadioGroup v-model="covids.accomodation" inline hide-details density="compact" :rules="[
-                        v => v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
+                    <VRadioGroup v-model="covids.accomodation" inline density="compact" :rules="[
+                        v => v === 0 || v === 1 || v === 2 ? true : 'This field is required']" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
                         <VRadio label="Yes" :value="1" />
                         <VRadio label="No" :value="0" />
@@ -786,18 +917,29 @@ function cancelEdit() {
                     </VRadioGroup>
                 </div>
 
-                <VTextField v-model="covids.acco_specify_type" outlined dense hide-details label="Specific Type:"
-                    class="mt-2" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField v-model="covids.acco_address" outlined dense hide-details label="Address:" class="mt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField type="date" v-model="covids.acco_date_last_expose" outlined dense hide-details
-                    label="Date of Last Exposure:" class="mt-2" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField v-model="covids.acco_name" outlined dense hide-details label="Name:" class="mt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-
-                <VRadioGroup v-model="covids.acco_name_type" inline hide-details density="compact" class="pt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+                <VTextField v-if="accoYes" v-model="covids.acco_specify_type" outlined dense class="mt-2"
+                    :rules="accoYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Specific Type</span></template>
+                </VTextField>
+                <VTextField v-if="accoYes" v-model="covids.acco_address" outlined dense class="mt-2"
+                    :rules="accoYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Address</span></template>
+                </VTextField>
+                <VTextField v-if="accoYes" type="date" v-model="covids.acco_date_last_expose" outlined dense
+                    class="mt-2" :rules="accoYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Date of Last Exposure</span></template>
+                </VTextField>
+                <VTextField v-if="accoYes" v-model="covids.acco_name" outlined dense class="mt-2"
+                    :rules="accoYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Name</span></template>
+                </VTextField>
+                <VRadioGroup v-if="accoYes" v-model="covids.acco_name_type" inline density="compact" class="pt-2"
+                    :rules="accoYes ? [requiredRadio] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label="Owner" :value="0" />
                     <VRadio label="Staff" :value="1" />
                     <VRadio label="Guest" :value="2" />
@@ -812,8 +954,8 @@ function cancelEdit() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Food Establishment</label>
 
-                    <VRadioGroup v-model="covids.food_establishment" inline hide-details density="compact" :rules="[
-                        v => v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
+                    <VRadioGroup v-model="covids.food_establishment" inline density="compact" :rules="[
+                        v => v === 0 || v === 1 || v === 2 ? true : 'This field is required']" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
                         <VRadio label=" Yes" :value="1" />
                         <VRadio label="No" :value="0" />
@@ -821,18 +963,29 @@ function cancelEdit() {
                     </VRadioGroup>
                 </div>
 
-                <VTextField v-model="covids.food_es_specify_type" outlined dense hide-details label="Specific Type:"
-                    class="mt-2" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField v-model="covids.food_es_address" outlined dense hide-details label="Address:" class="mt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField type="date" v-model="covids.food_es_date_last_expose" outlined dense hide-details
-                    label="Date of Last Exposure:" class="mt-2" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField v-model="covids.food_es_name" outlined dense hide-details label="Name:" class="mt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-
-                <VRadioGroup v-model="covids.food_es_name_type" inline hide-details density="compact" class="pt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+                <VTextField v-if="foodYes" v-model="covids.food_es_specify_type" outlined dense class="mt-2"
+                    :rules="foodYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Specific Type</span></template>
+                </VTextField>
+                <VTextField v-if="foodYes" v-model="covids.food_es_address" outlined dense class="mt-2"
+                    :rules="foodYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Address</span></template>
+                </VTextField>
+                <VTextField v-if="foodYes" type="date" v-model="covids.food_es_date_last_expose" outlined dense
+                    class="mt-2" :rules="foodYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Date of Last Exposure</span></template>
+                </VTextField>
+                <VTextField v-if="foodYes" v-model="covids.food_es_name" outlined dense class="mt-2"
+                    :rules="foodYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Name</span></template>
+                </VTextField>
+                <VRadioGroup v-if="foodYes" v-model="covids.food_es_name_type" inline density="compact" class="pt-2"
+                    :rules="foodYes ? [requiredRadio] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label="Owner" :value="0" />
                     <VRadio label="Staff" :value="1" />
                     <VRadio label="Customer" :value="2" />
@@ -847,8 +1000,8 @@ function cancelEdit() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Store</label>
 
-                    <VRadioGroup v-model="covids.store" inline hide-details density="compact" :rules="[
-                        v => v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
+                    <VRadioGroup v-model="covids.store" inline density="compact" :rules="[
+                        v => v === 0 || v === 1 || v === 2 ? true : 'This field is required']" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
                         <VRadio label=" Yes" :value="1" />
                         <VRadio label="No" :value="0" />
@@ -856,18 +1009,29 @@ function cancelEdit() {
                     </VRadioGroup>
                 </div>
 
-                <VTextField v-model="covids.store_specify_type" outlined dense hide-details label="Specific Type:"
-                    class="mt-2" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField v-model="covids.store_address" outlined dense hide-details label="Address:" class="mt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField type="date" v-model="covids.store_date_last_expose" outlined dense hide-details
-                    label="Date of Last Exposure:" class="mt-2" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField v-model="covids.store_name" outlined dense hide-details label="Name:" class="mt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-
-                <VRadioGroup v-model="covids.store_name_type" inline hide-details density="compact" class="pt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+                <VTextField v-if="storeYes" v-model="covids.store_specify_type" outlined dense class="mt-2"
+                    :rules="storeYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Specific Type</span></template>
+                </VTextField>
+                <VTextField v-if="storeYes" v-model="covids.store_address" outlined dense class="mt-2"
+                    :rules="storeYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Address</span></template>
+                </VTextField>
+                <VTextField v-if="storeYes" type="date" v-model="covids.store_date_last_expose" outlined dense
+                    class="mt-2" :rules="storeYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Date of Last Exposure</span></template>
+                </VTextField>
+                <VTextField v-if="storeYes" v-model="covids.store_name" outlined dense class="mt-2"
+                    :rules="storeYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Name</span></template>
+                </VTextField>
+                <VRadioGroup v-if="storeYes" v-model="covids.store_name_type" inline density="compact" class="pt-2"
+                    :rules="storeYes ? [requiredRadio] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label="Owner" :value="0" />
                     <VRadio label="Staff" :value="1" />
                     <VRadio label="Customer" :value="2" />
@@ -884,8 +1048,8 @@ function cancelEdit() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Health Facility</label>
 
-                    <VRadioGroup v-model="covids.facility" inline hide-details density="compact" :rules="[
-                        v => v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
+                    <VRadioGroup v-model="covids.facility" inline density="compact" :rules="[
+                        v => v === 0 || v === 1 || v === 2 ? true : 'This field is required']" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
                         <VRadio label=" Yes" :value="1" />
                         <VRadio label="No" :value="0" />
@@ -893,21 +1057,33 @@ function cancelEdit() {
                     </VRadioGroup>
                 </div>
 
-                <VTextField v-model="covids.fac_specify_type" outlined dense hide-details label="Specific Type:"
-                    class="mt-2" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField v-model="covids.fac_address" outlined dense hide-details label="Address:" class="mt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField v-model="covids.fac_significant_other" outlined dense hide-details
-                    label="Significant Other:" class="mt-2" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField type="date" v-model="covids.fac_date_last_expose" outlined dense hide-details
-                    label="Date of Last Exposure:" class="mt-2" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField v-model="covids.fac_name" outlined dense hide-details label="Name:" class="mt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-
-                <VRadioGroup v-model="covids.fac_name_type" inline hide-details density="compact" class="pt-2"
+                <VTextField v-if="facilityYes" v-model="covids.fac_specify_type" outlined dense class="mt-2"
+                    :rules="facilityYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Specific Type</span></template>
+                </VTextField>
+                <VTextField v-if="facilityYes" v-model="covids.fac_address" outlined dense class="mt-2"
+                    :rules="facilityYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Address</span></template>
+                </VTextField>
+                <VTextField v-if="facilityYes" v-model="covids.fac_significant_other" outlined dense class="mt-2"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span>Significant Other</span></template>
+                </VTextField>
+                <VTextField v-if="facilityYes" type="date" v-model="covids.fac_date_last_expose" outlined dense
+                    class="mt-2" :rules="facilityYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Date of Last Exposure</span></template>
+                </VTextField>
+                <VTextField v-if="facilityYes" v-model="covids.fac_name" outlined dense class="mt-2"
+                    :rules="facilityYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Name</span></template>
+                </VTextField>
+                <VRadioGroup v-if="facilityYes" v-model="covids.fac_name_type" inline density="compact" class="pt-2"
+                    :rules="facilityYes ? [requiredRadio] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label="Patient" :value="0" />
                     <VRadio label="Visitor" :value="1" />
                     <VRadio label="Staff" :value="2" />
@@ -923,8 +1099,8 @@ function cancelEdit() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Event</label>
 
-                    <VRadioGroup v-model="covids.event" inline hide-details density="compact" :rules="[
-                        v => v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
+                    <VRadioGroup v-model="covids.event" inline density="compact" :rules="[
+                        v => v === 0 || v === 1 || v === 2 ? true : 'This field is required']" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
                         <VRadio label=" Yes" :value="1" />
                         <VRadio label="No" :value="0" />
@@ -932,13 +1108,21 @@ function cancelEdit() {
                     </VRadioGroup>
                 </div>
 
-                <VTextField v-model="covids.event_specify_type" outlined dense hide-details label="Specific Type:"
-                    class="mt-2" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField type="date" v-model="covids.event_date_last_expose" outlined dense hide-details
-                    label="Date of last Exposure:" class="mt-2" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField v-model="covids.event_place" outlined dense hide-details label="Event Place:" class="mt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField v-if="eventYes" v-model="covids.event_specify_type" outlined dense class="mt-2"
+                    :rules="eventYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Specific Type</span></template>
+                </VTextField>
+                <VTextField v-if="eventYes" type="date" v-model="covids.event_date_last_expose" outlined dense
+                    class="mt-2" :rules="eventYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Date of last Exposure</span></template>
+                </VTextField>
+                <VTextField v-if="eventYes" v-model="covids.event_place" outlined dense class="mt-2"
+                    :rules="eventYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Event Place</span></template>
+                </VTextField>
             </VCol>
         </VRow>
 
@@ -950,8 +1134,8 @@ function cancelEdit() {
                 <div class="d-flex align-center gap-3">
                     <label class="text-body-1 font-weight-medium">Workplace</label>
 
-                    <VRadioGroup v-model="covids.workplace" inline hide-details density="compact" :rules="[
-                        v => v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
+                    <VRadioGroup v-model="covids.workplace" inline density="compact" :rules="[
+                        v => v === 0 || v === 1 || v === 2 ? true : 'This field is required']" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
                         <VRadio label=" Yes" :value="1" />
                         <VRadio label="No" :value="0" />
@@ -959,13 +1143,21 @@ function cancelEdit() {
                     </VRadioGroup>
                 </div>
 
-                <VTextField v-model="covids.wp_company_name" outlined dense hide-details label="Company Name:"
-                    class="mt-2" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField type="date" v-model="covids.wp_date_last_expose" outlined dense hide-details
-                    label="Date of last Exposure:" class="mt-2" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
-                <VTextField v-model="covids.wp_address" outlined dense hide-details label="Address:" class="mt-2"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField v-if="workplaceYes" v-model="covids.wp_company_name" outlined dense class="mt-2"
+                    :rules="workplaceYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Company Name</span></template>
+                </VTextField>
+                <VTextField v-if="workplaceYes" type="date" v-model="covids.wp_date_last_expose" outlined dense
+                    class="mt-2" :rules="workplaceYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Date of last Exposure</span></template>
+                </VTextField>
+                <VTextField v-if="workplaceYes" v-model="covids.wp_address" outlined dense class="mt-2"
+                    :rules="workplaceYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Address</span></template>
+                </VTextField>
             </VCol>
         </VRow>
         <VRow>
@@ -1003,7 +1195,7 @@ function cancelEdit() {
                 <!-- Add Button -->
                 <VRow class="mt-2">
                     <VCol cols="12">
-                        <VBtn color="primary" @click="addContact">
+                        <VBtn color="primary" @click="addContact" :disabled="!isEditing">
                             Add Contact
                         </VBtn>
                     </VCol>
@@ -1027,7 +1219,7 @@ function cancelEdit() {
                         <label>
                             14 days PRIOR to first date of Exposure:
                         </label>
-                        <VRadioGroup v-model="clinas.days_14_prior_expose" inline hide-details density="compact" :rules="[
+                        <VRadioGroup v-model="clinas.days_14_prior_expose" inline density="compact" :rules="[
                             v => v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }">
                             <VRadio label=" Yes" :value="1" />
@@ -1035,18 +1227,20 @@ function cancelEdit() {
                         </VRadioGroup>
                     </div>
                 </VRow>
-                <VRow v-if="clinas.days_14_prior_expose == 1">
+                <VRow v-if="prior14Yes">
                     <VCol>
-                        <VTextField type="date" v-model="clinas.days_14_date_onset_illness"
-                            label="(if yes)Date of onset of illness:" outlined dense :readonly="!isEditing"
-                            :class="{ 'custom-disabled': !isEditing }" />
+                        <VTextField type="date" v-model="clinas.days_14_date_onset_illness" outlined dense
+                            :rules="prior14Yes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                            :class="{ 'custom-disabled': !isEditing }">
+                            <template #label><span class="req-label">(If yes) Date of onset of illness</span></template>
+                        </VTextField>
                     </VCol>
                 </VRow>
-                <VRow v-if="clinas.days_14_prior_expose == 0" class="align-center">
+                <VRow v-if="prior14No" class="align-center">
                     <VCol>
-                        <div v-if="clinas.days_14_prior_expose == 0" class="d-flex align-center">
+                        <div class="d-flex align-center">
                             <label class="text-body-1 font-weight-medium me-2">(If no) Place of Quarantine:</label>
-                            <VCheckbox v-model="clinas.place_quarantine" label="Home" hide-details density="compact"
+                            <VCheckbox v-model="clinas.place_quarantine" label="Home" :value="1" density="compact"
                                 :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                         </div>
                     </VCol>
@@ -1055,8 +1249,8 @@ function cancelEdit() {
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="clinas.quarantine_facility" outlined dense hide-details
-                    label="Quarantine Facility:" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField v-model="clinas.quarantine_facility" outlined dense label="Quarantine Facility:"
+                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow class="align-center" flex>
@@ -1067,9 +1261,8 @@ function cancelEdit() {
                             Anytime during date of Exposure:
                         </label>
 
-                        <VRadioGroup v-model="clinas.anytime_during_expose" inline hide-details density="compact"
-                            :rules="[
-                                v => v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
+                        <VRadioGroup v-model="clinas.anytime_during_expose" inline density="compact" :rules="[
+                            v => v === 0 || v === 1 ? true : 'This field is required']" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }">
                             <VRadio label=" Yes" :value="1" />
                             <VRadio label="No" :value="0" />
@@ -1078,14 +1271,13 @@ function cancelEdit() {
                 </VRow>
                 <VRow>
                     <VCol>
-                        <VTextField v-model="clinas.name_facility" outlined dense hide-details
+                        <VTextField v-model="clinas.name_facility" outlined dense
                             label="Name of Referral Health Facility:" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
                     <VCol>
-                        <VTextField type="date" v-model="clinas.referral_date" outlined dense hide-details
-                            label="Date of Referral:" :readonly="!isEditing"
-                            :class="{ 'custom-disabled': !isEditing }" />
+                        <VTextField type="date" v-model="clinas.referral_date" outlined dense label="Date of Referral:"
+                            :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
                 </VRow>
             </VCol>
@@ -1093,60 +1285,75 @@ function cancelEdit() {
         </VRow>
         <VRow>
             <VCol>
-                <VTextField type="number" v-model="clinas.fever" outlined dense hide-details label="Fever(°C):"
-                    suffix="°C" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
-            </VCol>
-            <VCol class="align-center" flex>
-                <VCheckbox v-model="clinas.cough" label="Cough" :value="1" hide-details density="compact"
+                <VTextField type="number" v-model="clinas.fever" outlined dense label="Fever(°C):" suffix="°C"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VCol class="align-center" flex>
-                <VCheckbox v-model="clinas.colds" label="Colds" :value="1" hide-details density="compact"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                <VCheckbox v-model="clinas.cough" label="Cough" :value="1" density="compact" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VCol class="align-center" flex>
-                <VCheckbox v-model="clinas.sore_throat" label="Sore Throat" :value="1" hide-details density="compact"
+                <VCheckbox v-model="clinas.colds" label="Colds" :value="1" density="compact" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }" />
+            </VCol>
+            <VCol class="align-center" flex>
+                <VCheckbox v-model="clinas.sore_throat" label="Sore Throat" :value="1" density="compact"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VDivider />
         </VRow>
         <VRow>
             <VCol cols="12" md="2">
-                <VCheckbox v-model="clinas.diarrhea" label="Diarrhea" :value="1" hide-details density="compact"
+                <VCheckbox v-model="clinas.diarrhea" label="Diarrhea" :value="1" density="compact"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VCol cols="12" md="6">
                 <VCheckbox v-model="clinas.short_breathing" label="Shortness/Difficulty of breathing" :value="1"
-                    hide-details density="compact" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                    density="compact" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VCol>
-                <VTextField v-model="clinas.other_symptoms" outlined dense hide-details label="Other Symptoms Specify:"
+                <VTextField v-model="clinas.other_symptoms" outlined dense label="Other Symptoms Specify:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VDivider />
         </VRow>
         <VRow>
             <VCol cols="12" md="5">
-                <VRadioGroup v-model="clinas.history_illness" inline hide-details density="compact"
-                    label="Anytime during date of Exposure:" :readonly="!isEditing"
+                <VRadioGroup v-model="clinas.history_illness" inline density="compact"
+                    label="History of underlying illness/condition:" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label="Yes" :value="1" />
                     <VRadio label="No" :value="0" />
                 </VRadioGroup>
+                <VTextField v-if="historyIllnessYes" v-model="clinas.history_specify" outlined dense class="mt-1"
+                    :rules="historyIllnessYes ? [requiredValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Specify Illness</span></template>
+                </VTextField>
             </VCol>
             <VCol>
-                <VRadioGroup v-model="clinas.xray" inline hide-details density="compact" label="Chest Xray Done?:"
+                <VRadioGroup v-model="clinas.xray" inline density="compact" label="Chest Xray Done?:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label="Yes" :value="1" />
                     <VRadio label="No" :value="0" />
                 </VRadioGroup>
+                <VTextField v-if="xrayYes" type="date" v-model="clinas.xray_date" outlined dense class="mt-1"
+                    :rules="xrayYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Date of Chest X-ray</span></template>
+                </VTextField>
             </VCol>
             <VCol>
-                <VRadioGroup v-model="clinas.pregnant" inline hide-details density="compact" label="Are you pregnant?:"
+                <VRadioGroup v-model="clinas.pregnant" inline density="compact" label="Are you pregnant?:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label=" Yes" :value="1" />
                     <VRadio label="No" :value="0" />
                 </VRadioGroup>
+                <VTextField v-if="pregnantYes" type="date" v-model="clinas.lmp" outlined dense class="mt-1"
+                    :rules="pregnantYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }">
+                    <template #label><span class="req-label">Last Menstrual Period (LMP)</span></template>
+                </VTextField>
             </VCol>
             <VDivider />
         </VRow>
@@ -1156,8 +1363,8 @@ function cancelEdit() {
                     <label>
                         CXR Results:
                     </label>
-                    <VRadioGroup v-model="clinas.cxr_result" inline hide-details density="compact"
-                        :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+                    <VRadioGroup v-model="clinas.cxr_result" inline density="compact" :readonly="!isEditing"
+                        :class="{ 'custom-disabled': !isEditing }">
                         <VRadio label="Yes" :value="1" />
                         <VRadio label="No" :value="0" />
                         <VRadio label="Pending" :value="2" />
@@ -1165,9 +1372,8 @@ function cancelEdit() {
                 </div>
             </VCol>
             <VCol cols="12" md="5">
-                <VTextField v-model="clinas.radiologic_findings" outlined dense hide-details
-                    label="Other Radiologic Findings:" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField v-model="clinas.radiologic_findings" outlined dense label="Other Radiologic Findings:"
+                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <br />
@@ -1181,33 +1387,33 @@ function cancelEdit() {
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="clinas.specimen_collected" outlined dense hide-details label="Specimen Collected:"
+                <VTextField v-model="clinas.specimen_collected" outlined dense label="Specimen Collected:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VCol>
-                <VTextField type="date" v-model="clinas.date_collected" outlined dense hide-details
-                    label="Date Collected:" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField type="date" v-model="clinas.date_collected" outlined dense label="Date Collected:"
+                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
             <VCol>
-                <VTextField type="date" v-model="clinas.date_sent_ritm" outlined dense hide-details
+                <VTextField type="date" v-model="clinas.date_sent_ritm" outlined dense
                     label="Date Sent to RITM or any accredited laboratory:" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VCol>
-                <VTextField type="date" v-model="clinas.date_received_ritm" outlined dense hide-details
+                <VTextField type="date" v-model="clinas.date_received_ritm" outlined dense
                     label="Date Received in RITM:" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="clinas.virus_isolation_result" outlined dense hide-details
-                    label="Virus Isolation Result:" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField v-model="clinas.virus_isolation_result" outlined dense label="Virus Isolation Result:"
+                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VCol>
-                <VTextField v-model="clinas.rt_pcr_result" outlined dense hide-details label="RT-PCR Result:"
-                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                <VTextField v-model="clinas.rt_pcr_result" outlined dense label="RT-PCR Result:" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VDivider />
         </VRow>
@@ -1239,8 +1445,7 @@ function cancelEdit() {
                 <!-- Add Button -->
                 <VRow class="mt-2">
                     <VCol cols="12">
-                        <VBtn color="primary" @click="addScrum" :readonly="!isEditing"
-                            :class="{ 'custom-disabled': !isEditing }">
+                        <VBtn color="primary" @click="addScrum" :disabled="!isEditing">
                             Add Row
                         </VBtn>
                     </VCol>
@@ -1276,8 +1481,7 @@ function cancelEdit() {
                 <!-- Add button -->
                 <VRow class="mt-2">
                     <VCol cols="12">
-                        <VBtn color="primary" @click="addOroNasoSwab" :readonly="!isEditing"
-                            :class="{ 'custom-disabled': !isEditing }">
+                        <VBtn color="primary" @click="addOroNasoSwab" :disabled="!isEditing">
                             Add Row
                         </VBtn>
                     </VCol>
@@ -1313,8 +1517,7 @@ function cancelEdit() {
                 <!-- Add Button -->
                 <VRow class="mt-2">
                     <VCol cols="12">
-                        <VBtn color="primary" @click="addSpeOthers" :readonly="!isEditing"
-                            :class="{ 'custom-disabled': !isEditing }">
+                        <VBtn color="primary" @click="addSpeOthers" :disabled="!isEditing">
                             Add Rows
                         </VBtn>
                     </VCol>
@@ -1335,8 +1538,8 @@ function cancelEdit() {
         <br />
         <VRow>
             <Vcol>
-                <VRadioGroup v-model="clinas.classification" inline hide-details density="compact"
-                    style="padding-left: 10px;" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+                <VRadioGroup v-model="clinas.classification" inline density="compact" style="padding-left: 10px;"
+                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label="Suspect Case " :value="0" />
                     <VRadio label="Probable Case " :value="1" />
                     <VRadio label="Confirmed Case" :value="2" />
@@ -1356,13 +1559,12 @@ function cancelEdit() {
         <br />
         <VRow>
             <VCol cols="6">
-                <VTextField type="date" v-model="clinas.outcome_date_discharge" outlined dense hide-details
+                <VTextField type="date" v-model="clinas.outcome_date_discharge" outlined dense
                     label="Date of Discharge:" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <Vcol cols="6">
                 <VRadioGroup v-model="clinas.outcome_condition_discharge" label="Condition on Discharge " column
-                    hide-details style="padding-left: 10px;" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }">
+                    style="padding-left: 10px;" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label="Died " :value="0" />
                     <VRadio label="Improved" :value="1" />
                     <VRadio label="Recovered" :value="2" />
@@ -1374,3 +1576,16 @@ function cancelEdit() {
     </VForm>
 
 </template>
+
+<style>
+.req-label::after {
+    content: " *";
+    color: #f44336;
+    font-weight: bold;
+}
+
+.custom-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+</style>

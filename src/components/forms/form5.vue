@@ -2,11 +2,11 @@
 import { cStatus } from "@/components/snackbars/cStatus";
 import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { VForm } from 'vuetify/components/VForm';
 import { VCol, VRow } from "vuetify/lib/components/index.mjs";
 
-const planform = ref < VForm > ();
+const planform = ref<VForm>();
 const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 const emit = defineEmits(['loaded'])
@@ -23,14 +23,13 @@ const props = defineProps({
 const dialog = ref(false)
 
 const planma = ref({
-  // savedID: props.consultId,
-  meeting_id: '',
+  meeting_id: props.consultId ?? '',
+  patient_id: '',
   plan_management: '',
   prescription: '',
   referral: '',
   disposition: '',
   name_physician: '',
-  // signature: '',
   license_no: '',
   prof_tax_receipt: '',
 });
@@ -60,11 +59,10 @@ function selectPrescription(item) {
 
 const loadPrescriptions = async () => {
   try {
-    console.log('Fetching prescriptions...')
     const res = await axiosIns.get('/api/get-prescriptions')
-    console.log('Prescriptions response:', res.data)
-    prescriptions.value = res.data
-    console.log('Prescriptions stored in ref:', prescriptions.value)
+    // Guard: some APIs wrap data in a `data` key, others return the array directly
+    const raw = res.data
+    prescriptions.value = Array.isArray(raw) ? raw : (raw?.data ?? [])
   } catch (error) {
     console.error('Error fetching prescriptions:', error)
   }
@@ -87,19 +85,9 @@ async function fetchMeetingInfo(meetId) {
 
     const name_physician = [docfname, docmname, doclname].filter(Boolean).join(' ').trim();
 
-    //surname first
-    // const name_physician2 = [doclname ? `${doclname},` : '', docfname || '', docmname || '']
-    //   .filter(Boolean)
-    //   .join(' ')
-    //   .trim();
-
-
-    // Populate meeting data (defaults to null if missing)
-    planma.value = {
-      meeting_id: data.meetID ?? null,
-      name_physician: name_physician ?? null,
-
-    };
+    // Only patch meeting_id and name_physician — don't wipe the rest of the ref
+    planma.value.meeting_id = data.meetID ?? planma.value.meeting_id;
+    planma.value.name_physician = name_physician || planma.value.name_physician;
 
     console.log("✅ Meeting info fetched:", planma.value);
 
@@ -183,11 +171,18 @@ onMounted(() => {
 
 });
 
-const requiredValidator = (v) => !!v || 'This field is required';
+// Validators — !!v fails for 0; use explicit check instead
+const requiredValidator = (v: any) => (v !== '' && v !== null && v !== undefined) || 'This field is required';
+
 const isEditing = ref(false);
 
 function cancelEdit() {
   isEditing.value = false;
+}
+
+function openPrescriptionDialog() {
+  if (!isEditing.value) return
+  showDialog.value = true
 }
 </script>
 
@@ -196,7 +191,7 @@ function cancelEdit() {
     <VTooltip v-if="isEditing == true" text="Save" location="top">
       <template #activator="{ props }">
         <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
-          class="fab-fixed-botr"  @click="() => { saveUpdatePM(); }"/>
+          class="fab-fixed-botr" @click="() => { saveUpdatePM(); }" />
       </template>
     </VTooltip>
     <VTooltip v-if="isEditing == true" text="Cancel" location="top">
@@ -214,60 +209,99 @@ function cancelEdit() {
     <!-- <pre>planma val{{ planma }}</pre> -->
     <VRow>
       <VCol>
-        <VTextarea v-model="planma.plan_management" outlined dense hide-details auto-grow rows="2"
-          label="Plan of Management:" :rules="[requiredValidator]" :readonly="!isEditing"
-          :class="{ 'custom-disabled': !isEditing }"/>
+        <VTextarea v-model="planma.plan_management" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
+          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+          <template #label><span class="req-label">Plan of Management</span></template>
+        </VTextarea>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="planma.prescription" outlined dense hide-details auto-grow rows="2" label="Prescription:"
-          @click="showDialog = true" readonly :rules="[requiredValidator]" :readonly="!isEditing"
-          :class="{ 'custom-disabled': !isEditing }"/>
+        <!-- Prescription: clicking opens picker only when editing; readonly always so user can't type freely -->
+        <VTextField v-model="planma.prescription" outlined dense :rules="[requiredValidator]" :readonly="true"
+          :class="{ 'custom-disabled': !isEditing }" @click="openPrescriptionDialog" append-inner-icon="tabler-pill"
+          hint="Click to select a prescription" persistent-hint>
+          <template #label><span class="req-label">Prescription</span></template>
+        </VTextField>
       </VCol>
     </VRow>
-    <VDialog v-model="showDialog">
-      <VDataTable :headers="headers" :items="prescriptions" :readonly="!isEditing"
-          :class="{ 'custom-disabled': !isEditing }">
-        <template #item="{ item }">
-          <tr @click="selectPrescription(item)" style="cursor: pointer;">
-            <td>{{ item.presc_code }}</td>
-            <td>{{ item.type_of_medicine }}</td>
-            <td class="align-center">{{ item.drugcode }}</td>
-            <td>{{ item.frequency }}</td>
-            <td>{{ item.dose_regimen }}</td>
-            <td class="align-center">{{ item.total_qty }}</td>
-          </tr>
-        </template>
-      </VDataTable>
+
+    <!-- Prescription picker dialog -->
+    <VDialog v-model="showDialog" max-width="900">
+      <VCard>
+        <VCardTitle class="d-flex justify-space-between align-center pa-4">
+          <span>Select Prescription</span>
+          <VBtn icon="tabler-x" variant="text" @click="showDialog = false" />
+        </VCardTitle>
+        <VCardText class="pa-0">
+          <VDataTable :headers="headers" :items="prescriptions" hover>
+            <template #item="{ item }">
+              <tr @click="selectPrescription(item)" style="cursor: pointer;">
+                <td>{{ item.presc_code }}</td>
+                <td>{{ item.type_of_medicine }}</td>
+                <td class="align-center">{{ item.drugcode }}</td>
+                <td>{{ item.frequency }}</td>
+                <td>{{ item.dose_regimen }}</td>
+                <td class="align-center">{{ item.total_qty }}</td>
+              </tr>
+            </template>
+          </VDataTable>
+        </VCardText>
+      </VCard>
     </VDialog>
+
     <VRow>
       <VCol>
-        <VTextarea v-model="planma.referral" outlined dense hide-details auto-grow rows="2" label="Referral:"
-          :rules="[requiredValidator]" :readonly="!isEditing"
-          :class="{ 'custom-disabled': !isEditing }"/>
+        <VTextarea v-model="planma.referral" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
+          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+          <template #label><span class="req-label">Referral</span></template>
+        </VTextarea>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="planma.disposition" outlined dense hide-details auto-grow rows="2" label="Disposition:"
-          :rules="[requiredValidator]" :readonly="!isEditing"
-          :class="{ 'custom-disabled': !isEditing }"/>
+        <VTextarea v-model="planma.disposition" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
+          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+          <template #label><span class="req-label">Disposition</span></template>
+        </VTextarea>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="planma.license_no" outlined dense hide-details auto-grow rows="2" label="License #:"
-          :rules="[requiredValidator]" :readonly="!isEditing"
-          :class="{ 'custom-disabled': !isEditing }"/>
+        <!-- Physician name is auto-filled from meeting info — read-only always -->
+        <VTextField v-model="planma.name_physician" outlined dense :readonly="true"
+          :class="{ 'custom-disabled': !isEditing }" hint="Auto-filled from meeting record" persistent-hint>
+          <template #label><span>Physician Name</span></template>
+        </VTextField>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="planma.prof_tax_receipt" outlined dense hide-details auto-grow rows="2"
-          label="Professional Tax Receipt:" :readonly="!isEditing"
-          :class="{ 'custom-disabled': !isEditing }"/>
+        <!-- License # is a short code, not a paragraph — use VTextField -->
+        <VTextField v-model="planma.license_no" outlined dense :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }">
+          <template #label><span class="req-label">License #</span></template>
+        </VTextField>
+      </VCol>
+      <VCol>
+        <VTextField v-model="planma.prof_tax_receipt" outlined dense :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }">
+          <template #label><span>Professional Tax Receipt</span></template>
+        </VTextField>
       </VCol>
     </VRow>
   </VForm>
 </template>
+
+<style>
+.req-label::after {
+  content: " *";
+  color: #f44336;
+  font-weight: bold;
+}
+
+.custom-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+</style>
