@@ -11,8 +11,6 @@ const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 const emit = defineEmits(['loaded'])
 
-
-// Props — so this form can be reused for different calls
 const props = defineProps({
   consultId: {
     type: Number,
@@ -21,7 +19,6 @@ const props = defineProps({
 });
 
 const diagass = ref({
-  // savedID: props.consultId,
   meeting_id: props.consultId ?? '',
   patient_id: '',
   summary_assess: '',
@@ -30,7 +27,7 @@ const diagass = ref({
   if_covid: '',
 });
 
-// Watch for changes — strict: only clear if_covid when classification is explicitly NOT Covid (not null/empty)
+// Watch — clear if_covid when classification is not Covid
 watch(
   () => diagass.value.clinical_classification,
   (newVal) => {
@@ -40,45 +37,32 @@ watch(
   }
 )
 
-// Computed
 const isCovidCase = computed(() => diagass.value.clinical_classification === 1)
-
 
 async function fetchMeetingInfo(meetId) {
   try {
-    const response = await axiosIns.get(`/api/meeting-info`, {
+    const response = await axiosIns.get(`/api/meeting-infoV2`, {
       params: { meet_id: meetId },
     });
 
-    const data = response.data;
+    // ✅ v2 wraps under `data`
+    const data = response.data.data;
 
-    diagass.value = {
-      meeting_id: data.meetID ?? null,
-      patient_id: data.patient_id ?? null,
-    };
+    // ✅ diagnosis already in v2 response — no second API call needed
+    const da = data.diagnosis;
 
-    // 🔹 Step 3: Try to fetch existing diagnosis assess
-    if (diagass.value.meeting_id) {
-      const daResponse = await axiosIns.get(`/api/get-diagnosisassessment/${diagass.value.meeting_id}`);
-      const da = daResponse.data.data;
+    diagass.value.meeting_id = data.meetID ?? diagass.value.meeting_id;
+    diagass.value.patient_id = data.patient?.id ?? null;
+    diagass.value.summary_assess = da?.summary_assess ?? null;
+    diagass.value.diagnosis = da?.diagnosis ?? null;
+    diagass.value.clinical_classification = da?.clinical_classification ?? null;
+    diagass.value.if_covid = da?.if_covid ?? null;
 
-      if (da) {
-        console.log("✅ Existing Diagnosis / Assessment found:", da);
-
-        // Merge existing DP data into diagass.value
-        diagass.value.meeting_id = da.meeting_id ?? null;
-        diagass.value.patient_id = da.patient_id ?? null;
-        diagass.value.summary_assess = da.summary_assess ?? null;
-        diagass.value.diagnosis = da.diagnosis ?? null;
-        diagass.value.clinical_classification = da.clinical_classification ?? null;
-        diagass.value.if_covid = da.if_covid ?? null;
-      } else {
-        console.log("ℹ️ No Diagnosis / Assessment found for this meeting ID.");
-      }
-    }
+    console.log("✅ Meeting info fetched:", diagass.value);
 
   } catch (error) {
-    console.error("❌ Error fetching meeting info or DA:", error);
+    console.error("❌ Error fetching meeting info:", error);
+    console.error("Details:", error.response?.data);
     errorMessage.value = "Failed to load meeting info.";
     isError.value = true;
   } finally {
@@ -88,7 +72,6 @@ async function fetchMeetingInfo(meetId) {
 
 async function saveUpdateDA() {
   try {
-    // Ensure form validation
     const { valid } = await daform.value.validate();
 
     if (!valid) {
@@ -97,7 +80,6 @@ async function saveUpdateDA() {
       return;
     }
 
-    // ✅ Prepare payload using all meeting data
     const payload = {
       meeting_id: diagass.value.meeting_id,
       patient_id: diagass.value.patient_id,
@@ -107,32 +89,26 @@ async function saveUpdateDA() {
       if_covid: diagass.value.if_covid,
     };
 
-
     console.log("Payload being sent:", payload);
-    // Send request
-    const response = await axiosIns.post('/api/save-diagnosisassessment', payload);
+    await axiosIns.post('/api/save-diagnosisassessment', payload);
 
-    // Success response handling
-    successMessage.value = "Saved  Diagnosis / Assessment.";
+    successMessage.value = "Saved Diagnosis / Assessment.";
     isSuccess.value = true;
     cancelEdit();
 
   } catch (error) {
     console.error("Error Saving Diagnosis / Assessment:", error);
+    console.error("Details:", error.response?.data); // ✅ shows exact 422 fields
     errorMessage.value = "Failed to save Diagnosis / Assessment.";
     isError.value = true;
-
   }
 }
 
 onMounted(() => {
-  fetchMeetingInfo(props.consultId);
+  if (props.consultId) fetchMeetingInfo(props.consultId);
 });
 
-// Validators
-// ✅ handles 0 as a valid value (!!0 === false, so the old validator would reject 0)
 const requiredValidator = (v: any) => (v !== '' && v !== null && v !== undefined) || 'This field is required';
-// For radio groups where value is a number (0/1/2)
 const radioRequiredValidator = (v: any) => (v === 0 || v === 1 || v === 2) ? true : 'This field is required';
 
 const isEditing = ref(false);
