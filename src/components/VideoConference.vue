@@ -165,6 +165,22 @@
       </VCardText>
     </VCard>
   </VDialog>
+  <!-- Upload Prompt Dialog -->
+  <VDialog v-model="isUploadPromptDialog" persistent class="v-dialog-sm">
+    <VCard title="Save Consultation Recording?">
+      <VCardText>
+        Would you like to upload the session recording before ending the call?
+      </VCardText>
+      <VCardText class="d-flex justify-center gap-3 flex-wrap">
+        <VBtn color="primary" :loading="isProcessingVideo" @click="endCallWithUpload">
+          Yes, Upload Recording
+        </VBtn>
+        <VBtn color="error" variant="tonal" @click="endCallWithoutUpload">
+          No, End Without Upload
+        </VBtn>
+      </VCardText>
+    </VCard>
+  </VDialog>
   <VOverlay v-model="isProcessingVideo" persistent class="d-flex align-center justify-center" style="height: 100vh;">
     <VCard elevation="12" class="pa-6 text-center">
       <VCardText>
@@ -297,6 +313,7 @@ const isStartDialog = ref(true);
 const localVideo = ref<HTMLVideoElement | null>(null);
 const localVideoPreview = ref<HTMLVideoElement | null>(null);
 const remoteVideo = ref<HTMLVideoElement | null>(null);
+const isUploadPromptDialog = ref(false);
 
 const selectedCamera = ref<string | null>(null);
 const selectedMic = ref<string | null>(null);
@@ -313,7 +330,21 @@ let mediaRecorder: MediaRecorder;
 let recordedChunks: Blob[] = [];
 const callEnded = ref(false);
 const config: RTCConfiguration = {
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    {
+      // urls: "turn:telemed-dev.dohsox.com:3478", // domain expired
+      urls: "turn:192.168.1.75:3478",
+      username: "telemed",
+      credential: "telemed2026secret",
+    },
+    // TURNS disabled — no valid SSL cert for IP
+    // {
+    //   urls: "turns:telemed-dev.dohsox.com:5349",
+    //   username: "telemed",
+    //   credential: "telemed2026secret",
+    // },
+  ],
 };
 onMounted(async () => {
   document.addEventListener("keydown", handleKeydown);
@@ -325,10 +356,10 @@ onMounted(async () => {
   await loadDevices();
   await restartStream();
   // ✅ 1. Connect to signaling server
-  // socket = io("http://10.10.124.140:3000", {
-  socket = io("https://telemed-dev.dohsox.com", {
+  // socket = io("https://telemed-dev.dohsox.com", { // domain expired
+  socket = io("http://192.168.1.75", {
     path: "/socket.io",
-    transports: ["websocket"],
+    transports: ["polling", "websocket"],
     withCredentials: true,
   });
 
@@ -372,7 +403,6 @@ onMounted(async () => {
     }
   });
 
-  startRecording();
 });
 
 onBeforeUnmount(() => {
@@ -515,6 +545,7 @@ async function startCall() {
 
     socket.emit("offer", { roomId, offer });
     isStartDialog.value = false;
+    startRecording();
   } catch (error) {
     console.error(error);
   }
@@ -633,54 +664,123 @@ const startRecording = () => {
 // };
 
 const isProcessingVideo = ref(false);
+let pendingBlob: Blob | null = null;
+
+// const stopCall = async () => {
+//   if (!confirm("⚠️ Are you sure you want to stop the call?")) return;
+
+//   if (mediaRecorder && mediaRecorder.state !== "inactive") {
+
+//     isProcessingVideo.value = true;
+
+//     // Assign onstop BEFORE stopping
+//     mediaRecorder.onstop = async () => {
+
+//       if (!recordedChunks || recordedChunks.length === 0) {
+//         alert("⚠️ No video recorded!");
+//         return;
+//       }
+
+//       const blob = new Blob(recordedChunks, { type: "video/webm" });
+//       console.log("Blob size:", blob.size); // check size
+//       if (blob.size === 0) {
+//         alert("⚠️ Empty video, cannot upload");
+//         return;
+//       }
+
+//       const formData = new FormData();
+//       formData.append("consult_id", Number(props.conid));
+//       formData.append("video", blob, "video-conference.webm");
+
+//       // Debug FormData entries
+//       for (const [key, value] of formData.entries()) {
+//         console.log(key, value);
+//       }
+
+//       try {
+//         const response = await axiosIns.post(`/api/stop-consult`, formData);
+//         stopTimer();
+//         callEnded.value = true;
+//         isProcessingVideo.value = false;
+//         console.log("✅ Video uploaded:", response.data);
+//       } catch (error) {
+//         alert("❌ Failed to upload video");
+//         console.error(error.response?.data || error);
+//         isProcessingVideo.value = false;
+//       }
+//     };
+
+//     mediaRecorder.stop(); // stop AFTER assigning onstop
+//   }
+// };
 
 const stopCall = async () => {
   if (!confirm("⚠️ Are you sure you want to stop the call?")) return;
 
   if (mediaRecorder && mediaRecorder.state !== "inactive") {
-
-    isProcessingVideo.value = true;
-
-    // Assign onstop BEFORE stopping
-    mediaRecorder.onstop = async () => {
-
-      if (!recordedChunks || recordedChunks.length === 0) {
-        alert("⚠️ No video recorded!");
-        return;
-      }
-
+    mediaRecorder.onstop = () => {
       const blob = new Blob(recordedChunks, { type: "video/webm" });
-      console.log("Blob size:", blob.size); // check size
-      if (blob.size === 0) {
-        alert("⚠️ Empty video, cannot upload");
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("consult_id", Number(props.conid));
-      formData.append("video", blob, "video-conference.webm");
-
-      // Debug FormData entries
-      for (const [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
-
-      try {
-        const response = await axiosIns.post(`/api/stop-consult`, formData);
-        stopTimer();
-        callEnded.value = true;
-        isProcessingVideo.value = false;
-        console.log("✅ Video uploaded:", response.data);
-      } catch (error) {
-        alert("❌ Failed to upload video");
-        console.error(error.response?.data || error);
-        isProcessingVideo.value = false;
-      }
+      pendingBlob = blob.size > 0 ? blob : null;
+      isUploadPromptDialog.value = true; // show upload prompt
     };
-
-    mediaRecorder.stop(); // stop AFTER assigning onstop
+    mediaRecorder.stop();
+  } else {
+    // No recording active, just prompt
+    pendingBlob = null;
+    isUploadPromptDialog.value = true;
   }
 };
+const endCallWithUpload = async () => {
+  if (!pendingBlob) {
+    warningMessage.value = "No recording available to upload.";
+    isWarning.value = true;
+    await endCallWithoutUpload();
+    return;
+  }
+
+  isUploadPromptDialog.value = false;
+  isProcessingVideo.value = true;
+
+  const formData = new FormData();
+  formData.append("consult_id", Number(props.conid));
+  formData.append("video", pendingBlob, "video-conference.webm");
+
+  try {
+    await axiosIns.post(`/api/stop-consult`, formData);
+    successMessage.value = "Recording uploaded successfully.";
+    isSuccess.value = true;
+  } catch (error) {
+    errorMessage.value = "Failed to upload recording.";
+    isError.value = true;
+    console.error(error.response?.data || error);
+  } finally {
+    isProcessingVideo.value = false;
+    finishCall();
+  }
+};
+
+// Step 2b: user chose to skip upload
+const endCallWithoutUpload = async () => {
+  isUploadPromptDialog.value = false;
+  isProcessingVideo.value = true;
+
+  try {
+    await axiosIns.post(`/api/stop-consult`, { consult_id: Number(props.conid) });
+  } catch (error) {
+    console.error(error.response?.data || error);
+  } finally {
+    isProcessingVideo.value = false;
+    finishCall();
+  }
+};
+
+// Shared cleanup
+const finishCall = () => {
+  stopTimer();
+  pendingBlob = null;
+  callEnded.value = true;
+};
+
 
 
 function selectMic(deviceId: string) {

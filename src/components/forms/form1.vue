@@ -2,14 +2,12 @@
 import { cStatus } from "@/components/snackbars/cStatus";
 // import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue"; // ✅ Fix 1: added onMounted
 import { VForm } from 'vuetify/components/VForm';
 import { VCol, VRow, VTextarea, VTextField } from "vuetify/lib/components/index.mjs";
 
 // const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
-
-// const isLoading = ref(false)
 
 // Props — so this form can be reused for different calls
 const props = defineProps({
@@ -50,7 +48,6 @@ const nationalityList = ref([]);
 async function fetchCountries() {
   try {
     const response = await axiosIns.get('/api/tele/countries');
-    // Map the data to convert num_code to string
     nationalityList.value = response.data.data
       .map(country => ({
         ...country,
@@ -90,7 +87,6 @@ const religions = [
 
 const meeting = ref({
   demoprofile_id: null,
-  // savedID: props.consultId,
   facID: null,
   meetID: null,
   name_physician: null,
@@ -136,13 +132,11 @@ const meeting = ref({
 
 const patientfulladd = computed({
   get() {
-    // Lookup names from the lists
     const regionName = regionList.value.find(r => r.reg_code === meeting.value.region)?.reg_desc ?? '';
     const provinceName = provinceList.value.find(p => p.prov_code === meeting.value.pprov)?.prov_name ?? '';
     const cityName = cityList.value.find(c => c.zipcode === meeting.value.pmuniname)?.muni_name ?? '';
     let barangayName = barangayList.value.find(b => b.brg_psgc === meeting.value.pbrgyname)?.brg_name ?? '';
 
-    // Prepend "Barangay " if not already there
     if (barangayName && !/^barangay\s+/i.test(barangayName)) {
       barangayName = 'BARANGAY ' + barangayName;
     }
@@ -159,21 +153,18 @@ const patientfulladd = computed({
       .join(', ');
   },
   set(value: string) {
-    meeting.value.patientfulladd = value; // allow manual edits
+    meeting.value.patientfulladd = value;
   },
 });
-
 
 const emit = defineEmits(['loaded'])
 
 // barangay list
 const barangayList = ref([]);
 
-// Fetch barangay
 async function fetchBarangay() {
   try {
     const response = await axiosIns.get('/api/tele/barangays');
-    // Map to convert brg_psgc to string, then sort alphabetically
     barangayList.value = response.data.data
       .map(barangay => ({
         ...barangay,
@@ -188,11 +179,9 @@ async function fetchBarangay() {
 // region list
 const regionList = ref([]);
 
-// Fetch region
 async function fetchRegions() {
   try {
     const response = await axiosIns.get('/api/tele/regions');
-    // Sort the data alphabetically, just in case
     regionList.value = response.data.data.sort((a, b) => a.reg_desc.localeCompare(b.reg_desc));
   } catch (error) {
     console.error('Error fetching regions:', error);
@@ -202,11 +191,9 @@ async function fetchRegions() {
 // city list
 const cityList = ref([]);
 
-// Fetch city
 async function fetchCities() {
   try {
     const response = await axiosIns.get('/api/tele/cities');
-    // Convert zipcode to string, then sort alphabetically
     cityList.value = response.data.data
       .map(city => ({
         ...city,
@@ -221,22 +208,19 @@ async function fetchCities() {
 // province list
 const provinceList = ref([]);
 
-// Fetch province
 async function fetchProvince() {
   try {
     const response = await axiosIns.get('/api/tele/provinces');
-    // Sort the data alphabetically, just in case
     provinceList.value = response.data.data.sort((a, b) => a.prov_name.localeCompare(b.prov_name));
   } catch (error) {
     console.error('Error fetching provinces:', error);
   }
 }
 
-//save/update
 const demProf = ref(null)
 
 /**
- * Maps a patient record (from /api/patients/{id}) into the meeting reactive object.
+ * Maps a patient record (from tbl_master_patient via /api/patients/{id}) into meeting.
  * Used as the baseline — DP values will overwrite these only when non-null.
  */
 function applyPatientProfile(pat: Record<string, any>) {
@@ -272,7 +256,11 @@ async function fetchMeetingInfo(meetId: number) {
     const meetResp = await axiosIns.get('/api/meeting-infoV2', {
       params: { meet_id: meetId },
     });
-    const data = meetResp.data.data;
+
+    // ✅ Fix 2: guard both flat and nested response shapes
+    const data = meetResp.data?.data ?? meetResp.data ?? {};
+
+    console.log('🔍 RAW meeting data:', JSON.stringify(data)); // remove after confirming
 
     /* ── 2. Doctor ── */
     const doc = data.doctor ?? {};
@@ -283,45 +271,35 @@ async function fetchMeetingInfo(meetId: number) {
     meeting.value.facility_full_address = doc.address ?? null;
 
     /* ── 3. Meeting identifiers ── */
-    meeting.value.meetID = data.meetID;
-    meeting.value.facID = data.facID;
-    meeting.value.case_no = data.case_no;
+    meeting.value.meetID = data.meetID ?? null;
+    meeting.value.facID = data.facID ?? null;
+    meeting.value.case_no = data.case_no ?? null;
     meeting.value.datetimemeet = data.datetimemeet ?? null;
 
-    /* ── 4. Patient profile — always fetch from /api/patients/{id} ──
-     *  Priority: patient table row is the ground truth for read-only fields.
-     *  data.patient is used as fallback if the patients route is unavailable.
-     * ─────────────────────────────────────────────────────────────────────── */
-    const patientId = data.patient_id ?? data.patient?.id ?? null;
+    /* ── 4. Patient profile ── */
+    const patientId = data.patient?.id ?? null;
 
     if (patientId) {
       try {
         const patResp = await axiosIns.get(`/api/patients/${patientId}`);
-        // Support both { data: {...} } and flat response shapes
         const pat = patResp.data?.data ?? patResp.data ?? {};
         applyPatientProfile(pat);
         console.log('✅ Patient loaded from /api/patients/:id', pat);
       } catch (patErr) {
-        // Route unavailable — fall back to embedded patient object from meeting response
         console.warn('⚠️ /api/patients/:id failed, falling back to meeting patient data', patErr);
         applyPatientProfile(data.patient ?? {});
       }
     } else {
-      // No patient id at all — use whatever the meeting endpoint returned
       console.warn('⚠️ No patient_id in meeting response, using embedded patient data');
       applyPatientProfile(data.patient ?? {});
     }
 
-    /* ── 5. Demographic Profile — overlay only non-null DP values on top ──
-     *  If DP exists but a field is null/empty, the patient table value is kept.
-     *  If DP does not exist at all, patient table values stand as-is.
-     * ─────────────────────────────────────────────────────────────────────── */
+    /* ── 5. Demographic Profile — overlay only non-null DP values on top ── */
     const dp = data.demographic_profile ?? null;
 
     if (dp) {
       meeting.value.demoprofile_id = dp.id ?? null;
 
-      // DP fields that map to tele_demographic_profile columns
       const dpFieldMap: Record<string, string> = {
         name_physician: 'name_physician',
         address_health: 'facility_full_address',
@@ -339,7 +317,6 @@ async function fetchMeetingInfo(meetId: number) {
         if (val !== null && val !== undefined && val !== '') {
           meeting.value[meetKey] = val;
         }
-        // else: keep the patient-profile value already set in step 4
       }
     } else {
       meeting.value.demoprofile_id = null;
@@ -360,19 +337,16 @@ async function fetchMeetingInfo(meetId: number) {
 }
 
 onMounted(() => {
-
   if (props.consultId) fetchMeetingInfo(props.consultId);
   fetchCountries();
   fetchRegions();
   fetchCities();
   fetchBarangay();
   fetchProvince();
-
 });
 
 async function saveUpdateDP() {
   try {
-    // Ensure form validation
     const { valid } = await demProf.value.validate();
 
     if (!valid) {
@@ -381,9 +355,7 @@ async function saveUpdateDP() {
       return;
     }
 
-    // Only send columns that exist in tele_demographic_profile.
-    // Patient name, address, and profile fields are display-only here —
-    // they live in tbl_master_patient and are pre-filled for context only.
+    // Only columns that exist in tele_demographic_profile
     const payload = {
       meeting_id: meeting.value.meetID,
       name_physician: meeting.value.name_physician2,
@@ -398,10 +370,8 @@ async function saveUpdateDP() {
     };
 
     console.log("Payload being sent:", payload);
-    // Send request
     const response = await axiosIns.post('/api/save-demoprofile', payload);
 
-    // Success response handling
     successMessage.value = "Saved demographic profile.";
     isSuccess.value = true;
     cancelEdit();
@@ -410,7 +380,6 @@ async function saveUpdateDP() {
     console.error("Error Saving Demographic Profile:", error);
     errorMessage.value = "Failed to save demographic profile.";
     isError.value = true;
-
   }
 }
 
@@ -420,12 +389,12 @@ const isEditing = ref(false);
 const originalMeeting = ref({});
 
 function cancelEdit() {
-  // Restore original data to discard unsaved changes
   Object.assign(meeting.value, originalMeeting.value);
   isEditing.value = false;
 }
 
 </script>
+
 <template>
   <VForm ref="demProf" style="align-self: stretch; width: 100%;">
     <VTooltip v-if="isEditing == true" text="Save" location="top">
@@ -454,19 +423,16 @@ function cancelEdit() {
 
     <VRow>
       <VCol cols="12" md="6">
-        <!-- name_physician: NOT NULL in DP table — required -->
         <VTextField v-model="meeting.name_physician" outlined dense hide-details label="Name of physician: *"
           :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
       <VCol cols="12" md="6" class="centered-col">
-        <!-- datetimemeet: not in DP table — display only from meeting -->
         <VTextField type="datetime-local" v-model="meeting.datetimemeet" outlined dense hide-details
           label="Date and Time of Teleconsultation" disabled class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <!-- address_health: nullable in DP table — optional -->
         <VTextarea auto-grow rows="2" v-model="meeting.facility_full_address" outlined dense hide-details
           label="Name and Address of Health Facility (if applicable):" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }" />
@@ -474,7 +440,6 @@ function cancelEdit() {
     </VRow>
     <VRow>
       <VCol cols="12" md="6" class="centered-col">
-        <!-- tele_partner_platform: nullable in DP table — optional -->
         <VTextField v-model="meeting.tele_partner_platform" label="Name of Telemedicine Partner (if applicable):"
           outlined dense hint="If none, Indicate telemedicine platform being used:" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }" />
@@ -482,7 +447,6 @@ function cancelEdit() {
     </VRow>
     <VRow class="align-center">
       <VCol>
-        <!-- prior_tele_proper: NOT NULL int in DP table — required -->
         <VRadioGroup v-model="meeting.prior_tele_proper"
           label="* Prior to teleconsultation proper, obtain patient consent:" inline
           :rules="[v => v === 0 || v === 1 ? true : 'This field is required']"
@@ -494,7 +458,6 @@ function cancelEdit() {
     </VRow>
     <VRow class="align-center">
       <VCol>
-        <!-- is_patient_accompanied: NOT NULL int in DP table — required -->
         <VRadioGroup v-model="meeting.is_patient_accompanied"
           label="* Is patient accompanied/assisted by another person during the consultation:" inline
           :rules="[v => v === 0 || v === 1 ? true : 'This field is required']"
@@ -513,73 +476,62 @@ function cancelEdit() {
       <VCol inline>
         <div class="d-flex align-center">
           <label class="mr-2">Case #:</label>
-          <!-- case_no: NOT NULL in DP table but auto-set from meeting — disabled display -->
           <VTextField v-model="meeting.case_no" outlined dense hide-details label="" disabled class="custom-disabled" />
         </div>
       </VCol>
     </VRow>
     <VRow class="align-center">
       <VCol>
-        <!-- type_of_membership: from patient profile — disabled -->
         <VSelect v-model="meeting.type_of_membership" label="PhilHealth Type:" :items="[
           { title: 'Direct Contributor', value: 'Direct Contributor' },
           { title: 'Indirect Contributors', value: 'Indirect Contributors' }
         ]" item-title="title" item-value="value" variant="outlined" disabled class="custom-disabled" />
       </VCol>
       <VCol>
-        <!-- phic_id: from patient profile — disabled -->
         <VTextField v-model="meeting.phic_id" outlined dense hide-details label="PhilHealth ID:" disabled
           class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <!-- fname: from patient profile — disabled -->
         <VTextField v-model="meeting.fname" outlined dense hide-details label="First Name:" disabled
           class="custom-disabled" />
       </VCol>
       <VCol>
-        <!-- mname: from patient profile — disabled -->
         <VTextField v-model="meeting.mname" outlined dense hide-details label="Middle Name:" disabled
           class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <!-- lname: from patient profile — disabled -->
         <VTextField v-model="meeting.lname" outlined dense hide-details label="Last Name:" disabled
           class="custom-disabled" />
       </VCol>
       <VCol>
-        <!-- phone_no: nullable in DP table — editable, optional -->
         <VTextField v-model="meeting.phone_no" outlined dense hide-details label="Contact Number:"
           :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <!-- dob: from patient profile — disabled -->
         <VTextField v-model="meeting.dob" type="date" outlined dense hide-details label="Birth Date:" disabled
           class="custom-disabled" />
       </VCol>
       <VCol>
-        <!-- sex: from patient profile — disabled -->
         <VTextField v-model="meeting.sex" outlined dense hide-details label="Sex:" disabled class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <!-- civil_status: from patient profile — disabled -->
         <VSelect v-model="meeting.civil_status" :items="civilStatusOptions" label="Civil Status:" item-title="title"
           item-value="value" variant="outlined" disabled class="custom-disabled" />
       </VCol>
       <VCol>
-        <!-- religion: from patient profile — disabled -->
         <VAutocomplete v-model="meeting.religion" :items="religions" label="Religion:" item-title="text"
           item-value="code" disabled class="custom-disabled" />
       </VCol>
     </VRow>
-    <!-- Companion fields — nullable in DP table, editable, show when married/separated/divorced -->
+    <!-- Companion fields — show when married/separated/divorced -->
     <VRow v-if="['1', '3', '4'].includes(String(meeting.civil_status))">
       <VCol>
         <VTextField v-model="meeting.relationship" outlined dense hide-details label="Relationship:"
@@ -592,24 +544,20 @@ function cancelEdit() {
     </VRow>
     <VRow>
       <VCol>
-        <!-- edu_attain: from patient profile — disabled -->
         <VSelect v-model="meeting.edu_attain" :items="educationalAttainments" label="Educational Attainment:"
           item-title="text" item-value="code" disabled class="custom-disabled" />
       </VCol>
       <VCol>
-        <!-- occupation: from patient profile — disabled -->
         <VTextField v-model="meeting.occupation" outlined dense hide-details label="Occupation:" disabled
           class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <!-- monthly_income: from patient profile — disabled -->
         <VTextField v-model="meeting.monthly_income" outlined dense hide-details label="Monthly Income:" disabled
           class="custom-disabled" />
       </VCol>
       <VCol>
-        <!-- id_type: not in DP table, not in patient profile — editable metadata -->
         <VSelect v-model="meeting.id_type" :items="[
           'NOT APPLICABLE',
           'UMID',
@@ -622,12 +570,10 @@ function cancelEdit() {
     </VRow>
     <VRow>
       <VCol>
-        <!-- id_type_no: not in DP table — disabled -->
         <VTextField v-model="meeting.id_type_no" outlined dense hide-details label="CRN:" disabled
           class="custom-disabled" />
       </VCol>
       <VCol>
-        <!-- nationality_id: from patient profile — disabled -->
         <VAutocomplete v-model="meeting.nationality_id" :items="nationalityList" item-title="nationality"
           item-value="num_code" label="Nationality:" outlined hide-details disabled class="custom-disabled" />
       </VCol>

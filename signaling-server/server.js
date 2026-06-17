@@ -51,6 +51,7 @@ io.on('connection', (socket) => {
 // httpServer.listen(3000, '0.0.0.0', () => { // local testing
 //   console.log('Socket.IO server running on port 3000')
 // })
-httpServer.listen(3000, '192.168.1.75', () => { // production
+// httpServer.listen(3000, '192.168.1.75', () => {
+httpServer.listen(3000, '0.0.0.0', () => {
   console.log('Socket.IO server running on port 3000')
 })

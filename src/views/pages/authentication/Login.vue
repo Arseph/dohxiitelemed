@@ -39,7 +39,7 @@ const submit = async () => {
     }
     const response = await store.dispatch('auth/login', form.value);
 
-      router.push('/homes');
+    router.push('/homes');
   } catch (error) {
     alertMessage.value = error.response.data.has_token ? 'Account logged in to another device. Please contact administrator' : 'Invalid username or password. Please try again.'
     showAlert.value = true
@@ -53,33 +53,19 @@ const submit = async () => {
     <div class="auth-logo d-flex align-center gap-x-3">
       <VNodeRenderer :nodes="themeConfig.app.logo" />
       <h1 class="auth-title">
-        DOH XII Employee Portal
+        DOH XII TELEMED
       </h1>
     </div>
   </RouterLink>
 
-  <VRow
-    no-gutters
-    class="auth-wrapper bg-surface"
-  >
-    <VCol
-      md="8"
-      class="d-none d-md-flex"
-    >
+  <VRow no-gutters class="auth-wrapper bg-surface">
+    <VCol md="8" class="d-none d-md-flex">
       <div class="position-relative bg-background w-100 me-0">
       </div>
     </VCol>
 
-    <VCol
-      cols="12"
-      md="4"
-      class="auth-card-v2 d-flex align-center justify-center"
-    >
-      <VCard
-        flat
-        :max-width="500"
-        class="mt-12 mt-sm-0 pa-4"
-      >
+    <VCol cols="12" md="4" class="auth-card-v2 d-flex align-center justify-center">
+      <VCard flat :max-width="500" class="mt-12 mt-sm-0 pa-4">
         <VCardText>
           <h4 class="text-h4 mb-1">
             Welcome to <span class="text-capitalize"> {{ themeConfig.app.title }} </span>
@@ -89,13 +75,7 @@ const submit = async () => {
           </p>
         </VCardText>
         <VCardText>
-          <VAlert
-            v-if="showAlert"
-            color="primary"
-            variant="tonal"
-            dismissible
-            @input="showAlert = false"
-          >
+          <VAlert v-if="showAlert" color="primary" variant="tonal" dismissible @input="showAlert = false">
             {{ alertMessage }}
           </VAlert>
         </VCardText>
@@ -104,37 +84,23 @@ const submit = async () => {
             <VRow>
               <!-- email -->
               <VCol cols="12">
-                <AppTextField
-                  v-model="form.username"
-                  autofocus
-                  label="Username"
-                  type="username"
-                  placeholder="..........."
-                />
+                <AppTextField v-model="form.username" autofocus label="Username" type="username"
+                  placeholder="..........." />
               </VCol>
 
               <!-- password -->
               <VCol cols="12">
-                <AppTextField
-                  v-model="form.password"
-                  label="Password"
-                  placeholder="············"
+                <AppTextField v-model="form.password" label="Password" placeholder="············"
                   :type="isPasswordVisible ? 'text' : 'password'"
                   :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
-                  @click:append-inner="isPasswordVisible = !isPasswordVisible"
-                />
+                  @click:append-inner="isPasswordVisible = !isPasswordVisible" />
 
                 <div class="d-flex align-center flex-wrap justify-space-between mt-2 mb-4">
                   <VCheckbox v-model="form.remember" label="Remember me" />
                   <a class="text-primary ms-2 mb-1" href="/forget-password">Forgot Password?</a>
                 </div>
 
-                <VBtn
-                  :loading="loadingButton"
-                  :disabled="loadingButton"
-                  block
-                  type="submit"
-                >Login</VBtn>
+                <VBtn :loading="loadingButton" :disabled="loadingButton" block type="submit">Login</VBtn>
               </VCol>
             </VRow>
           </VForm>

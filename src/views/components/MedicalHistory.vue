@@ -1,3 +1,3 @@
 <template>
-    MEDICAL HISTORY HEREEEEEE
+    MEDICAL HISTORY HERE
 </template>

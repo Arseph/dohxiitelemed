@@ -77,6 +77,7 @@ export default defineConfig({
 
     svgLoader(),
     VitePWA({
+      disable: true,
       srcDir: "./public",
       filename: "mockServiceWorker.js",
       registerType: "autoUpdate",
