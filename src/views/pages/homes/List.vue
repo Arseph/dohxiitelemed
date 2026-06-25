@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { axiosIns } from '@/plugins/axios';
 import { register } from 'swiper/element/bundle';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 register()
+
+const { camera, microphone, secureContext, checkStatus, requestMedia, requestNotification } = useMediaPermissions()
 const logisticData = ref([
   { icon: 'tabler-video-plus', color: 'primary', title: 'Start Teleconsultation', isHover: false, modal: 'start', swipe: 0 },
   { icon: 'tabler-video', color: 'warning', title: 'Join Teleconsultation', isHover: false, modal: 'join', swipe: 1 },
@@ -58,13 +60,29 @@ const swipeSpecific = (index: number) => {
     swiperEl.value.swiper.slideTo(index)
   }
 }
+const permBanner = computed(() => {
+  if (!secureContext) {
+    return { show: true, type: 'warning' as const, text: 'Camera and microphone require a secure connection (HTTPS). Teleconsultation video may not work until HTTPS is configured.', btn: null }
+  }
+  if (camera.value === 'denied' || microphone.value === 'denied') {
+    return { show: true, type: 'error' as const, text: 'Camera or microphone access was denied. Please allow access in browser settings.', btn: null }
+  }
+  if (camera.value === 'prompt' || microphone.value === 'prompt') {
+    return { show: true, type: 'info' as const, text: 'Camera and microphone access is required for teleconsultation.', btn: 'Grant Access' }
+  }
+  return { show: false, type: 'success' as const, text: '', btn: null }
+})
+
 let interval: number
 
-onMounted(() => {
+onMounted(async () => {
   swiperEl.value = document.querySelector('swiper-container')
   updateDateTime()
   fetchTele()
   interval = window.setInterval(updateDateTime, 1000)
+  await checkStatus()
+  requestNotification()
+  if (camera.value === 'prompt') requestMedia()
 })
 
 onUnmounted(() => {
@@ -73,6 +91,13 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <VAlert v-if="permBanner.show" :type="permBanner.type" class="mb-4" variant="tonal" closable>
+    {{ permBanner.text }}
+    <template v-if="permBanner.btn" #append>
+      <VBtn size="small" variant="tonal" @click="requestMedia">{{ permBanner.btn }}</VBtn>
+    </template>
+  </VAlert>
+
   <VRow>
     <VCol cols="5" md="5" sm="5">
       <VRow>

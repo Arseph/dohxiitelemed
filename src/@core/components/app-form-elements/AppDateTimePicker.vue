@@ -73,8 +73,8 @@ if (compAttrs.config && compAttrs.config.inline) {
 
 compAttrs.config = {
   ...compAttrs.config,
-  prevArrow: '<i class="tabler-chevron-left v-icon" style="font-size: 20px; height: 20px; width: 20px;"></i>',
-  nextArrow: '<i class="tabler-chevron-right v-icon" style="font-size: 20px; height: 20px; width: 20px;"></i>',
+  prevArrow: '<i class="tabler-chevron-left v-icon flatpickr-nav-icon"></i>',
+  nextArrow: '<i class="tabler-chevron-right v-icon flatpickr-nav-icon"></i>',
 }
 
 // v-field clear prop
@@ -226,6 +226,12 @@ const elementId = computed(() => {
   outline: none;
   padding-block: 0;
   padding-inline: var(--v-field-padding-start);
+}
+
+.flatpickr-nav-icon {
+  font-size: 20px;
+  block-size: 20px;
+  inline-size: 20px;
 }
 
 $heading-color: rgba(var(--v-theme-on-background), var(--v-high-emphasis-opacity));

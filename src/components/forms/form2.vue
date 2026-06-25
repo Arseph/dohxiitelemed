@@ -150,7 +150,7 @@ async function fetchMeetingInfo(meetId: number) {
     // Step 4: If both CH and PE are not found, fetch meeting info
     if (!ch && !pe) {
       console.log("ℹ️ No clinical history or physical exam found, fetching meeting info.");
-      const meetingResponse = await axiosIns.get(`/api/meeting-info`, {
+      const meetingResponse = await axiosIns.get(`/api/meeting-infoV2`, {
         params: { meet_id: meetId },
       });
       const data = meetingResponse.data;

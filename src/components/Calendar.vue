@@ -49,7 +49,11 @@ export default {
           title: event.title,
           start: event.start,
           end: event.end,
-          facility: event.facility,
+          extendedProps: {
+            facility: event.facility,
+            patient: event.patient,
+            doctor: event.doctor,
+          },
         }))
       } catch (error) {
         console.error('❌ fetchTele failed', error)
@@ -86,8 +90,14 @@ export default {
           {{ selectedEvent?.title }}
         </VCardTitle>
         <VCardText>
-          <div><strong>Facility:</strong> {{ selectedEvent?.extendedProps?.facility }}</div>
-          <div><strong>Start:</strong> {{ formatDate(selectedEvent?.start) }}</div>
+          <div v-if="selectedEvent?.extendedProps?.patient" class="mb-1">
+            <strong>Patient:</strong> {{ selectedEvent.extendedProps.patient }}
+          </div>
+          <div v-if="selectedEvent?.extendedProps?.doctor" class="mb-1">
+            <strong>Doctor:</strong> {{ selectedEvent.extendedProps.doctor }}
+          </div>
+          <div class="mb-1"><strong>Facility:</strong> {{ selectedEvent?.extendedProps?.facility }}</div>
+          <div class="mb-1"><strong>Start:</strong> {{ formatDate(selectedEvent?.start) }}</div>
           <div><strong>End:</strong> {{ formatDate(selectedEvent?.end) }}</div>
         </VCardText>
         <VCardActions>

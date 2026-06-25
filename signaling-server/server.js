@@ -8,7 +8,8 @@ app.use(cors());
 const httpServer = http.createServer(app);
 const io = socketIo(httpServer, {
   cors: {
-    origin: "https://telemed-dev.dohsox.com", // your frontend domain
+    // origin: "https://telemed-dev.dohsox.com", // old domain
+    origin: "http://192.168.1.75", // current LAN IP
     // origin: "*", // allow all for local testing
     methods: ["GET", "POST"]
   }
@@ -51,6 +52,6 @@ io.on('connection', (socket) => {
 // httpServer.listen(3000, '0.0.0.0', () => { // local testing
 //   console.log('Socket.IO server running on port 3000')
 // })
-httpServer.listen(3000, '192.168.1.75', () => { // production
+httpServer.listen(3000, '0.0.0.0', () => { // listens on all interfaces so nginx proxy (127.0.0.1:3000) can reach it
   console.log('Socket.IO server running on port 3000')
 })

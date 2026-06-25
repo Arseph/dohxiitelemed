@@ -1,0 +1,1 @@
+import{bp as s}from"./index-Iv8R944q.js";const e=s(!1),r=s(""),c=s(!1),n=s(""),o=s(!1),t=s("");function i(){return{isError:e,errorMessage:r,isSuccess:c,successMessage:n,isWarning:o,warningMessage:t}}export{i as c};
