@@ -76,8 +76,7 @@ export default defineConfig({
     }),
 
     svgLoader(),
-    VitePWA({
-      disable: true,
+    ...(process.env.NODE_ENV !== 'production' ? [VitePWA({
       srcDir: "./public",
       filename: "mockServiceWorker.js",
       registerType: "autoUpdate",
@@ -91,7 +90,7 @@ export default defineConfig({
       injectManifest: {
         injectionPoint: "",
       },
-    }),
+    })] : []),
 
   ],
   define: { 'process.env': {} },

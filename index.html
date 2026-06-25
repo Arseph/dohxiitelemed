@@ -6,6 +6,7 @@
   <link rel="icon" href="/ro12.png" />
   <link rel="manifest" href="/site.webmanifest" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csp-nonce" content="CSP_NONCE_PLACEHOLDER" />
   <title>DOH CHD XII TELEMEDICINE</title>
   <link rel="stylesheet" type="text/css" href="/loader.css" />
 </head>
@@ -21,33 +22,7 @@
     </div>
   </div>
   <script type="module" src="/src/main.ts"></script>
-  <script>
-    const loaderColor
-      = localStorage.getItem('vuexy-initial-loader-bg') || '#FFFFFF'
-
-    const primaryColor
-      = localStorage.getItem('vuexy-initial-loader-color') || '#7367F0'
-
-    if (loaderColor) {
-      document.documentElement.style.setProperty(
-        '--initial-loader-bg',
-        loaderColor,
-      )
-    }
-    if (loaderColor) {
-      document.documentElement.style.setProperty(
-        '--initial-loader-bg',
-        loaderColor,
-      )
-    }
-
-    if (primaryColor) {
-      document.documentElement.style.setProperty(
-        '--initial-loader-color',
-        primaryColor,
-      )
-    }
-  </script>
+  <script src="/loader-init.js"></script>
 </body>
 
 </html>

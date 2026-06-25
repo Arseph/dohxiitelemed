@@ -34,7 +34,7 @@ async function fetchPatients() {
     isLoading.value = true;
 
     const response = await axiosIns.get("/api/patients");
-    const data = response.data.data || response.data;
+    const data = Array.isArray(response.data) ? response.data : (response.data.data || []);
 
     patients.value = data.map((p: any) => {
       const dob = p.pat_birthDate ? new Date(p.pat_birthDate) : null;

@@ -33,14 +33,15 @@ export default function (app: App) {
 
   const optionTheme = deepMerge({ themes }, cookieThemeValues)
 
+  const nonce = document.querySelector<HTMLMetaElement>('meta[name="csp-nonce"]')?.content ?? ''
+
   const vuetify = createVuetify({
     aliases: {
       IconBtn: VBtn,
     },
     defaults,
     icons,
-    theme: optionTheme,
-
+    theme: { ...optionTheme, cspNonce: nonce },
   })
 
   app.use(vuetify)
