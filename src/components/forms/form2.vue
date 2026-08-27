@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { cStatus } from "@/components/snackbars/cStatus";
+import { useDirtyTracker, useFormSync } from '@/composables/useFormSync';
 import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { VForm } from 'vuetify/components/VForm';
 import { VCol, VRow, VTextField } from "vuetify/lib/components/index.mjs";
 
@@ -88,6 +89,42 @@ const examFields = [
 
 
 // const meeting = ref<any>(null);
+
+// Collaborative editing — see useFormSync. This card holds two records (clinical
+// history and physical exam) but is one form to the user and to the other
+// participant, so there is a single presence/refetch channel and one dirty tracker
+// per record.
+const { connected, remoteEditor, notifySaved, setEditing } = useFormSync({
+  form: 'clinical_history',
+  editorName: computed(() => user.value?.name ?? 'Other user'),
+  onRemoteSave: () => {
+    if (props.consultId)
+      fetchMeetingInfo(props.consultId)
+  },
+})
+
+// clinichis stores the facility under 'facilityOptions' but the column is
+// 'facility_id', so dirtiness is tracked on the payload shape, not the model.
+const chPayload = computed(() => ({
+  meeting_id: clinichis.value.meeting_id,
+  reason_consult: clinichis.value.reason_consult,
+  date_onset_illness: clinichis.value.date_onset_illness,
+  date_referral: clinichis.value.date_referral,
+  facility_id: clinichis.value.facilityOptions,
+  known_medical_history: clinichis.value.known_medical_history,
+  current_medication: clinichis.value.current_medication,
+  blood_type: clinichis.value.blood_type,
+  clinical_status_time_consult: clinichis.value.clinical_status_time_consult,
+  specific_findings: clinichis.value.specific_findings,
+}))
+
+const chTracker = useDirtyTracker(chPayload, ['meeting_id'])
+const peTracker = useDirtyTracker(physexam, ['meeting_id'])
+
+const isEditing = ref(false);
+
+// Announce edit mode both ways, so the other side's banner appears and clears.
+watch(isEditing, editing => setEditing(editing))
 async function fetchMeetingInfo(meetId: number) {
   try {
     // Step 1: Fetch both Clinical History (CH) and Physical Exam (PE) in parallel
@@ -153,13 +190,17 @@ async function fetchMeetingInfo(meetId: number) {
       const meetingResponse = await axiosIns.get(`/api/meeting-infoV2`, {
         params: { meet_id: meetId },
       });
-      const data = meetingResponse.data;
+      // meeting-infoV2 wraps its payload: { data: { meetID, ... } }. Reading one
+      // level short left every field undefined, so meeting_id went up as null.
+      const data = meetingResponse.data.data;
 
       // Populate Clinical History from meeting info
-      clinichis.value = {
+      // Merge, don't replace — a fresh object here dropped the other eight
+      // fields off the model, so the save payload read undefined for them.
+      Object.assign(clinichis.value, {
         meeting_id: data.meetID ?? null,
         reason_consult: data.title ?? '',
-      };
+      });
 
       // Populate Physical Exam from meeting info
       physexam.value = {
@@ -189,6 +230,15 @@ async function fetchMeetingInfo(meetId: number) {
       });
     }
 
+    // Baseline for working out what is dirty on the next save. Covers every branch
+    // above, so it sits at the end of the try rather than inside one of them.
+    // setRecordExists decides whether the next save can narrow to changed
+    // fields, or must send everything to satisfy NOT NULL columns on INSERT.
+    chTracker.setRecordExists(!!ch);
+    peTracker.setRecordExists(!!pe);
+    chTracker.markClean();
+    peTracker.markClean();
+
   } catch (error) {
     console.error("Error fetching clinical history, physical exam, or meeting info:", error);
     errorMessage.value = "Failed to fetch data.";
@@ -216,24 +266,19 @@ async function saveUpdateCH() {
       return;
     }
 
-    // ✅ Prepare payload using all meeting data
-    const payload = {
-      meeting_id: clinichis.value.meeting_id,
-      reason_consult: clinichis.value.reason_consult,
-      date_onset_illness: clinichis.value.date_onset_illness,
-      date_referral: clinichis.value.date_referral,
-      facility_id: clinichis.value.facilityOptions,
-      known_medical_history: clinichis.value.known_medical_history,
-      current_medication: clinichis.value.current_medication,
-      blood_type: clinichis.value.blood_type,
-      clinical_status_time_consult: clinichis.value.clinical_status_time_consult,
-      specific_findings: clinichis.value.specific_findings,
-    };
+    // Only the changed fields, so this save cannot overwrite what the other
+    // participant edited from our own stale copy.
+    const changed = chTracker.dirty();
 
-
-    console.log("Payload being sent:", payload);
-    // Send request
-    const response = await axiosIns.post('/api/save-clinicalhistory', payload); //no route yet
+    if (Object.keys(changed).length) {
+      await axiosIns.post('/api/save-clinicalhistory', {
+        meeting_id: clinichis.value.meeting_id,
+        ...changed,
+      });
+      // The row is there now, so later saves can narrow to what changed.
+      chTracker.setRecordExists(true);
+      chTracker.markClean();
+    }
 
     // Success response handling
     successMessage.value = "Saved  Clinical history.";
@@ -260,32 +305,20 @@ async function saveUpdatePE() {
       return;
     }
 
-    // ✅ Prepare payload using all meeting data
-    const payload = {
-      meeting_id: physexam.value.meeting_id,
-      head: physexam.value.head,
-      conjunctiva: physexam.value.conjunctiva,
-      con_remarks: physexam.value.con_remarks,
-      neck: physexam.value.neck,
-      chest: physexam.value.chest,
-      breast: physexam.value.breast,
-      breast_remarks: physexam.value.breast_remarks,
-      thorax: physexam.value.thorax,
-      thorax_remarks: physexam.value.thorax_remarks,
-      abdomen: physexam.value.abdomen,
-      abdomen_remarks: physexam.value.abdomen_remarks,
-      genitals: physexam.value.genitals,
-      genital_remarks: physexam.value.genital_remarks,
-      extremities: physexam.value.extremities,
-      extremities_remarks: physexam.value.extremities_remarks,
-      others: physexam.value.others,
-      waist_circumference: physexam.value.waist_circumference,
-    };
+    const changed = peTracker.dirty();
 
+    if (Object.keys(changed).length) {
+      await axiosIns.post('/api/save-physicalexam', {
+        meeting_id: physexam.value.meeting_id,
+        ...changed,
+      });
+      // The row is there now, so later saves can narrow to what changed.
+      peTracker.setRecordExists(true);
+      peTracker.markClean();
+    }
 
-    console.log("Payload being sent:", payload);
-    // Send request
-    const response = await axiosIns.post('/api/save-physicalexam', payload); //no route yet
+    // Both records are saved from this one card, so announce once here.
+    notifySaved();
 
     // Success response handling
     setTimeout(function () {
@@ -305,7 +338,6 @@ async function saveUpdatePE() {
 
 const requiredValidator = (v) => !!v || 'This field is required';
 
-const isEditing = ref(false);
 
 function cancelEdit() {
   isEditing.value = false;
@@ -315,6 +347,9 @@ function cancelEdit() {
 
 <template>
   <VForm ref="clinform" style="align-self: stretch; width: 100%;">
+    <VAlert v-if="remoteEditor" type="warning" variant="tonal" density="compact" class="mb-3 form-remote-editing">
+      {{ remoteEditor }} is editing this form. It will refresh when they save.
+    </VAlert>
     <VTooltip v-if="isEditing == true" text="Save" location="top">
       <template #activator="{ props }">
         <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
@@ -437,3 +472,26 @@ function cancelEdit() {
     </VRow>
   </VForm>
 </template>
+
+<style>
+
+/*
+  Shown while the other participant is in edit mode. Deliberately loud: it is the
+  only warning that this form is about to be refreshed out from under you, taking
+  any unsaved typing with it.
+*/
+.form-remote-editing {
+  border: 2px solid #ff6d00;
+  color: #ff6d00 !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+
+  /* Black outline keeps the orange readable — the drawer sits over the video feed,
+     so the backdrop behind it is unpredictable. */
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+}
+</style>

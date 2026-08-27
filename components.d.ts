@@ -50,6 +50,7 @@ declare module 'vue' {
     EnableOneTimePasswordDialog: typeof import('./src/components/dialogs/EnableOneTimePasswordDialog.vue')['default']
     ErrorHeader: typeof import('./src/components/ErrorHeader.vue')['default']
     Errors: typeof import('./src/components/snackbars/errors.vue')['default']
+    FieldNotice: typeof import('./src/components/forms/FieldNotice.vue')['default']
     Form1: typeof import('./src/components/forms/form1.vue')['default']
     Form2: typeof import('./src/components/forms/form2.vue')['default']
     Form3: typeof import('./src/components/forms/form3.vue')['default']

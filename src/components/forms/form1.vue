@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { cStatus } from "@/components/snackbars/cStatus";
-// import { useUser } from '@/composables/useUser';
+import { useDirtyTracker, useFormSync } from '@/composables/useFormSync';
+import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
-import { computed, onMounted, ref } from "vue"; // ✅ Fix 1: added onMounted
+import { computed, onMounted, ref, watch } from "vue"; // ✅ Fix 1: added onMounted
 import { VForm } from 'vuetify/components/VForm';
 import { VCol, VRow, VTextarea, VTextField } from "vuetify/lib/components/index.mjs";
 
-// const { user } = useUser();
+const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 
 // Props — so this form can be reused for different calls
@@ -45,6 +46,42 @@ const educationalAttainments = [
 const nationalityList = ref([]);
 
 // Fetch countries
+
+// Collaborative editing — see useFormSync. The doctor and the staff member beside
+// the patient take turns: entering edit mode tells the other side, saving sends only
+// what changed, and the other side refetches so both screens match the record.
+//
+// Dirtiness is tracked on the payload shape rather than on `meeting`, because this
+// form renames fields on the way out (meetID -> meeting_id, name_physician2 ->
+// name_physician, and so on) and only those columns actually exist in the table.
+const dpPayload = computed(() => ({
+  meeting_id: meeting.value.meetID,
+  name_physician: meeting.value.name_physician2,
+  address_health: meeting.value.facility_full_address,
+  tele_partner_platform: meeting.value.tele_partner_platform,
+  prior_tele_proper: meeting.value.prior_tele_proper,
+  is_patient_accompanied: meeting.value.is_patient_accompanied,
+  case_no: meeting.value.case_no,
+  name_of_companion: meeting.value.name_of_companion,
+  relationship: meeting.value.relationship,
+  phone_no: meeting.value.phone_no,
+}))
+
+const { connected, remoteEditor, notifySaved, setEditing } = useFormSync({
+  form: 'demographic_profile',
+  editorName: computed(() => user.value?.name ?? 'Other user'),
+  onRemoteSave: () => {
+    if (props.consultId)
+      fetchMeetingInfo(props.consultId)
+  },
+})
+
+const dpTracker = useDirtyTracker(dpPayload, ['meeting_id'])
+
+const isEditing = ref(false);
+
+// Announce edit mode both ways, so the other side's banner appears and clears.
+watch(isEditing, editing => setEditing(editing))
 async function fetchCountries() {
   try {
     const response = await axiosIns.get('/api/tele/countries');
@@ -325,7 +362,11 @@ async function fetchMeetingInfo(meetId: number) {
 
     /* ── 6. Snapshot for cancel/restore ── */
     originalMeeting.value = { ...meeting.value };
-    console.log('✅ Meeting fully loaded:', meeting.value);
+    // Baseline for working out what is dirty on the next save.
+    // setRecordExists decides whether the next save can narrow to changed fields,
+    // or must send everything to satisfy the table's NOT NULL columns on INSERT.
+    dpTracker.setRecordExists(!!dp);
+    dpTracker.markClean();
 
   } catch (error) {
     console.error('❌ Error fetching meeting info:', error);
@@ -355,22 +396,21 @@ async function saveUpdateDP() {
       return;
     }
 
-    // Only columns that exist in tele_demographic_profile
-    const payload = {
-      meeting_id: meeting.value.meetID,
-      name_physician: meeting.value.name_physician2,
-      address_health: meeting.value.facility_full_address,
-      tele_partner_platform: meeting.value.tele_partner_platform,
-      prior_tele_proper: meeting.value.prior_tele_proper,
-      is_patient_accompanied: meeting.value.is_patient_accompanied,
-      case_no: meeting.value.case_no,
-      name_of_companion: meeting.value.name_of_companion,
-      relationship: meeting.value.relationship,
-      phone_no: meeting.value.phone_no,
-    };
+    // Only the changed columns, so this save cannot overwrite fields the other
+    // participant edited from our own stale copy.
+    const changed = dpTracker.dirty();
 
-    console.log("Payload being sent:", payload);
-    const response = await axiosIns.post('/api/save-demoprofile', payload);
+    if (Object.keys(changed).length) {
+      await axiosIns.post('/api/save-demoprofile', {
+        meeting_id: meeting.value.meetID,
+        ...changed,
+      });
+      // The row is there now, so later saves can narrow to what changed.
+      dpTracker.setRecordExists(true);
+      dpTracker.markClean();
+    }
+
+    notifySaved();
 
     successMessage.value = "Saved demographic profile.";
     isSuccess.value = true;
@@ -385,7 +425,6 @@ async function saveUpdateDP() {
 
 const requiredValidator = (v) => !!v || 'This field is required';
 
-const isEditing = ref(false);
 const originalMeeting = ref({});
 
 function cancelEdit() {
@@ -397,6 +436,9 @@ function cancelEdit() {
 
 <template>
   <VForm ref="demProf" style="align-self: stretch; width: 100%;">
+    <VAlert v-if="remoteEditor" type="warning" variant="tonal" density="compact" class="mb-3 form-remote-editing">
+      {{ remoteEditor }} is editing this form. It will refresh when they save.
+    </VAlert>
     <VTooltip v-if="isEditing == true" text="Save" location="top">
       <template #activator="{ props }">
         <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
@@ -618,3 +660,26 @@ function cancelEdit() {
     </VRow>
   </VForm>
 </template>
+
+<style>
+
+/*
+  Shown while the other participant is in edit mode. Deliberately loud: it is the
+  only warning that this form is about to be refreshed out from under you, taking
+  any unsaved typing with it.
+*/
+.form-remote-editing {
+  border: 2px solid #ff6d00;
+  color: #ff6d00 !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+
+  /* Black outline keeps the orange readable — the drawer sits over the video feed,
+     so the backdrop behind it is unpredictable. */
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+}
+</style>

@@ -41,7 +41,11 @@ const submit = async () => {
 
       router.push('/homes');
   } catch (error) {
-    alertMessage.value = error.response.data.has_token ? 'Account logged in to another device. Please contact administrator' : 'Invalid username or password. Please try again.'
+    if (!error.response) {
+      alertMessage.value = 'Unable to reach the server. Please check your connection and try again.'
+    } else {
+      alertMessage.value = error.response.data?.has_token ? 'Account logged in to another device. Please contact administrator' : 'Invalid username or password. Please try again.'
+    }
     showAlert.value = true
     loadingButton.value = false
   }

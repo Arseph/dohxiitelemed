@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { cStatus } from "@/components/snackbars/cStatus";
+import { useDirtyTracker, useFormSync } from '@/composables/useFormSync';
 import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
 import { computed, onMounted, ref, watch } from "vue";
@@ -24,6 +25,94 @@ async function fetchCountries() {
     }
 }
 
+// ── Province / City ──────────────────────────────────────────────────────────
+//
+// The two are bound through PSGC: municipal_cities.prov_psgc points at
+// provinces.prov_psgc. The columns are different types — varchar there (keeping a
+// leading zero, "012800000") and unsigned int here — so every comparison goes
+// through Number(), never string equality, which would silently match nothing for
+// any province whose code begins with a zero.
+//
+// tele_covid19_screening.province / .municipal are varchar and have always held
+// free text, so the NAME is still what gets stored. The PSGC is kept in component
+// state purely to drive the filtering.
+interface ProvinceOption { prov_psgc: string; prov_name: string; prov_code?: string }
+interface CityOption { muni_psgc: number; muni_name: string; prov_psgc: number; zipcode?: number }
+
+// ISO 3166-1 numeric for the Philippines, matching countries.num_code. Screening
+// happens domestically unless stated otherwise, so the field starts here.
+const DEFAULT_COUNTRY_ID = 608;
+
+const provinceList = ref<ProvinceOption[]>([]);
+const cityList = ref<CityOption[]>([]);
+const selectedProvPsgc = ref<string | number | null>(null);
+
+async function fetchProvinces() {
+    try {
+        const response = await axiosIns.get('/api/tele/provinces');
+        provinceList.value = response.data.data;
+    } catch (error) {
+        console.error('Error fetching provinces:', error);
+    }
+}
+
+async function fetchCities() {
+    try {
+        const response = await axiosIns.get('/api/tele/cities');
+        cityList.value = response.data.data;
+    } catch (error) {
+        console.error('Error fetching cities:', error);
+    }
+}
+
+// Only the cities in the chosen province. With no province chosen the list is
+// empty rather than "all", so the field cannot be filled with a city that
+// contradicts the province above it.
+const citiesInProvince = computed(() => {
+    if (selectedProvPsgc.value === null || selectedProvPsgc.value === '')
+        return [];
+
+    const target = Number(selectedProvPsgc.value);
+
+    return cityList.value.filter(c => Number(c.prov_psgc) === target);
+});
+
+// Only a handful of provinces have their cities loaded (municipal_cities covers
+// Region XII). Rather than present an empty dropdown for the rest, the field
+// falls back to free text so the address can still be recorded.
+const cityIsFreeText = computed(() =>
+    selectedProvPsgc.value !== null && selectedProvPsgc.value !== '' && citiesInProvince.value.length === 0);
+
+function onProvinceChange(psgc: string | number | null) {
+    selectedProvPsgc.value = psgc ?? null;
+
+    const match = provinceList.value.find(p => Number(p.prov_psgc) === Number(psgc));
+
+    covids.value.province = match?.prov_name ?? '';
+
+    // The old city almost certainly is not in the new province.
+    covids.value.municipal = '';
+}
+
+function onCityChange(psgc: string | number | null) {
+    const match = cityList.value.find(c => Number(c.muni_psgc) === Number(psgc));
+
+    covids.value.municipal = match?.muni_name ?? '';
+}
+
+// The stored values are names, so restore the dropdown selections by matching on
+// name after a fetch. Anything that does not match — the free text these columns
+// used to collect — is left in place and simply shows as unselected.
+const selectedCityPsgc = computed(() =>
+    cityList.value.find(c => c.muni_name === covids.value.municipal)?.muni_psgc ?? null);
+
+function syncAddressSelections() {
+    const prov = provinceList.value.find(p => p.prov_name === covids.value.province);
+
+    selectedProvPsgc.value = prov?.prov_psgc ?? null;
+}
+
+
 // Props — so this form can be reused for different calls
 const props = defineProps({
     consultId: {
@@ -40,7 +129,7 @@ const covids = ref({
     street: '',
     municipal: '',
     province: '',
-    country_id: '',
+    country_id: DEFAULT_COUNTRY_ID,
     office_phone_no: '',
     cellphone_no: '',
     history_travel_country_symptoms: '',
@@ -310,10 +399,17 @@ watch(() => clinas.value.history_illness, (newVal) => {
 //save/update
 async function fetchMeetingInfo() {
     try {
+        // Whether each record already exists decides if the next save can send only
+        // changed fields, or must send everything to satisfy NOT NULL columns.
+        let cvExists = false;
+        let caExists = false;
+
         // 🔹 Step 3: Try to fetch existing covid screening
         if (covids.value.meeting_id) {
             const cvResponse = await axiosIns.get(`/api/get-covidscreening/${covids.value.meeting_id}`);
             const cv = cvResponse.data.data;
+
+            cvExists = !!cv;
 
             if (cv) {
                 console.log("✅ Existing covid screening found:",);
@@ -326,7 +422,7 @@ async function fetchMeetingInfo() {
                 covids.value.street = cv.street ?? null;
                 covids.value.municipal = cv.municipal ?? null;
                 covids.value.province = cv.province ?? null;
-                covids.value.country_id = cv.country_id ?? null;
+                covids.value.country_id = cv.country_id ?? DEFAULT_COUNTRY_ID;
                 covids.value.office_phone_no = cv.office_phone_no ?? null;
                 covids.value.cellphone_no = cv.cellphone_no ?? null;
                 covids.value.history_travel_country_symptoms = cv.history_travel_country_symptoms ?? null;
@@ -395,6 +491,8 @@ async function fetchMeetingInfo() {
         if (clinas.value.meeting_id) {
             const caResponse = await axiosIns.get(`/api/get-covidassessment/${clinas.value.meeting_id}`);
             const ca = caResponse.data.data;
+
+            caExists = !!ca;
 
             if (ca) {
                 console.log("✅ Existing covid assessment profile found:",);
@@ -471,6 +569,17 @@ async function fetchMeetingInfo() {
             }
         }
 
+        // Baseline for working out what is dirty on the next save.
+        // setRecordExists decides whether the next save can narrow to changed fields,
+        // or must send everything to satisfy the tables' NOT NULL columns on INSERT.
+        // Stored province/municipal are names; map them back onto the dropdowns.
+        syncAddressSelections();
+
+        cvTracker.setRecordExists(cvExists);
+        caTracker.setRecordExists(caExists);
+        cvTracker.markClean();
+        caTracker.markClean();
+
     } catch (error) {
         console.error("❌ Error fetching covid screening info:", error);
         errorMessage.value = "Failed to load covid screening info.";
@@ -484,6 +593,8 @@ async function fetchMeetingInfo() {
 onMounted(() => {
     if (props.consultId) fetchMeetingInfo();
     fetchCountries();
+    fetchProvinces();
+    fetchCities();
 
     if (covids.value.list_name_occasion) {
         const parts = covids.value.list_name_occasion.split(',');
@@ -517,19 +628,33 @@ onMounted(() => {
     };
 });
 
-async function saveUpdateCV() {
-    try {
-        // Ensure form validation
-        const { valid } = await cvdform.value.validate();
+// Payload shapes kept exactly as they were, now reusable so dirtiness can be
+// measured against what the API actually receives rather than the raw models.
 
-        if (!valid) {
-            errorMessage.value = "Please fill in all required fields correctly.";
-            isError.value = true;
-            return;
-        }
+// Collaborative editing — see useFormSync. This card holds two records (COVID-19
+// screening and clinical assessment) but is one form to the user and to the other
+// participant, so there is a single presence/refetch channel and one dirty tracker
+// per record.
+//
+// Trackers sit on the payload shapes, not the raw models: several fields are
+// renamed or normalised on the way out, and the assessment payload carries arrays
+// (contacts, specimens) that are mutated in place — the tracker compares by value
+// for exactly that reason.
+const { connected, remoteEditor, notifySaved, setEditing } = useFormSync({
+  form: 'covid_screening',
+  editorName: computed(() => user.value?.name ?? 'Other user'),
+  onRemoteSave: () => fetchMeetingInfo(),
+})
 
-        // ✅ Prepare payload using all meeting data
-        const payload = {
+const cvTracker = useDirtyTracker(computed(() => cvPayload()), ['meeting_id'])
+const caTracker = useDirtyTracker(computed(() => caPayload()), ['meeting_id'])
+
+const isEditing = ref(false);
+
+// Announce edit mode both ways, so the other side's banner appears and clears.
+watch(isEditing, editing => setEditing(editing))
+function cvPayload() {
+    return {
             meeting_id: covids.value.meeting_id,
             employers_name: covids.value.employers_name ?? null,
             place_of_work: covids.value.place_of_work ?? null,
@@ -582,38 +707,11 @@ async function saveUpdateCV() {
             wp_date_last_expose: covids.value.wp_date_last_expose ?? null,
             wp_address: covids.value.wp_address ?? null,
             list_name_occasion: covids.value.list_name_occasion ?? null
-        };
-
-
-        console.log("Payload being sent:", payload);
-        // Send request
-        const response = await axiosIns.post('/api/save-covidscreening', payload);
-
-        // Success response handling
-        successMessage.value = "Saved covid-19 screening.";
-        isSuccess.value = true;
-
-    } catch (error) {
-        console.error("Error Saving covid-19 screening:", error);
-        errorMessage.value = "Failed to save covid-19 screening.";
-        isError.value = true;
-
-    }
+    };
 }
 
-async function saveUpdateCA() {
-    try {
-        // Ensure form validation
-        const { valid } = await cvdform.value.validate();
-
-        if (!valid) {
-            errorMessage.value = "Please fill in all required fields correctly.";
-            isError.value = true;
-            return;
-        }
-
-        // ✅ Prepare payload using all meeting data
-        const payload = {
+function caPayload() {
+    return {
             meeting_id: clinas.value.meeting_id,
             days_14_prior_expose: clinas.value.days_14_prior_expose,
             anytime_during_expose: clinas.value.anytime_during_expose,
@@ -649,12 +747,75 @@ async function saveUpdateCA() {
             classification: clinas.value.classification,
             outcome_date_discharge: clinas.value.outcome_date_discharge,
             outcome_condition_discharge: clinas.value.outcome_condition_discharge
-        };
+    };
+}
 
+async function saveUpdateCV() {
+    try {
+        // Ensure form validation
+        const { valid } = await cvdform.value.validate();
 
-        console.log("Payload being sent:", payload);
-        // Send request
-        const response = await axiosIns.post('/api/save-covidassessment', payload); //no route controller yet
+        if (!valid) {
+            errorMessage.value = "Please fill in all required fields correctly.";
+            isError.value = true;
+            return;
+        }
+
+        // ✅ Prepare payload using all meeting data
+        // Only the changed fields — a full payload would carry our stale copy of
+        // whatever the other participant just edited and overwrite it.
+        const changed = cvTracker.dirty();
+
+        if (Object.keys(changed).length) {
+            await axiosIns.post('/api/save-covidscreening', {
+                meeting_id: covids.value.meeting_id,
+                ...changed,
+            });
+            // The row is there now, so later saves can narrow to what changed.
+            cvTracker.setRecordExists(true);
+            cvTracker.markClean();
+        }
+
+        // Success response handling
+        successMessage.value = "Saved covid-19 screening.";
+        isSuccess.value = true;
+
+    } catch (error) {
+        console.error("Error Saving covid-19 screening:", error);
+        errorMessage.value = "Failed to save covid-19 screening.";
+        isError.value = true;
+
+    }
+}
+
+async function saveUpdateCA() {
+    try {
+        // Ensure form validation
+        const { valid } = await cvdform.value.validate();
+
+        if (!valid) {
+            errorMessage.value = "Please fill in all required fields correctly.";
+            isError.value = true;
+            return;
+        }
+
+        // ✅ Prepare payload using all meeting data
+        // Only the changed fields — a full payload would carry our stale copy of
+        // whatever the other participant just edited and overwrite it.
+        const changed = caTracker.dirty();
+
+        if (Object.keys(changed).length) {
+            await axiosIns.post('/api/save-covidassessment', {
+                meeting_id: clinas.value.meeting_id,
+                ...changed,
+            });
+            // The row is there now, so later saves can narrow to what changed.
+            caTracker.setRecordExists(true);
+            caTracker.markClean();
+        }
+
+        // Both records save from this one card, so announce once, here.
+        notifySaved();
 
         // Success response handling
         setTimeout(function () {
@@ -694,7 +855,6 @@ const xrayYes = computed(() => clinas.value.xray === 1);
 const pregnantYes = computed(() => clinas.value.pregnant === 1);
 const historyIllnessYes = computed(() => clinas.value.history_illness === 1);
 
-const isEditing = ref(false);
 
 function cancelEdit() {
     isEditing.value = false;
@@ -704,6 +864,9 @@ function cancelEdit() {
 
 <template>
     <VForm ref="cvdform" style="align-self: stretch; width: 100%;">
+    <VAlert v-if="remoteEditor" type="warning" variant="tonal" density="compact" class="mb-3 form-remote-editing">
+      {{ remoteEditor }} is editing this form. It will refresh when they save.
+    </VAlert>
         <VTooltip v-if="isEditing == true" text="Save" location="top">
             <template #activator="{ props }">
                 <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
@@ -762,14 +925,27 @@ function cancelEdit() {
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="covids.municipal" outlined dense label="City/Municipality:" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
+                <!-- Province drives the city list below via PSGC. -->
+                <VAutocomplete :model-value="selectedProvPsgc" :items="provinceList" item-title="prov_name"
+                    item-value="prov_psgc" label="Province/State:" outlined dense clearable
+                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }"
+                    @update:model-value="onProvinceChange" />
             </VCol>
         </VRow>
         <VRow>
             <VCol>
-                <VTextField v-model="covids.province" outlined dense label="Province/State:" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
+                <!-- Most provinces have no cities loaded, so the field switches to free text
+                     rather than showing a dropdown that can never be satisfied. -->
+                <VTextField v-if="cityIsFreeText" v-model="covids.municipal" outlined dense
+                    label="City/Municipality:" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }"
+                    hint="No city list available for this province — type the name." persistent-hint />
+                <VAutocomplete v-else :model-value="selectedCityPsgc" :items="citiesInProvince"
+                    item-title="muni_name" item-value="muni_psgc" label="City/Municipality:"
+                    outlined dense clearable :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }"
+                    no-data-text="Select a province first"
+                    @update:model-value="onCityChange" />
             </VCol>
         </VRow>
         <VRow>
@@ -1240,8 +1416,9 @@ function cancelEdit() {
                     <VCol>
                         <div class="d-flex align-center">
                             <label class="text-body-1 font-weight-medium me-2">(If no) Place of Quarantine:</label>
-                            <VCheckbox v-model="clinas.place_quarantine" label="Home" :value="1" density="compact"
-                                :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                            <VCheckbox v-model="clinas.place_quarantine" label="Home" :value="1" :false-value="0"
+                                density="compact" :readonly="!isEditing"
+                                :class="{ 'custom-disabled': !isEditing }" />
                         </div>
                     </VCol>
                 </VRow>
@@ -1289,27 +1466,30 @@ function cancelEdit() {
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VCol class="align-center" flex>
-                <VCheckbox v-model="clinas.cough" label="Cough" :value="1" density="compact" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
-            </VCol>
-            <VCol class="align-center" flex>
-                <VCheckbox v-model="clinas.colds" label="Colds" :value="1" density="compact" :readonly="!isEditing"
-                    :class="{ 'custom-disabled': !isEditing }" />
-            </VCol>
-            <VCol class="align-center" flex>
-                <VCheckbox v-model="clinas.sore_throat" label="Sore Throat" :value="1" density="compact"
+                <!-- false-value is 0, not Vuetify's default boolean false: these columns
+                     are int and MySQL rejects 'false' once a box is unticked. -->
+                <VCheckbox v-model="clinas.cough" label="Cough" :value="1" :false-value="0" density="compact"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+            </VCol>
+            <VCol class="align-center" flex>
+                <VCheckbox v-model="clinas.colds" label="Colds" :value="1" :false-value="0" density="compact"
+                    :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+            </VCol>
+            <VCol class="align-center" flex>
+                <VCheckbox v-model="clinas.sore_throat" label="Sore Throat" :value="1" :false-value="0"
+                    density="compact" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VDivider />
         </VRow>
         <VRow>
             <VCol cols="12" md="2">
-                <VCheckbox v-model="clinas.diarrhea" label="Diarrhea" :value="1" density="compact"
+                <VCheckbox v-model="clinas.diarrhea" label="Diarrhea" :value="1" :false-value="0" density="compact"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VCol cols="12" md="6">
                 <VCheckbox v-model="clinas.short_breathing" label="Shortness/Difficulty of breathing" :value="1"
-                    density="compact" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                    :false-value="0" density="compact" :readonly="!isEditing"
+                    :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VCol>
                 <VTextField v-model="clinas.other_symptoms" outlined dense label="Other Symptoms Specify:"
@@ -1578,6 +1758,26 @@ function cancelEdit() {
 </template>
 
 <style>
+
+/*
+  Shown while the other participant is in edit mode. Deliberately loud: it is the
+  only warning that this form is about to be refreshed out from under you, taking
+  any unsaved typing with it.
+*/
+.form-remote-editing {
+  border: 2px solid #ff6d00;
+  color: #ff6d00 !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+
+  /* Black outline keeps the orange readable — the drawer sits over the video feed,
+     so the backdrop behind it is unpredictable. */
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+}
 .req-label::after {
     content: " *";
     color: #f44336;
