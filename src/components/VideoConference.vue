@@ -47,6 +47,20 @@ const cards = ref<CardItem[]>([
   { id: 5, title: 'Plan of Management', icon: 'tabler-clipboard-check', color: 'green', component: Form5 },
 ])
 
+/**
+ * Form keys as sent over the socket by useFormSync, mapped to the labels shown on
+ * the drawer cards. Kept here rather than in the forms so the notice can name a form
+ * that is not currently open — the form components only exist while their card is
+ * showing, so they cannot announce anything about the other four.
+ */
+const FORM_LABELS: Record<string, string> = {
+  demographic_profile: 'Demographic Profile',
+  clinical_history: 'Clinical History & Physical Examination',
+  covid_screening: 'COVID-19 Screening',
+  diagnosis_assessment: 'Diagnosis / Assessment',
+  plan_of_management: 'Plan of Management',
+}
+
 // const activeCard = ref<number | null>(null);
 // const showCard = ref(false);
 
@@ -240,6 +254,18 @@ onMounted(async () => {
 
   socket.on('connect', () => {
     socket.emit('join', roomId)
+  })
+
+  // Announce when the other participant starts editing any form, not just the one
+  // open here. The forms raise their own in-place banner; this covers the other four.
+  socket.on('form-editing', (payload: { form?: string; by?: string; editing?: boolean }) => {
+    if (!payload?.editing || !payload.form)
+      return
+
+    const label = FORM_LABELS[payload.form] ?? 'a form'
+
+    warningMessage.value = `${payload.by ?? 'Other user'} is editing ${label}`
+    isWarning.value = true
   })
 
   // ✅ 2. Setup socket listeners

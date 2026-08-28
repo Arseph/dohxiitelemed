@@ -28,6 +28,11 @@ onMounted(async () => {
 
     var channel = pusher.subscribe(`my-channel.${cachedUser?.id}`);
     channel.bind(`my-event.${cachedUser?.id}`, function(data) {
+      // Re-broadcast in-page before showing the desktop notification. showNotification
+      // silently does nothing unless the user granted permission, so anything that
+      // only reacts there would miss the event entirely. Pages that need to refresh
+      // on activity from other users listen for this instead.
+      window.dispatchEvent(new CustomEvent('teleconsult-notification', { detail: data }))
       showNotification(data.title,data.subtitle)
     });
 })
