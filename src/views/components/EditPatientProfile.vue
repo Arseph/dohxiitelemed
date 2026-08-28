@@ -348,7 +348,7 @@ async function saveChanges() {
 
             if (!value || value === "" || value === null) {
                 isError.value = true;
-                // errorMessage.value = `${requiredFields[key]} is required and cannot be empty or 'N/A'.`;
+                errorMessage.value = `${requiredFields[key]} is required.`;
                 return;
             }
         }
@@ -444,7 +444,7 @@ const toUpperCase = (field: string) => {
 
 const requiredValidator = (v) => !!v || 'This field is required'
 
-const requiredFields = {
+const requiredFields: Record<string, string> = {
     prefix_code: "Prefix",
     pat_fname: "First Name",
     pat_mname: "Middle Name",
@@ -452,8 +452,9 @@ const requiredFields = {
     sex_code: "Sex",
     pat_birthDate: "Birth Date",
 
-    fsNumber: "Family Serial Number",
-    PCB_nhts: "PCB Eligible",
+    // fsNumber is not enforced: it is not always known at registration.
+    // PCB_nhts (PhilHealth Primary Care Benefit) is deliberately absent: the
+    // system is not integrated with PhilHealth yet, so it cannot be required.
 
     regcode: "Region",
     provcode: "Province",
@@ -824,11 +825,8 @@ watch(
                             :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
                     <VCol cols="12" md="4">
-                        <VTextField v-model="profileformp.fsNumber" :readonly="!isEditing"
-                            :class="{ 'custom-disabled': !isEditing }" :rules="[requiredValidator]">
-                            <template #label><span>Family Serial Number <span
-                                        class="text-error text-lg">*</span></span></template>
-                        </VTextField>
+                        <VTextField v-model="profileformp.fsNumber" label="Family Serial Number"
+                            :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
                     <VCol cols="12" md="4">
                         <VTextField v-model="profileformp.Patient_Type" label="Patient Type" :readonly="!isEditing"
@@ -956,7 +954,7 @@ watch(
                         <VSelect v-model="profileformp.phic_stat" label="Philhealth Status" :items="[
                             { title: 'Active', value: '1' },
                             { title: 'Inactive', value: '0' }]" item-title="title" item-value="value"
-                            variant="outlined" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
+                            variant="outlined" clearable :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
                 </VRow>
                 <!-- <VRow>
@@ -1009,7 +1007,9 @@ watch(
                             <VCol>
                                 <VSelect v-model="profileformp.pMemberSex" label="Member Sex" :items="[
                                     { title: 'Male', value: '0' },
-                                    { title: 'Female', value: '1' }]" />
+                                    { title: 'Female', value: '1' }]"
+                                        item-title="title" item-value="value" variant="outlined" clearable
+                                        :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                             </VCol>
                         </VRow>
                     </VCol>

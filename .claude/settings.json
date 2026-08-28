@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npx vue-tsc *)",
       "Bash(C:/xampp/php/php.exe -l app/Http/Controllers/Tele/TeleController.php)",
-      "Bash(grep -n \"^use Carbon\\\\|use Carbon\\\\\\\\\\\\\\\\Carbon\" app/Http/Controllers/Tele/TeleController.php)"
+      "Bash(grep -n \"^use Carbon\\\\|use Carbon\\\\\\\\\\\\\\\\Carbon\" app/Http/Controllers/Tele/TeleController.php)",
+      "Bash(grep -n 'protected $table' app/Models/PatientV2.php)",
+      "Bash(C:/xampp/php/php.exe -r ' *)"
     ]
   }
 }
