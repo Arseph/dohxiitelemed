@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { cStatus } from "@/components/snackbars/cStatus";
+import { useDirtyTracker, useFormSync } from '@/composables/useFormSync';
 import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
 import { computed, onMounted, ref, watch } from "vue";
@@ -27,17 +28,39 @@ const diagass = ref({
   if_covid: '',
 });
 
+// Collaborative editing. The doctor and the staff member beside the patient take
+// turns filling this form during the call: entering edit mode tells the other side,
+// saving sends only what changed, and the other side refetches afterwards so both
+// screens always show what is actually stored.
+const { connected, remoteEditor, notifySaved, setEditing } = useFormSync({
+  form: 'diagnosis_assessment',
+  editorName: computed(() => user.value?.name ?? 'Other user'),
+  onRemoteSave: () => {
+    // Full refresh, including anything typed but not saved here. Keeping local edits
+    // would leave the form showing something the record does not contain.
+    if (props.consultId)
+      fetchMeetingInfo(props.consultId)
+  },
+})
+
+const daTracker = useDirtyTracker(diagass, ['meeting_id', 'patient_id'])
+
 // Watch — clear if_covid when classification is not Covid
 watch(
   () => diagass.value.clinical_classification,
   (newVal) => {
-    if (newVal !== 1) {
+    if (newVal !== 1)
       diagass.value.if_covid = ''
-    }
   }
 )
 
 const isCovidCase = computed(() => diagass.value.clinical_classification === 1)
+
+const isEditing = ref(false);
+
+// Announce edit mode both ways, so the other side's banner appears and clears.
+watch(isEditing, editing => setEditing(editing))
+
 
 async function fetchMeetingInfo(meetId) {
   try {
@@ -58,7 +81,10 @@ async function fetchMeetingInfo(meetId) {
     diagass.value.clinical_classification = da?.clinical_classification ?? null;
     diagass.value.if_covid = da?.if_covid ?? null;
 
-    console.log("✅ Meeting info fetched:", diagass.value);
+    // Baseline for the next save. setRecordExists decides whether that save can
+    // narrow to changed fields or must send everything to satisfy NOT NULL columns.
+    daTracker.setRecordExists(!!da);
+    daTracker.markClean();
 
   } catch (error) {
     console.error("❌ Error fetching meeting info:", error);
@@ -70,6 +96,8 @@ async function fetchMeetingInfo(meetId) {
   }
 }
 
+// Sends only the fields that changed, so this save cannot overwrite columns the
+// other participant edited. On success the other side is told to refetch.
 async function saveUpdateDA() {
   try {
     const { valid } = await daform.value.validate();
@@ -80,17 +108,22 @@ async function saveUpdateDA() {
       return;
     }
 
-    const payload = {
-      meeting_id: diagass.value.meeting_id,
-      patient_id: diagass.value.patient_id,
-      summary_assess: diagass.value.summary_assess,
-      diagnosis: diagass.value.diagnosis,
-      clinical_classification: diagass.value.clinical_classification,
-      if_covid: diagass.value.if_covid,
-    };
+    const changed = daTracker.dirty();
 
-    console.log("Payload being sent:", payload);
-    await axiosIns.post('/api/save-diagnosisassessment', payload);
+    if (Object.keys(changed).length) {
+      await axiosIns.post('/api/save-diagnosisassessment', {
+        meeting_id: diagass.value.meeting_id,
+        patient_id: diagass.value.patient_id,
+        ...changed,
+      });
+      // The row is there now, so later saves can narrow to what changed.
+      daTracker.setRecordExists(true);
+      daTracker.markClean();
+    }
+
+    // Tell the other participant to refetch, even if nothing changed here — their
+    // copy may still be showing something older.
+    notifySaved();
 
     successMessage.value = "Saved Diagnosis / Assessment.";
     isSuccess.value = true;
@@ -111,7 +144,6 @@ onMounted(() => {
 const requiredValidator = (v: any) => (v !== '' && v !== null && v !== undefined) || 'This field is required';
 const radioRequiredValidator = (v: any) => (v === 0 || v === 1 || v === 2) ? true : 'This field is required';
 
-const isEditing = ref(false);
 
 function cancelEdit() {
   isEditing.value = false;
@@ -139,18 +171,23 @@ function cancelEdit() {
       </template>
     </VTooltip>
     <!-- <pre>diagrass vals{{ diagass }}</pre> -->
+    <VAlert v-if="remoteEditor" type="warning" variant="tonal" density="compact" class="mb-3 form-remote-editing">
+      {{ remoteEditor }} is editing this form. It will refresh when they save.
+    </VAlert>
     <VRow>
       <VCol>
-        <VTextarea v-model="diagass.summary_assess" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
-          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+        <VTextarea v-model="diagass.summary_assess" outlined dense auto-grow rows="2"
+          :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }">
           <template #label><span class="req-label">Summary of Assessment Findings</span></template>
         </VTextarea>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="diagass.diagnosis" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
-          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+        <VTextarea v-model="diagass.diagnosis" outlined dense auto-grow rows="2"
+          :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }">
           <template #label><span class="req-label">Diagnosis</span></template>
         </VTextarea>
       </VCol>
@@ -162,7 +199,8 @@ function cancelEdit() {
         </label>
         <div class="d-flex align-center">
           <VRadioGroup v-model="diagass.clinical_classification" inline density="compact"
-            :rules="[radioRequiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+            :rules="[radioRequiredValidator]" :readonly="!isEditing"
+            :class="{ 'custom-disabled': !isEditing }">
             <VRadio label="Covid-19 Case" :value="1" />
             <VRadio label="Non-Covid-19 Case" :value="0" />
           </VRadioGroup>
@@ -198,5 +236,25 @@ function cancelEdit() {
 .custom-disabled {
   opacity: 0.6;
   pointer-events: none;
+}
+
+/*
+  Shown while the other participant is in edit mode. Deliberately loud: it is the
+  only warning that this form is about to be refreshed out from under you, taking
+  any unsaved typing with it.
+*/
+.form-remote-editing {
+  border: 2px solid #ff6d00;
+  color: #ff6d00 !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+
+  /* Black outline keeps the orange readable — the drawer sits over the video feed,
+     so the backdrop behind it is unpredictable. */
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
 }
 </style>

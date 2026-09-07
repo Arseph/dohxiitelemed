@@ -31,7 +31,7 @@
       </VCardTitle>
 
       <VCardText>
-        <AcceptDec :data="selectedItem" @close="setModal = false" />
+        <AcceptDec :data="selectedItem" @close="onScheduled" />
       </VCardText>
     </VCard>
   </VDialog>
@@ -42,6 +42,12 @@ import { computed, ref } from "vue";
 
 const props = defineProps<{
   data: any[]
+}>()
+
+// Setting a schedule turns a pending request into a real teleconsultation, so the
+// lists on the parent page are stale the moment this dialog closes.
+const emit = defineEmits<{
+  (e: 'refresh'): void
 }>()
 
 const search = ref("")
@@ -63,5 +69,10 @@ const filteredData = computed(() => {
 const openSetSchedule = (item: any) => {
   selectedItem.value = item
   setModal.value = !setModal.value
+}
+
+const onScheduled = () => {
+  setModal.value = false
+  emit('refresh')
 }
 </script>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { cStatus } from "@/components/snackbars/cStatus";
+import { useDirtyTracker, useFormSync } from '@/composables/useFormSync';
 import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { VForm } from 'vuetify/components/VForm';
 import { VCol, VRow } from "vuetify/lib/components/index.mjs";
 
@@ -31,6 +32,25 @@ const planma = ref({
   license_no: '',
   prof_tax_receipt: '',
 });
+
+// Collaborative editing — see useFormSync. The doctor and the staff member beside
+// the patient take turns: entering edit mode tells the other side, saving sends only
+// what changed, and the other side refetches so both screens match the record.
+const { connected, remoteEditor, notifySaved, setEditing } = useFormSync({
+  form: 'plan_of_management',
+  editorName: computed(() => user.value?.name ?? 'Other user'),
+  onRemoteSave: () => {
+    if (props.consultId)
+      fetchMeetingInfo(props.consultId)
+  },
+})
+
+const pmTracker = useDirtyTracker(planma, ['meeting_id', 'patient_id'])
+
+const isEditing = ref(false);
+
+// Announce edit mode both ways, so the other side's banner appears and clears.
+watch(isEditing, editing => setEditing(editing))
 
 const headers = [
   { title: 'Prescription Code', key: 'presc_code' },
@@ -87,7 +107,10 @@ async function fetchMeetingInfo(meetId) {
     planma.value.license_no = pm?.license_no ?? null;
     planma.value.prof_tax_receipt = pm?.prof_tax_receipt ?? null;
 
-    console.log("✅ Meeting info fetched:", planma.value);
+    // Baseline for the next save. setRecordExists decides whether that save can
+    // narrow to changed fields or must send everything to satisfy NOT NULL columns.
+    pmTracker.setRecordExists(!!pm);
+    pmTracker.markClean();
 
   } catch (error) {
     console.error("❌ Error fetching meeting info:", error);
@@ -109,19 +132,23 @@ async function saveUpdatePM() {
       return;
     }
 
-    const payload = {
-      meeting_id: planma.value.meeting_id,
-      plan_management: planma.value.plan_management,
-      prescription: planma.value.prescription,
-      referral: planma.value.referral,
-      disposition: planma.value.disposition,
-      name_physician: planma.value.name_physician,
-      license_no: planma.value.license_no,
-      prof_tax_receipt: planma.value.prof_tax_receipt,
-    };
+    // Only the changed fields, so this save cannot overwrite columns the other
+    // participant edited from their own stale copy.
+    const changed = pmTracker.dirty();
 
-    console.log("Payload being sent:", payload);
-    await axiosIns.post('/api/save-planofmanagement', payload);
+    if (Object.keys(changed).length) {
+      // No patient_id here — tele_plan_management is keyed on meeting_id alone and
+      // has no such column.
+      await axiosIns.post('/api/save-planofmanagement', {
+        meeting_id: planma.value.meeting_id,
+        ...changed,
+      });
+      // The row is there now, so later saves can narrow to what changed.
+      pmTracker.setRecordExists(true);
+      pmTracker.markClean();
+    }
+
+    notifySaved();
 
     successMessage.value = "Saved plan of management.";
     isSuccess.value = true;
@@ -142,7 +169,6 @@ onMounted(() => {
 
 const requiredValidator = (v: any) => (v !== '' && v !== null && v !== undefined) || 'This field is required';
 
-const isEditing = ref(false);
 
 function cancelEdit() {
   isEditing.value = false;
@@ -155,6 +181,9 @@ function openPrescriptionDialog() {
 </script>
 <template>
   <VForm ref="planform" style="align-self: stretch; width: 100%;">
+    <VAlert v-if="remoteEditor" type="warning" variant="tonal" density="compact" class="mb-3 form-remote-editing">
+      {{ remoteEditor }} is editing this form. It will refresh when they save.
+    </VAlert>
     <VTooltip v-if="isEditing == true" text="Save" location="top">
       <template #activator="{ props }">
         <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
@@ -261,6 +290,26 @@ function openPrescriptionDialog() {
 </template>
 
 <style>
+
+/*
+  Shown while the other participant is in edit mode. Deliberately loud: it is the
+  only warning that this form is about to be refreshed out from under you, taking
+  any unsaved typing with it.
+*/
+.form-remote-editing {
+  border: 2px solid #ff6d00;
+  color: #ff6d00 !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+
+  /* Black outline keeps the orange readable — the drawer sits over the video feed,
+     so the backdrop behind it is unpredictable. */
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+}
 .req-label::after {
   content: " *";
   color: #f44336;

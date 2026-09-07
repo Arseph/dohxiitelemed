@@ -14,7 +14,11 @@
         >
         <VListItem>
             <VListItemTitle class="pa-3">
-                <h2>{{ data.title }}</h2>
+                <h2 :class="{ 'text-disabled': isFinished(data) }">{{ data.title }}</h2>
+                <VChip v-if="isFinished(data)" size="small" color="success" variant="tonal" class="mt-1">
+                    <VIcon start icon="tabler-circle-check" size="16" />
+                    Finished
+                </VChip>
             </VListItemTitle>
             <VListItemSubtitle class="mt-1">
             <VBadge
@@ -43,8 +47,8 @@
             </VListItemSubtitle>
 
             <template #append>
-            <VBtn size="small" :disabled="!isMeetingOngoing(data)" @click="startConsult(data)">
-                Start
+            <VBtn size="small" :disabled="!isMeetingOngoing(data) || isFinished(data)" @click="startConsult(data)">
+                {{ isFinished(data) ? 'Finished' : 'Start' }}
             </VBtn>
             </template>
         </VListItem>
@@ -84,6 +88,12 @@ const formatTime = (time?: string) => {
   const d = parseTime(time)
   return d ? d.format('h:mm A') : ''
 }
+/**
+ * is_finished is an int column, and older rows have it null rather than 0, so this
+ * has to be a truthiness check — `=== 1` would miss anything stored as "1".
+ */
+const isFinished = (item: any) => Boolean(Number(item?.is_finished))
+
 const isMeetingOngoing = (item: any) => {
   const start = dayjs(`${item.date_meeting} ${item.from_time}`, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD H:mm'])
   const end = dayjs(`${item.date_meeting} ${item.to_time}`, ['YYYY-MM-DD HH:mm:ss', 'YYYY-MM-DD H:mm'])
