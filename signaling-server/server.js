@@ -9,7 +9,8 @@ const httpServer = http.createServer(app);
 const io = socketIo(httpServer, {
   cors: {
     // origin: "https://telemed-dev.dohsox.com", // old domain
-    origin: "http://192.168.1.75", // current LAN IP
+    // origin: "http://180.193.207.212", // public IP (pre-domain fallback)
+    origin: "https://telemed.doh12.com",
     // origin: "*", // allow all for local testing
     methods: ["GET", "POST"]
   }

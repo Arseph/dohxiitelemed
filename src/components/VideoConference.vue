@@ -334,7 +334,10 @@ const config: RTCConfiguration = {
     { urls: "stun:stun.l.google.com:19302" },
     {
       // urls: "turn:telemed-dev.dohsox.com:3478", // domain expired
-      urls: "turn:192.168.1.75:3478",
+      // NOTE: keep this as the raw IP, not telemed.doh12.com — that domain is
+      // Cloudflare-proxied and Cloudflare's standard proxy doesn't relay raw
+      // TURN (UDP/TCP 3478) traffic, only HTTP(S)/WS.
+      urls: "turn:180.193.207.212:3478",
       username: "telemed",
       credential: "telemed2026secret",
     },
@@ -357,7 +360,8 @@ onMounted(async () => {
   await restartStream();
   // ✅ 1. Connect to signaling server
   // socket = io("https://telemed-dev.dohsox.com", { // domain expired
-  socket = io("http://192.168.1.75", {
+  // socket = io("http://180.193.207.212", { // pre-domain fallback
+  socket = io("https://telemed.doh12.com", {
     path: "/socket.io",
     transports: ["polling", "websocket"],
     withCredentials: true,
