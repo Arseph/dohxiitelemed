@@ -11,8 +11,8 @@ const httpServer = http.createServer(app)
 
 const io = socketIo(httpServer, {
   cors: {
-    // origin: 'https://telemed-dev.dohsox.com', // your frontend domain
-    origin: '*', // allow all for local testing
+    origin: 'https://telemed.doh12.com', // LIVE frontend origin
+    // origin: '*', // local testing only
     methods: ['GET', 'POST'],
   },
 })
@@ -69,11 +69,12 @@ io.on('connection', socket => {
   })
 })
 
-// Start HTTPS server
-httpServer.listen(3000, '0.0.0.0', () => { // local testing — reachable from phone too
+// LIVE: bound to loopback only — the web server reverse-proxies /socket.io/
+// (and its WebSocket upgrade) to this port. Do not expose 3000 publicly.
+httpServer.listen(3000, '127.0.0.1', () => {
   console.log('Socket.IO server running on port 3000')
 })
 
-// httpServer.listen(3000, '192.168.1.75', () => { // production — REVERT TO THIS BEFORE PUSH
+// httpServer.listen(3000, '0.0.0.0', () => { // local testing - reachable from phone too
 //   console.log('Socket.IO server running on port 3000')
 // })

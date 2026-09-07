@@ -9,6 +9,7 @@ import Form3 from './forms/form3.vue'
 import Form4 from './forms/form4.vue'
 import Form5 from './forms/form5.vue'
 import { axiosIns } from '@/plugins/axios'
+import { globals } from '@/globals'
 import WarningSnackbar from '@/components/snackbars/warning.vue'
 import SuccessSnackbar from '@/components/snackbars/success.vue'
 import ErrorSnackbar from '@/components/snackbars/errors.vue'
@@ -243,8 +244,7 @@ onMounted(async () => {
   await restartStream()
 
   // ✅ 1. Connect to signaling server
-  socket = io('http://10.10.124.140:3000', {
-  // socket = io('https://telemed-dev.dohsox.com', {
+  socket = io(globals.socket, {
     path: '/socket.io',
     transports: ['websocket'],
     withCredentials: true,
