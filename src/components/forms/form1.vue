@@ -412,6 +412,10 @@ async function saveUpdateDP() {
 
     notifySaved();
 
+    // What is on screen is now the record, so it becomes the restore point. Without
+    // this, cancelEdit() below put the pre-edit values back on the saver's screen.
+    originalMeeting.value = { ...meeting.value };
+
     successMessage.value = "Saved demographic profile.";
     isSuccess.value = true;
     cancelEdit();

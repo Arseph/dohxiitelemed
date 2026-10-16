@@ -56,10 +56,59 @@ watch(
 
 const isCovidCase = computed(() => diagass.value.clinical_classification === 1)
 
+
 const isEditing = ref(false);
 
 // Announce edit mode both ways, so the other side's banner appears and clears.
 watch(isEditing, editing => setEditing(editing))
+
+// ---- ICD-10 choices for the diagnosis field ----------------------------------
+//
+// Same ICD-10 lookup as the patient's Medical History picker. The column is free
+// text (varchar 255), so a picked entry is stored as "CODE — description" and
+// anything typed that matches no entry is still saved as written; older records keep
+// showing what was typed.
+
+interface DiagnosisOption { id: number; diagcode: string; diagdesc: string }
+
+const diagnosisOptions = ref<DiagnosisOption[]>([])
+const diagnosisSearch = ref('')
+const isSearchingDiagnosis = ref(false)
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+
+const diagnosisLabel = (d: DiagnosisOption) => `${d.diagcode} — ${d.diagdesc}`
+
+// Strings, not objects, so the combobox writes the label itself into the model.
+const diagnosisItems = computed(() => diagnosisOptions.value.map(diagnosisLabel))
+
+async function fetchDiagnoses(term: string) {
+  isSearchingDiagnosis.value = true
+  try {
+    const response = await axiosIns.get('/api/diagnosis-search', {
+      params: { q: term },
+    })
+
+    diagnosisOptions.value = response.data.data ?? []
+  }
+  catch (error) {
+    console.error('Error searching diagnoses:', error)
+  }
+  finally {
+    isSearchingDiagnosis.value = false
+  }
+}
+
+// Debounced: each request scans a 22k-row table. Skipped when the search text is
+// the label of an entry just picked from the list, which would match nothing and
+// empty it. Not compared against the model: a single combobox copies every
+// keystroke into v-model, so that test was always true and nothing was searched.
+watch(diagnosisSearch, term => {
+  clearTimeout(searchTimer)
+  if (!isEditing.value || diagnosisItems.value.includes(term))
+    return
+
+  searchTimer = setTimeout(() => fetchDiagnoses(term ?? ''), 300)
+})
 
 
 async function fetchMeetingInfo(meetId) {
@@ -185,11 +234,14 @@ function cancelEdit() {
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="diagass.diagnosis" outlined dense auto-grow rows="2"
+        <VCombobox v-model="diagass.diagnosis" v-model:search="diagnosisSearch" :items="diagnosisItems"
+          outlined dense no-filter :loading="isSearchingDiagnosis" maxlength="255"
           :rules="[requiredValidator]" :readonly="!isEditing"
-          :class="{ 'custom-disabled': !isEditing }">
+          :class="{ 'custom-disabled': !isEditing }"
+          no-data-text="Type to search ICD-10 codes, or enter your own diagnosis"
+          hint="Search by code (E11) or description (diabetes)" :persistent-hint="isEditing">
           <template #label><span class="req-label">Diagnosis</span></template>
-        </VTextarea>
+        </VCombobox>
       </VCol>
     </VRow>
     <VRow class="align-center" flex>

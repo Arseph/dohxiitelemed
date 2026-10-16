@@ -343,6 +343,14 @@ function cancelEdit() {
   isEditing.value = false;
 }
 
+// One after the other, not in parallel: saveUpdatePE is the one that tells the other
+// participant to refetch, and if it finished first they would reload before the
+// clinical history row was written and show the old values.
+async function saveAll() {
+  await saveUpdateCH();
+  await saveUpdatePE();
+}
+
 </script>
 
 <template>
@@ -353,7 +361,7 @@ function cancelEdit() {
     <VTooltip v-if="isEditing == true" text="Save" location="top">
       <template #activator="{ props }">
         <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
-          class="fab-fixed-botr" @click="() => { saveUpdateCH(); saveUpdatePE(); }" />
+          class="fab-fixed-botr" @click="saveAll" />
       </template>
     </VTooltip>
     <VTooltip v-if="isEditing == true" text="Cancel" location="top">

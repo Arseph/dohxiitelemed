@@ -860,6 +860,14 @@ function cancelEdit() {
     isEditing.value = false;
 }
 
+// One after the other, not in parallel: saveUpdateCA is the one that tells the other
+// participant to refetch, and if it finished first they would reload before the
+// screening row was written and show the old values.
+async function saveAll() {
+    await saveUpdateCV();
+    await saveUpdateCA();
+}
+
 </script>
 
 <template>
@@ -870,7 +878,7 @@ function cancelEdit() {
         <VTooltip v-if="isEditing == true" text="Save" location="top">
             <template #activator="{ props }">
                 <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
-                    class="fab-fixed-botr" @click="() => { saveUpdateCV(); saveUpdateCA() }" />
+                    class="fab-fixed-botr" @click="saveAll" />
             </template>
         </VTooltip>
         <VTooltip v-if="isEditing == true" text="Cancel" location="top">
