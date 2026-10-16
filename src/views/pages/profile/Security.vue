@@ -89,7 +89,8 @@
 import { cStatus } from "@/components/snackbars/cStatus"
 import { useUser } from "@/composables/useUser"
 import { axiosIns } from "@/plugins/axios"
-import { ref } from "vue"
+import { ref, watch } from "vue"
+import { useStore } from "vuex"
 
 const isCurrentPasswordVisible = ref(false)
 const isNewPasswordVisible = ref(false)
@@ -109,6 +110,13 @@ const initialData = {
   confirmPassword: '',
 }
 const accountData = ref(structuredClone(initialData))
+const store = useStore()
+
+// The user may load after this component mounts
+watch(user, (u) => {
+  initialData.userName = u?.username
+  accountData.value.userName = u?.username
+})
 
 const submit = async () => {
   loadingButton.value = true
@@ -123,6 +131,7 @@ const submit = async () => {
   } else {
     try {
       await axiosIns.post(`/api/employee/store/security`, accountData.value)
+      await store.dispatch('auth/refreshUser')
       successMessage.value = 'Successfully saved Security'
       isSuccess.value = true
     } catch (error) {

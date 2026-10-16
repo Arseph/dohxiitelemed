@@ -3,11 +3,16 @@ import cover from '@/assets/images/bg.png'
 import { useUserProfile } from "@/composables/userProfile"
 import { useUser } from '@/composables/useUser'
 import About from "@/views/pages/profile/About.vue"
-import Timeline from "@/views/pages/profile/Timeline.vue"
-import { ref, watch } from "vue"
+import { onMounted, ref, watch } from "vue"
+import { useStore } from "vuex"
 
+const store = useStore()
 const { user } = useUser()
 const { profile } = useUserProfile()
+
+onMounted(() => {
+  store.dispatch('auth/refreshUser').catch(() => {})
+})
 const profileUrl = ref<string | null>(null)
 const activeTab = ref('profile')
 const tabs = [
@@ -40,11 +45,10 @@ watch(profile, (newProfile) => {
 
       <div class="user-profile-info w-100 mt-16 pt-6 pt-sm-0 mt-sm-0">
         <h4 class="text-h4 text-center text-sm-start font-weight-medium mb-2">
-          {{ user?.info?.first_name }} {{ user?.info?.sur_name }}
-          <span v-if="user?.info?.title_name">,{{user?.info?.title_name}}</span>
+          {{ user?.fname }} {{ user?.lname }}<span v-if="user?.title">, {{ user?.title }}</span>
         </h4>
-        <p class="text-sm-start font-weight-medium mb-2">
-          {{ user?.info?.nick_name }}
+        <p class="text-sm-start font-weight-medium mb-2 text-capitalize">
+          {{ user?.level }}
         </p>
 
         <div class="d-flex align-center justify-center justify-sm-space-between flex-wrap gap-5">
@@ -52,10 +56,10 @@ watch(profile, (newProfile) => {
             <span class="d-flex gap-x-2 align-center">
               <VIcon
                 size="24"
-                icon="tabler-palette"
+                icon="tabler-briefcase"
               />
               <div class="text-body-1 font-weight-medium">
-                {{ user?.info?.hrinfo?.pos?.position }}
+                {{ user?.designation || '—' }}
               </div>
             </span>
 
@@ -65,7 +69,7 @@ watch(profile, (newProfile) => {
                 icon="tabler-map-pin"
               />
               <div class="text-body-1 font-weight-medium">
-                {{ user?.info?.hrinfo?.div?.office }} - {{ user?.info?.hrinfo?.sec?.station }}
+                {{ user?.facility?.facilityname || '—' }}
               </div>
             </span>
           </div>
@@ -101,19 +105,10 @@ watch(profile, (newProfile) => {
   >
     <VWindowItem value="profile">
       <VRow>
-        <VCol
-          md="5"
-          cols="12"
-        >
+        <VCol cols="12">
           <About :data="user" />
         </VCol>
-
-        <VCol
-          cols="12"
-          md="7"
-        >
-          <Timeline />
-        </VCol>
+        <!-- Activity Timeline hidden for now (Timeline.vue) -->
       </VRow>
     </VWindowItem>
   </VWindow>

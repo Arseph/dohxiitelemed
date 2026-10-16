@@ -5,7 +5,6 @@ import SuccessSnackbar from '@/components/snackbars/success.vue'
 import Basic from "@/views/pages/profile/Basic.vue"
 import Security from "@/views/pages/profile/Security.vue"
 import { ref } from "vue"
-import Signature from "./Signature.vue"
 const currentTab = ref(0)
 const { isError, errorMessage, isSuccess, successMessage } = cStatus()
 </script>
@@ -29,13 +28,6 @@ const { isError, errorMessage, isSuccess, successMessage } = cStatus()
       />&nbsp;
       Security
     </VTab>
-    <VTab>
-      <VIcon
-        icon="tabler-signature"
-        class="sm"
-      />&nbsp;
-      My Signature
-    </VTab>
   </VTabs>
   <VCardText>
 </VCardText>
@@ -48,9 +40,7 @@ const { isError, errorMessage, isSuccess, successMessage } = cStatus()
         <VWindowItem :value="1">
           <Security />
         </VWindowItem>
-        <VWindowItem :value="2">
-          <Signature :isActive="currentTab === 2" />
-        </VWindowItem>
+        <!-- My Signature tab hidden: the signatures table has not been migrated yet -->
       </VWindow>
     </VCardText>
   </VCard>

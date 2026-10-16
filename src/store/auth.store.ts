@@ -7,6 +7,15 @@ interface User {
   id: number;
   emp_id: number;
   username: string;
+  fname?: string;
+  mname?: string | null;
+  lname?: string;
+  title?: string | null;
+  contact?: string | null;
+  designation?: string | null;
+  license_no?: string | null;
+  picture?: string | null;
+  facility?: { id: number; facilityname: string } | null;
   level: string;
   last_login: string | null;
   login_status: string;
@@ -118,6 +127,21 @@ const auth: Module<AuthState, RootState> = {
         commit('SET_USER', null)
       } finally {
         commit('SET_CHECKED')
+      }
+    },
+
+    // Bypasses the cached auth_user so profile pages show saved changes.
+    async refreshUser({ commit }: { commit: Commit }): Promise<void> {
+      const { data } = await axiosIns.get('/api/employee/me')
+      commit('SET_USER', data)
+    },
+
+    async userProfile(): Promise<Blob | null> {
+      try {
+        const { data } = await axiosIns.get('/api/employee/profile-pic', { responseType: 'blob' })
+        return data
+      } catch {
+        return null
       }
     },
 
