@@ -1,0 +1,1 @@
+import{ce as t,bp as r,ba as a}from"./index-Iv8R944q.js";function u(){const s=t(),e=r(null);return a(async()=>{try{const o=await s.dispatch("auth/userProfile");o instanceof Blob&&(e.value=o)}catch{e.value=null}}),{profile:e}}export{u};

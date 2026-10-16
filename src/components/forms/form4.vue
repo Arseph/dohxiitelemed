@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { cStatus } from "@/components/snackbars/cStatus";
+import { useDirtyTracker, useFormSync } from '@/composables/useFormSync';
 import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
 import { computed, onMounted, ref, watch } from "vue";
@@ -11,8 +12,6 @@ const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 const emit = defineEmits(['loaded'])
 
-
-// Props — so this form can be reused for different calls
 const props = defineProps({
   consultId: {
     type: Number,
@@ -21,7 +20,6 @@ const props = defineProps({
 });
 
 const diagass = ref({
-  // savedID: props.consultId,
   meeting_id: props.consultId ?? '',
   patient_id: '',
   summary_assess: '',
@@ -30,55 +28,116 @@ const diagass = ref({
   if_covid: '',
 });
 
-// Watch for changes — strict: only clear if_covid when classification is explicitly NOT Covid (not null/empty)
+// Collaborative editing. The doctor and the staff member beside the patient take
+// turns filling this form during the call: entering edit mode tells the other side,
+// saving sends only what changed, and the other side refetches afterwards so both
+// screens always show what is actually stored.
+const { connected, remoteEditor, notifySaved, setEditing } = useFormSync({
+  form: 'diagnosis_assessment',
+  editorName: computed(() => user.value?.name ?? 'Other user'),
+  onRemoteSave: () => {
+    // Full refresh, including anything typed but not saved here. Keeping local edits
+    // would leave the form showing something the record does not contain.
+    if (props.consultId)
+      fetchMeetingInfo(props.consultId)
+  },
+})
+
+const daTracker = useDirtyTracker(diagass, ['meeting_id', 'patient_id'])
+
+// Watch — clear if_covid when classification is not Covid
 watch(
   () => diagass.value.clinical_classification,
   (newVal) => {
-    if (newVal !== 1) {
+    if (newVal !== 1)
       diagass.value.if_covid = ''
-    }
   }
 )
 
-// Computed
 const isCovidCase = computed(() => diagass.value.clinical_classification === 1)
+
+
+const isEditing = ref(false);
+
+// Announce edit mode both ways, so the other side's banner appears and clears.
+watch(isEditing, editing => setEditing(editing))
+
+// ---- ICD-10 choices for the diagnosis field ----------------------------------
+//
+// Same ICD-10 lookup as the patient's Medical History picker. The column is free
+// text (varchar 255), so a picked entry is stored as "CODE — description" and
+// anything typed that matches no entry is still saved as written; older records keep
+// showing what was typed.
+
+interface DiagnosisOption { id: number; diagcode: string; diagdesc: string }
+
+const diagnosisOptions = ref<DiagnosisOption[]>([])
+const diagnosisSearch = ref('')
+const isSearchingDiagnosis = ref(false)
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+
+const diagnosisLabel = (d: DiagnosisOption) => `${d.diagcode} — ${d.diagdesc}`
+
+// Strings, not objects, so the combobox writes the label itself into the model.
+const diagnosisItems = computed(() => diagnosisOptions.value.map(diagnosisLabel))
+
+async function fetchDiagnoses(term: string) {
+  isSearchingDiagnosis.value = true
+  try {
+    const response = await axiosIns.get('/api/diagnosis-search', {
+      params: { q: term },
+    })
+
+    diagnosisOptions.value = response.data.data ?? []
+  }
+  catch (error) {
+    console.error('Error searching diagnoses:', error)
+  }
+  finally {
+    isSearchingDiagnosis.value = false
+  }
+}
+
+// Debounced: each request scans a 22k-row table. Skipped when the search text is
+// the label of an entry just picked from the list, which would match nothing and
+// empty it. Not compared against the model: a single combobox copies every
+// keystroke into v-model, so that test was always true and nothing was searched.
+watch(diagnosisSearch, term => {
+  clearTimeout(searchTimer)
+  if (!isEditing.value || diagnosisItems.value.includes(term))
+    return
+
+  searchTimer = setTimeout(() => fetchDiagnoses(term ?? ''), 300)
+})
 
 
 async function fetchMeetingInfo(meetId) {
   try {
-    const response = await axiosIns.get(`/api/meeting-info`, {
+    const response = await axiosIns.get(`/api/meeting-infoV2`, {
       params: { meet_id: meetId },
     });
 
-    const data = response.data;
+    // ✅ v2 wraps under `data`
+    const data = response.data.data;
 
-    diagass.value = {
-      meeting_id: data.meetID ?? null,
-      patient_id: data.patient_id ?? null,
-    };
+    // ✅ diagnosis already in v2 response — no second API call needed
+    const da = data.diagnosis;
 
-    // 🔹 Step 3: Try to fetch existing diagnosis assess
-    if (diagass.value.meeting_id) {
-      const daResponse = await axiosIns.get(`/api/get-diagnosisassessment/${diagass.value.meeting_id}`);
-      const da = daResponse.data.data;
+    diagass.value.meeting_id = data.meetID ?? diagass.value.meeting_id;
+    diagass.value.patient_id = data.patient?.id ?? null;
+    diagass.value.summary_assess = da?.summary_assess ?? null;
+    diagass.value.diagnosis = da?.diagnosis ?? null;
+    diagass.value.clinical_classification = da?.clinical_classification ?? null;
+    diagass.value.if_covid = da?.if_covid ?? null;
 
-      if (da) {
-        console.log("✅ Existing Diagnosis / Assessment found:", da);
-
-        // Merge existing DP data into diagass.value
-        diagass.value.meeting_id = da.meeting_id ?? null;
-        diagass.value.patient_id = da.patient_id ?? null;
-        diagass.value.summary_assess = da.summary_assess ?? null;
-        diagass.value.diagnosis = da.diagnosis ?? null;
-        diagass.value.clinical_classification = da.clinical_classification ?? null;
-        diagass.value.if_covid = da.if_covid ?? null;
-      } else {
-        console.log("ℹ️ No Diagnosis / Assessment found for this meeting ID.");
-      }
-    }
+    // Baseline for the next save. setRecordExists decides whether that save can
+    // narrow to changed fields or must send everything to satisfy NOT NULL columns.
+    daTracker.setRecordExists(!!da);
+    daTracker.markClean();
 
   } catch (error) {
-    console.error("❌ Error fetching meeting info or DA:", error);
+    console.error("❌ Error fetching meeting info:", error);
+    console.error("Details:", error.response?.data);
     errorMessage.value = "Failed to load meeting info.";
     isError.value = true;
   } finally {
@@ -86,9 +145,10 @@ async function fetchMeetingInfo(meetId) {
   }
 }
 
+// Sends only the fields that changed, so this save cannot overwrite columns the
+// other participant edited. On success the other side is told to refetch.
 async function saveUpdateDA() {
   try {
-    // Ensure form validation
     const { valid } = await daform.value.validate();
 
     if (!valid) {
@@ -97,45 +157,42 @@ async function saveUpdateDA() {
       return;
     }
 
-    // ✅ Prepare payload using all meeting data
-    const payload = {
-      meeting_id: diagass.value.meeting_id,
-      patient_id: diagass.value.patient_id,
-      summary_assess: diagass.value.summary_assess,
-      diagnosis: diagass.value.diagnosis,
-      clinical_classification: diagass.value.clinical_classification,
-      if_covid: diagass.value.if_covid,
-    };
+    const changed = daTracker.dirty();
 
+    if (Object.keys(changed).length) {
+      await axiosIns.post('/api/save-diagnosisassessment', {
+        meeting_id: diagass.value.meeting_id,
+        patient_id: diagass.value.patient_id,
+        ...changed,
+      });
+      // The row is there now, so later saves can narrow to what changed.
+      daTracker.setRecordExists(true);
+      daTracker.markClean();
+    }
 
-    console.log("Payload being sent:", payload);
-    // Send request
-    const response = await axiosIns.post('/api/save-diagnosisassessment', payload);
+    // Tell the other participant to refetch, even if nothing changed here — their
+    // copy may still be showing something older.
+    notifySaved();
 
-    // Success response handling
-    successMessage.value = "Saved  Diagnosis / Assessment.";
+    successMessage.value = "Saved Diagnosis / Assessment.";
     isSuccess.value = true;
     cancelEdit();
 
   } catch (error) {
     console.error("Error Saving Diagnosis / Assessment:", error);
+    console.error("Details:", error.response?.data); // ✅ shows exact 422 fields
     errorMessage.value = "Failed to save Diagnosis / Assessment.";
     isError.value = true;
-
   }
 }
 
 onMounted(() => {
-  fetchMeetingInfo(props.consultId);
+  if (props.consultId) fetchMeetingInfo(props.consultId);
 });
 
-// Validators
-// ✅ handles 0 as a valid value (!!0 === false, so the old validator would reject 0)
 const requiredValidator = (v: any) => (v !== '' && v !== null && v !== undefined) || 'This field is required';
-// For radio groups where value is a number (0/1/2)
 const radioRequiredValidator = (v: any) => (v === 0 || v === 1 || v === 2) ? true : 'This field is required';
 
-const isEditing = ref(false);
 
 function cancelEdit() {
   isEditing.value = false;
@@ -163,20 +220,28 @@ function cancelEdit() {
       </template>
     </VTooltip>
     <!-- <pre>diagrass vals{{ diagass }}</pre> -->
+    <VAlert v-if="remoteEditor" type="warning" variant="tonal" density="compact" class="mb-3 form-remote-editing">
+      {{ remoteEditor }} is editing this form. It will refresh when they save.
+    </VAlert>
     <VRow>
       <VCol>
-        <VTextarea v-model="diagass.summary_assess" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
-          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+        <VTextarea v-model="diagass.summary_assess" outlined dense auto-grow rows="2"
+          :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }">
           <template #label><span class="req-label">Summary of Assessment Findings</span></template>
         </VTextarea>
       </VCol>
     </VRow>
     <VRow>
       <VCol>
-        <VTextarea v-model="diagass.diagnosis" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
-          :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+        <VCombobox v-model="diagass.diagnosis" v-model:search="diagnosisSearch" :items="diagnosisItems"
+          outlined dense no-filter :loading="isSearchingDiagnosis" maxlength="255"
+          :rules="[requiredValidator]" :readonly="!isEditing"
+          :class="{ 'custom-disabled': !isEditing }"
+          no-data-text="Type to search ICD-10 codes, or enter your own diagnosis"
+          hint="Search by code (E11) or description (diabetes)" :persistent-hint="isEditing">
           <template #label><span class="req-label">Diagnosis</span></template>
-        </VTextarea>
+        </VCombobox>
       </VCol>
     </VRow>
     <VRow class="align-center" flex>
@@ -186,7 +251,8 @@ function cancelEdit() {
         </label>
         <div class="d-flex align-center">
           <VRadioGroup v-model="diagass.clinical_classification" inline density="compact"
-            :rules="[radioRequiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
+            :rules="[radioRequiredValidator]" :readonly="!isEditing"
+            :class="{ 'custom-disabled': !isEditing }">
             <VRadio label="Covid-19 Case" :value="1" />
             <VRadio label="Non-Covid-19 Case" :value="0" />
           </VRadioGroup>
@@ -222,5 +288,25 @@ function cancelEdit() {
 .custom-disabled {
   opacity: 0.6;
   pointer-events: none;
+}
+
+/*
+  Shown while the other participant is in edit mode. Deliberately loud: it is the
+  only warning that this form is about to be refreshed out from under you, taking
+  any unsaved typing with it.
+*/
+.form-remote-editing {
+  border: 2px solid #ff6d00;
+  color: #ff6d00 !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+
+  /* Black outline keeps the orange readable — the drawer sits over the video feed,
+     so the backdrop behind it is unpredictable. */
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
 }
 </style>

@@ -100,19 +100,19 @@ const handleSubmit = async () => {
 
       <!-- Doctor Category -->
       <VCol cols="12" v-if="selectedFacility">
-        <VSelect v-model="selectedCategory" :items="props.docCat" item-title="category_name" item-value="id"
+        <VAutocomplete v-model="selectedCategory" :items="props.docCat" item-title="category_name" item-value="id"
           label="Doctor Category" placeholder="Select Category" @update:model-value="fetchDoctorCat" />
       </VCol>
 
       <!-- Doctor -->
       <VCol cols="12" v-if="doctors.length > 0">
-        <VSelect v-model="selectedDoctor" :items="doctors" item-title="name" item-value="id" label="Doctor"
+        <VAutocomplete v-model="selectedDoctor" :items="doctors" item-title="name" item-value="id" label="Doctor"
           placeholder="Select Doctor" />
       </VCol>
 
       <!-- Patient -->
       <VCol cols="12" v-if="selectedDoctor">
-        <VSelect v-model="selectedPatient" :items="props.patient" item-title="name" item-value="id" label="Patient"
+        <VAutocomplete v-model="selectedPatient" :items="props.patient" item-title="name" item-value="id" label="Patient"
           placeholder="Select Patient" />
       </VCol>
 

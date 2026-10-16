@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { axiosIns } from '@/plugins/axios';
 import { register } from 'swiper/element/bundle';
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 register()
+
+const { camera, microphone, secureContext, checkStatus, requestMedia, requestNotification } = useMediaPermissions()
 const logisticData = ref([
   { icon: 'tabler-video-plus', color: 'primary', title: 'Start Teleconsultation', isHover: false, modal: 'start', swipe: 0 },
   { icon: 'tabler-video', color: 'warning', title: 'Join Teleconsultation', isHover: false, modal: 'join', swipe: 1 },
@@ -16,8 +18,12 @@ const start = ref([])
 const active = ref(0)
 const pending = ref([])
 const req = ref([])
+const isRefreshing = ref(false)
+
 const fetchTele = async () => {
   try {
+    isRefreshing.value = true
+
     const response = await axiosIns.get(`/api/teleconsultation`);
     facilities.value = response.data.facilities
     docCat.value = response.data.telecat
@@ -29,9 +35,9 @@ const fetchTele = async () => {
     active.value = response.data?.active_user?.id
     pending.value = response.data?.data_req
     req.value = response.data?.data_my_req
-    console.log(req.value)
   } catch (error) {
   } finally {
+    isRefreshing.value = false
   }
 };
 const activeModal = ref<string | null>(null)
@@ -44,6 +50,36 @@ const openModal = (modal: string) => {
 // Function to close modal
 const closeModal = () => {
   activeModal.value = null
+}
+
+// A request was submitted from the dialog — the lists behind it are now out of date.
+const onRequestCreated = () => {
+  closeModal()
+  fetchTele()
+}
+
+/**
+ * Someone else did something that affects this user's lists.
+ *
+ * The backend already pushes to `my-channel.{userId}` whenever a teleconsultation is
+ * requested for or scheduled with this user (see PusherHelper::trigger in
+ * TeleController). App.vue re-broadcasts those in-page as `teleconsult-notification`,
+ * so this page can refresh without opening a second Pusher connection or waiting for
+ * the user to reload.
+ */
+const onRemoteActivity = () => {
+  fetchTele()
+}
+
+/**
+ * Fallback for anything the push missed — a dropped websocket, a notification fired
+ * while the tab was closed, or a change made by someone this user is not the target
+ * of. Refetching only when the tab regains focus keeps this close to free, unlike a
+ * timer that polls whether or not anyone is looking.
+ */
+const onWindowFocus = () => {
+  if (document.visibilityState === 'visible')
+    fetchTele()
 }
 const time = ref('')
 const date = ref('')
@@ -58,21 +94,48 @@ const swipeSpecific = (index: number) => {
     swiperEl.value.swiper.slideTo(index)
   }
 }
+const permBanner = computed(() => {
+  if (!secureContext) {
+    return { show: true, type: 'warning' as const, text: 'Camera and microphone require a secure connection (HTTPS). Teleconsultation video may not work until HTTPS is configured.', btn: null }
+  }
+  if (camera.value === 'denied' || microphone.value === 'denied') {
+    return { show: true, type: 'error' as const, text: 'Camera or microphone access was denied. Please allow access in browser settings.', btn: null }
+  }
+  if (camera.value === 'prompt' || microphone.value === 'prompt') {
+    return { show: true, type: 'info' as const, text: 'Camera and microphone access is required for teleconsultation.', btn: 'Grant Access' }
+  }
+  return { show: false, type: 'success' as const, text: '', btn: null }
+})
+
 let interval: number
 
-onMounted(() => {
+onMounted(async () => {
   swiperEl.value = document.querySelector('swiper-container')
   updateDateTime()
   fetchTele()
   interval = window.setInterval(updateDateTime, 1000)
+  await checkStatus()
+  requestNotification()
+  if (camera.value === 'prompt') requestMedia()
+  window.addEventListener('teleconsult-notification', onRemoteActivity)
+  document.addEventListener('visibilitychange', onWindowFocus)
 })
 
 onUnmounted(() => {
   clearInterval(interval)
+  window.removeEventListener('teleconsult-notification', onRemoteActivity)
+  document.removeEventListener('visibilitychange', onWindowFocus)
 })
 </script>
 
 <template>
+  <VAlert v-if="permBanner.show" :type="permBanner.type" class="mb-4" variant="tonal" closable>
+    {{ permBanner.text }}
+    <template v-if="permBanner.btn" #append>
+      <VBtn size="small" variant="tonal" @click="requestMedia">{{ permBanner.btn }}</VBtn>
+    </template>
+  </VAlert>
+
   <VRow>
     <VCol cols="5" md="5" sm="5">
       <VRow>
@@ -103,6 +166,22 @@ onUnmounted(() => {
           <div class="d-flex align-center justify-center gap-x-4 mb-1">
             <h3 class="text-white">{{ date }}</h3>
           </div>
+          <!--
+            Lists refresh on their own after any action and on push, but an explicit
+            control matters when someone is waiting on a colleague to schedule.
+          -->
+          <div class="d-flex align-center justify-center gap-x-2">
+            <VBtn
+              size="small"
+              variant="tonal"
+              color="white"
+              prepend-icon="tabler-refresh"
+              :loading="isRefreshing"
+              @click="fetchTele"
+            >
+              Refresh
+            </VBtn>
+          </div>
         </VCardItem>
       </VCard>
       <swiper-container ref="swiperEl" :loop="false" slides-per-view="1">
@@ -130,7 +209,7 @@ onUnmounted(() => {
             <VIcon icon="tabler-video" size="28" class="mr-3" />
             Pending Teleconsultation
           </h1>
-          <Pending :data="pending" />
+          <Pending :data="pending" @refresh="fetchTele" />
         </swiper-slide>
         <swiper-slide>
           <h1 class="text-h5 mt-6 mb-6">
@@ -166,7 +245,7 @@ onUnmounted(() => {
           🔗 Enter meeting details to join your teleconsultation.
         </div>
         <div v-else-if="activeModal === 'schedule'">
-          <Request :facilities="facilities" :docCat="docCat" :patient="patient" @close="closeModal" />
+          <Request :facilities="facilities" :docCat="docCat" :patient="patient" @close="onRequestCreated" />
         </div>
       </VCardText>
     </VCard>

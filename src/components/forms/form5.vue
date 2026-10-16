@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { cStatus } from "@/components/snackbars/cStatus";
+import { useDirtyTracker, useFormSync } from '@/composables/useFormSync';
 import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { VForm } from 'vuetify/components/VForm';
 import { VCol, VRow } from "vuetify/lib/components/index.mjs";
 
@@ -11,8 +12,6 @@ const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 const emit = defineEmits(['loaded'])
 
-
-// Props — so this form can be reused for different calls
 const props = defineProps({
   consultId: {
     type: Number,
@@ -34,6 +33,25 @@ const planma = ref({
   prof_tax_receipt: '',
 });
 
+// Collaborative editing — see useFormSync. The doctor and the staff member beside
+// the patient take turns: entering edit mode tells the other side, saving sends only
+// what changed, and the other side refetches so both screens match the record.
+const { connected, remoteEditor, notifySaved, setEditing } = useFormSync({
+  form: 'plan_of_management',
+  editorName: computed(() => user.value?.name ?? 'Other user'),
+  onRemoteSave: () => {
+    if (props.consultId)
+      fetchMeetingInfo(props.consultId)
+  },
+})
+
+const pmTracker = useDirtyTracker(planma, ['meeting_id', 'patient_id'])
+
+const isEditing = ref(false);
+
+// Announce edit mode both ways, so the other side's banner appears and clears.
+watch(isEditing, editing => setEditing(editing))
+
 const headers = [
   { title: 'Prescription Code', key: 'presc_code' },
   { title: 'Medicine Type', key: 'type_of_medicine' },
@@ -46,11 +64,6 @@ const headers = [
 const showDialog = ref(false)
 const prescriptions = ref([])
 
-// function selectPrescription(item) {
-//   planma.value.prescription = `${item.presc_code} - ${item.drug_code}`
-//   showDialog.value = false
-// }
-
 function selectPrescription(item) {
   if (!item || !item.presc_code) return
   planma.value.prescription = item.presc_code
@@ -60,7 +73,6 @@ function selectPrescription(item) {
 const loadPrescriptions = async () => {
   try {
     const res = await axiosIns.get('/api/get-prescriptions')
-    // Guard: some APIs wrap data in a `data` key, others return the array directly
     const raw = res.data
     prescriptions.value = Array.isArray(raw) ? raw : (raw?.data ?? [])
   } catch (error) {
@@ -68,54 +80,41 @@ const loadPrescriptions = async () => {
   }
 }
 
-
 async function fetchMeetingInfo(meetId) {
   try {
-    // Fetch meeting info
-    const response = await axiosIns.get(`/api/meeting-info`, {
+    const response = await axiosIns.get(`/api/meeting-infoV2`, {
       params: { meet_id: meetId },
     });
 
-    const data = response.data;
+    // ✅ v2 wraps under `data`
+    const data = response.data.data;
 
-    // --- Physician name ---
-    const docfname = data.docfname ?? null;
-    const docmname = data.docmname ? `${data.docmname.charAt(0)}.` : null;
-    const doclname = data.doclname ?? null;
-
+    // --- Physician name from nested doctor object ---
+    const docfname = data.doctor?.fname ?? null;
+    const docmname = data.doctor?.mname ? `${data.doctor.mname.charAt(0)}.` : null;
+    const doclname = data.doctor?.lname ?? null;
     const name_physician = [docfname, docmname, doclname].filter(Boolean).join(' ').trim();
 
-    // Only patch meeting_id and name_physician — don't wipe the rest of the ref
+    // ✅ Plan of management already in v2 response — no second API call needed
+    const pm = data.plan_management;
+
     planma.value.meeting_id = data.meetID ?? planma.value.meeting_id;
-    planma.value.name_physician = name_physician || planma.value.name_physician;
+    planma.value.name_physician = pm?.name_physician ?? name_physician;
+    planma.value.plan_management = pm?.plan_management ?? null;
+    planma.value.prescription = pm?.prescription ?? null;
+    planma.value.referral = pm?.referral ?? null;
+    planma.value.disposition = pm?.disposition ?? null;
+    planma.value.license_no = pm?.license_no ?? null;
+    planma.value.prof_tax_receipt = pm?.prof_tax_receipt ?? null;
 
-    console.log("✅ Meeting info fetched:", planma.value);
-
-    // 🔹 Step 3: Try to fetch existing Demographic Profile
-    if (planma.value.meeting_id) {
-      const pmResponse = await axiosIns.get(`/api/get-planofmanagement/${planma.value.meeting_id}`);
-      const pm = pmResponse.data.data;
-
-      if (pm) {
-        console.log("✅ Existing plan of management found:", pm);
-
-        // Merge existing DP data into diagass.value
-        planma.value.meeting_id = pm.meeting_id ?? null;
-        planma.value.plan_management = pm.plan_management ?? null;
-        planma.value.prescription = pm.prescription ?? null;
-        planma.value.referral = pm.referral ?? null;
-        planma.value.disposition = pm.disposition ?? null;
-        planma.value.name_physician = pm.name_physician ?? null;
-        // planma.value.signature = pm.signature ?? null;
-        planma.value.license_no = pm.license_no ?? null;
-        planma.value.prof_tax_receipt = pm.prof_tax_receipt ?? null;
-      } else {
-        console.log("ℹ️ No plan of management found for this meeting ID.");
-      }
-    }
+    // Baseline for the next save. setRecordExists decides whether that save can
+    // narrow to changed fields or must send everything to satisfy NOT NULL columns.
+    pmTracker.setRecordExists(!!pm);
+    pmTracker.markClean();
 
   } catch (error) {
-    console.error("❌ Error fetching meeting info or PM:", error);
+    console.error("❌ Error fetching meeting info:", error);
+    console.error("Details:", error.response?.data); // shows exact validation errors
     errorMessage.value = "Failed to load meeting info.";
     isError.value = true;
   } finally {
@@ -125,7 +124,6 @@ async function fetchMeetingInfo(meetId) {
 
 async function saveUpdatePM() {
   try {
-    // Ensure form validation
     const { valid } = await planform.value.validate();
 
     if (!valid) {
@@ -134,47 +132,43 @@ async function saveUpdatePM() {
       return;
     }
 
-    // ✅ Prepare payload using all meeting data
-    const payload = {
-      meeting_id: planma.value.meeting_id,
-      plan_management: planma.value.plan_management,
-      prescription: planma.value.prescription,
-      referral: planma.value.referral,
-      disposition: planma.value.disposition,
-      name_physician: planma.value.name_physician,
-      // signature: planma.value.signature,
-      license_no: planma.value.license_no,
-      prof_tax_receipt: planma.value.prof_tax_receipt,
-    };
+    // Only the changed fields, so this save cannot overwrite columns the other
+    // participant edited from their own stale copy.
+    const changed = pmTracker.dirty();
 
+    if (Object.keys(changed).length) {
+      // No patient_id here — tele_plan_management is keyed on meeting_id alone and
+      // has no such column.
+      await axiosIns.post('/api/save-planofmanagement', {
+        meeting_id: planma.value.meeting_id,
+        ...changed,
+      });
+      // The row is there now, so later saves can narrow to what changed.
+      pmTracker.setRecordExists(true);
+      pmTracker.markClean();
+    }
 
-    console.log("Payload being sent:", payload);
-    // Send request
-    const response = await axiosIns.post('/api/save-planofmanagement', payload);
+    notifySaved();
 
-    // Success response handling
-    successMessage.value = "Saved  plan of management.";
+    successMessage.value = "Saved plan of management.";
     isSuccess.value = true;
     cancelEdit();
 
   } catch (error) {
     console.error("Error Saving plan of management:", error);
+    console.error("Details:", error.response?.data); // ✅ shows exact 422 errors
     errorMessage.value = "Failed to save plan of management.";
     isError.value = true;
-
   }
 }
 
 onMounted(() => {
   if (props.consultId) fetchMeetingInfo(props.consultId);
   loadPrescriptions();
-
 });
 
-// Validators — !!v fails for 0; use explicit check instead
 const requiredValidator = (v: any) => (v !== '' && v !== null && v !== undefined) || 'This field is required';
 
-const isEditing = ref(false);
 
 function cancelEdit() {
   isEditing.value = false;
@@ -185,9 +179,11 @@ function openPrescriptionDialog() {
   showDialog.value = true
 }
 </script>
-
 <template>
   <VForm ref="planform" style="align-self: stretch; width: 100%;">
+    <VAlert v-if="remoteEditor" type="warning" variant="tonal" density="compact" class="mb-3 form-remote-editing">
+      {{ remoteEditor }} is editing this form. It will refresh when they save.
+    </VAlert>
     <VTooltip v-if="isEditing == true" text="Save" location="top">
       <template #activator="{ props }">
         <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
@@ -294,6 +290,26 @@ function openPrescriptionDialog() {
 </template>
 
 <style>
+
+/*
+  Shown while the other participant is in edit mode. Deliberately loud: it is the
+  only warning that this form is about to be refreshed out from under you, taking
+  any unsaved typing with it.
+*/
+.form-remote-editing {
+  border: 2px solid #ff6d00;
+  color: #ff6d00 !important;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+
+  /* Black outline keeps the orange readable — the drawer sits over the video feed,
+     so the backdrop behind it is unpredictable. */
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+}
 .req-label::after {
   content: " *";
   color: #f44336;
