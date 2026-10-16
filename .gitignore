@@ -41,3 +41,6 @@ public/mockServiceWorker.js
 # Env files
 .env*
 !.env.example
+
+# Vite leaves these behind when a config reload is interrupted
+vite.config.ts.timestamp-*

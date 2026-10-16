@@ -3,7 +3,7 @@ import { cStatus } from "@/components/snackbars/cStatus";
 import ErrorSnackbar from '@/components/snackbars/errors.vue';
 import SuccessSnackbar from '@/components/snackbars/success.vue';
 import { axiosIns } from '@/plugins/axios';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 interface Facility {
   id: number
   facilityname: string
@@ -31,24 +31,47 @@ const selectedDoctor = ref<number | null>(null)
 const selectedPatient = ref<number | null>(null)
 const chiefComplaint = ref<string>('')
 
-const fetchDoctorCat = async (facilityId: number) => {
+// Ignores out-of-date responses if the selection changes again before they arrive
+let doctorReq = 0
+
+const fetchDoctors = async () => {
+  const req = ++doctorReq
+  doctors.value = []
+  selectedDoctor.value = null
+  selectedPatient.value = null
+
+  // The backend filters by both, so wait until both are picked
+  if (!selectedFacility.value || !selectedCategory.value)
+    return
+
   try {
     const response = await axiosIns.get(`/api/get-doctors-facility`, {
       params: { fac_id: selectedFacility.value, cat_id: selectedCategory.value }
     })
-    if (response.data.length > 0) {
-      doctors.value = response.data.map((doc: any) => ({
-        id: doc.id,
-        name: `${doc.fname} ${doc.mname ?? ''} ${doc.lname}`.replace(/\s+/g, ' ').trim(),
-      }))
-    } else {
-      doctors.value = []
+    if (req !== doctorReq)
+      return
+
+    doctors.value = response.data.map((doc: any) => ({
+      id: doc.id,
+      name: `${doc.fname} ${doc.mname ?? ''} ${doc.lname}`.replace(/\s+/g, ' ').trim(),
+    }))
+    if (!doctors.value.length) {
       errorMessage.value = 'No doctors found in this category'
       isError.value = !isError.value
     }
   } catch (error) {
     console.error(error)
   }
+}
+
+// Reload doctors whenever the facility or the category changes
+watch([selectedFacility, selectedCategory], fetchDoctors)
+
+const resetForm = () => {
+  selectedFacility.value = null
+  selectedCategory.value = null
+  chiefComplaint.value = ''
+  // the watch then clears doctors, selected doctor and patient
 }
 
 const emit = defineEmits<{
@@ -101,7 +124,7 @@ const handleSubmit = async () => {
       <!-- Doctor Category -->
       <VCol cols="12" v-if="selectedFacility">
         <VAutocomplete v-model="selectedCategory" :items="props.docCat" item-title="category_name" item-value="id"
-          label="Doctor Category" placeholder="Select Category" @update:model-value="fetchDoctorCat" />
+          label="Doctor Category" placeholder="Select Category" />
       </VCol>
 
       <!-- Doctor -->
@@ -123,7 +146,7 @@ const handleSubmit = async () => {
 
       <VCol cols="12" class="d-flex justify-end gap-4">
         <VCardActions>
-          <VBtn type="reset" color="secondary" variant="tonal">
+          <VBtn color="secondary" variant="tonal" @click="resetForm">
             Reset
           </VBtn>
           <VBtn type="submit" color="success" variant="tonal" :disabled="isSubmitting || isAccepted">

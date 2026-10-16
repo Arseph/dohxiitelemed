@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { type Socket, io } from 'socket.io-client'
-import { onBeforeUnmount, onMounted, provide, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, provide, ref } from 'vue'
 import type { Component } from 'vue'
 import { useDisplay } from 'vuetify'
 import Form1 from './forms/form1.vue'
@@ -25,6 +25,8 @@ const callDuration = ref<number | null>(null)
 
 interface ConsultData {
   title?: string
+  RequestTo?: number // doctor_id — the side that starts the call
+  Creator?: number // user_id — the side that joins it
   encoded?: {
     facility?: {
       facilityname?: string
@@ -144,6 +146,29 @@ const roomId = props.conid
 const consult = ref<ConsultData>({})
 let socket: Socket
 
+const currentUserId = (() => {
+  try {
+    return JSON.parse(localStorage.getItem('auth_user') ?? 'null')?.id ?? null
+  }
+  catch {
+    return null
+  }
+})()
+
+// The person the request was sent to starts the call (Start Teleconsultation), so
+// they decide whether it is recorded. The joining side never records.
+const isHost = computed(() =>
+  currentUserId !== null && Number(consult.value.RequestTo) === Number(currentUserId),
+)
+
+// Recording is not used for now — the switch is hidden, so calls are never recorded.
+// Set to true to give the host the "Record this consultation" switch back.
+const SHOW_RECORD_SWITCH = false
+
+const recordCall = ref(false) // host's switch on the pre-call screen, off by default
+const isRecording = ref(false) // this side is recording right now
+const remoteRecording = ref(false) // the host is recording — show the joiner a notice
+
 // Shared with the form components via inject('formSync') so they can relay field
 // edits over the same room as the call. Deliberately a plain object, not reactive —
 // the forms mount when the drawer opens, which is after onMounted has set `socket`,
@@ -163,6 +188,52 @@ let localStream: MediaStream
 let mediaRecorder: MediaRecorder
 let recordedChunks: Blob[] = []
 const callEnded = ref(false)
+
+// The recording's audio track is a mix of both voices. A MediaRecorder records
+// only one audio track, so adding the local and remote tracks side by side would
+// keep just the host's mic. Each source can be swapped when its stream changes
+// (mic switched, other side reconnected) without touching the recorder.
+let audioCtx: AudioContext | null = null
+let audioMix: MediaStreamAudioDestinationNode | null = null
+let localAudioSource: MediaStreamAudioSourceNode | null = null
+let remoteAudioSource: MediaStreamAudioSourceNode | null = null
+
+const mixSource = (stream: MediaStream | null | undefined) => {
+  if (!audioCtx || !audioMix || !stream?.getAudioTracks().length)
+    return null
+
+  const source = audioCtx.createMediaStreamSource(stream)
+
+  source.connect(audioMix)
+
+  return source
+}
+
+const mixLocalAudio = (stream: MediaStream | null | undefined) => {
+  localAudioSource?.disconnect()
+  localAudioSource = mixSource(stream)
+}
+
+const mixRemoteAudio = (stream: MediaStream | null | undefined) => {
+  remoteAudioSource?.disconnect()
+  remoteAudioSource = mixSource(stream)
+}
+
+const stopAudioMix = () => {
+  localAudioSource?.disconnect()
+  remoteAudioSource?.disconnect()
+  localAudioSource = null
+  remoteAudioSource = null
+  audioMix = null
+  audioCtx?.close().catch(() => {})
+  audioCtx = null
+}
+
+// Set once this side starts ending the call, whichever side asked for it.
+let isEnding = false
+
+// The other participant ended the call and already told the API.
+let endedRemotely = false
 
 const config: RTCConfiguration = {
   iceServers: [
@@ -297,6 +368,14 @@ onMounted(async () => {
     await pc.setLocalDescription(answer)
 
     socket.emit('answer', { roomId, answer })
+
+    // The other side just entered — tell them whether this call is being recorded.
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    announceRecording()
+  })
+
+  socket.on('recording-state', (payload: { recording?: boolean }) => {
+    remoteRecording.value = !!payload?.recording
   })
 
   socket.on('answer', async (answer: RTCSessionDescriptionInit) => {
@@ -325,13 +404,30 @@ onMounted(async () => {
     }
   })
   socket.on('user-disconnected', () => {
+    teardownPeerConnection()
+
+    // Expected once the call is over — the other side drops its socket on the way out.
+    if (isEnding)
+      return
     errorMessage.value = 'User Disconnected'
     isError.value = true
-    teardownPeerConnection()
   })
 
-  // eslint-disable-next-line @typescript-eslint/no-use-before-define
-  startRecording()
+  // The other participant clicked End.
+  socket.on('call-ended', () => {
+    if (isEnding || callEnded.value)
+      return
+    isEnding = true
+    endedRemotely = true
+    isStartDialog.value = false
+    warningMessage.value = 'The other participant ended the call.'
+    isWarning.value = true
+    teardownPeerConnection()
+    if (remoteVideo.value)
+      remoteVideo.value.srcObject = null
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    stopRecordingThenPrompt()
+  })
 })
 
 onBeforeUnmount(() => {
@@ -341,6 +437,7 @@ onBeforeUnmount(() => {
     socket.disconnect()
   if (localStream)
     localStream.getTracks().forEach(t => t.stop())
+  stopAudioMix()
   stopTimer()
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   if (hideTimeout)
@@ -363,6 +460,10 @@ function createPeerConnection() {
   peerConnection.ontrack = event => {
     if (remoteVideo.value)
       remoteVideo.value.srcObject = event.streams[0]
+
+    // Fires once per track; the audio one is what the recording needs.
+    if (event.track.kind === 'audio')
+      mixRemoteAudio(event.streams[0])
   }
 
   // Handle connection state changes
@@ -464,6 +565,10 @@ const restartStream = async () => {
 
   localStream = await getStream()
 
+  // Mic switched mid-call — keep recording the new one.
+  if (audioCtx)
+    mixLocalAudio(localStream)
+
   if (localVideo.value)
     localVideo.value.srcObject = localStream
 
@@ -540,6 +645,13 @@ async function startCall() {
 
     socket.emit('offer', { roomId, offer })
     isStartDialog.value = false
+
+    // Only the host records, and only when they switched it on.
+    if (isHost.value && recordCall.value)
+      // eslint-disable-next-line @typescript-eslint/no-use-before-define
+      startRecording()
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    announceRecording()
   }
   catch (error) {
     console.error(error)
@@ -582,22 +694,31 @@ const startRecording = () => {
   canvas.width = 1280
   canvas.height = 480
 
-  // Draw both videos on canvas every frame
+  // Draw both videos on canvas every frame, until recording stops
   const drawFrame = () => {
-    if (!ctx)
+    if (!ctx || !isRecording.value)
       return
     ctx.drawImage(localVideo.value!, 0, 0, 640, 480) // Left half
     ctx.drawImage(remoteVideo.value!, 640, 0, 640, 480) // Right half
     requestAnimationFrame(drawFrame)
   }
 
+  isRecording.value = true
   drawFrame()
 
   // Capture canvas as stream
   canvasStream = (canvas as HTMLCanvasElement).captureStream(30) // 30 fps
 
-  // Add local audio to the stream
-  localStream.getAudioTracks().forEach(track => {
+  // Add both voices, mixed into one track. Muting the mic mutes it in the
+  // recording too, since a disabled track feeds silence into the mix.
+  audioCtx = new AudioContext()
+  audioMix = audioCtx.createMediaStreamDestination()
+  audioCtx.resume().catch(() => {})
+  mixLocalAudio(localStream)
+
+  // The other side may already be connected; if not, ontrack adds them later.
+  mixRemoteAudio(remoteVideo.value.srcObject as MediaStream | null)
+  audioMix.stream.getAudioTracks().forEach(track => {
     canvasStream.addTrack(track)
   })
 
@@ -643,6 +764,12 @@ const startRecording = () => {
 //   }
 // };
 
+// Host only: tell the other side whether this call is being recorded.
+const announceRecording = () => {
+  if (isHost.value && socket)
+    socket.emit('recording-state', { roomId, recording: isRecording.value })
+}
+
 const isProcessingVideo = ref(false)
 let pendingBlob: Blob | null = null
 
@@ -651,31 +778,61 @@ const finishCall = () => {
   stopTimer()
   pendingBlob = null
   callEnded.value = true
+
+  // Release the camera and mic and leave the room — the call is over.
+  teardownPeerConnection()
+  if (localStream)
+    localStream.getTracks().forEach(t => t.stop())
+  stopAudioMix()
+  if (socket)
+    socket.disconnect()
+}
+
+// Stop recording, then ask whether to upload it. Without a recording there is
+// nothing to ask, so the call just ends.
+const stopRecordingThenPrompt = () => {
+  if (!isRecording.value || !mediaRecorder || mediaRecorder.state === 'inactive') {
+    isRecording.value = false
+    pendingBlob = null
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    endCallWithoutUpload()
+
+    return
+  }
+
+  mediaRecorder.onstop = () => {
+    const blob = new Blob(recordedChunks, { type: 'video/webm' })
+
+    stopAudioMix()
+    pendingBlob = blob.size > 0 ? blob : null
+    isUploadPromptDialog.value = true // show upload prompt
+  }
+  isRecording.value = false // also stops the canvas redraw
+  mediaRecorder.stop()
 }
 
 const stopCall = async () => {
+  if (isEnding)
+    return
   if (!confirm('⚠️ Are you sure you want to stop the call?'))
     return
 
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(recordedChunks, { type: 'video/webm' })
-
-      pendingBlob = blob.size > 0 ? blob : null
-      isUploadPromptDialog.value = true // show upload prompt
-    }
-    mediaRecorder.stop()
-  }
-  else {
-    // No recording active, just prompt
-    pendingBlob = null
-    isUploadPromptDialog.value = true
-  }
+  isEnding = true
+  socket?.emit('end-call', { roomId })
+  stopRecordingThenPrompt()
 }
 
 // Step 2b: user chose to skip upload
 const endCallWithoutUpload = async () => {
   isUploadPromptDialog.value = false
+
+  // Ended by the other side: they already marked it finished, nothing to send.
+  if (endedRemotely) {
+    finishCall()
+
+    return
+  }
+
   isProcessingVideo.value = true
 
   try {
@@ -812,6 +969,13 @@ const closeTab = () => {
           />
           <div class="call-timer">
             {{ formatTime(elapsedSeconds) }}
+          </div>
+          <div
+            v-if="isRecording || remoteRecording"
+            class="rec-notice"
+          >
+            <span class="rec-dot" />
+            {{ isRecording ? 'Recording' : 'This consultation is being recorded' }}
           </div>
 
           <Transition name="fade">
@@ -1121,6 +1285,15 @@ const closeTab = () => {
           class="mt-3"
           @update:model-value="selectMic"
         />
+        <VSwitch
+          v-if="SHOW_RECORD_SWITCH && isHost"
+          v-model="recordCall"
+          color="error"
+          class="mt-3"
+          label="Record this consultation"
+          :hint="recordCall ? 'The other participant will see that this call is being recorded.' : ''"
+          :persistent-hint="recordCall"
+        />
       </VCardText>
 
       <VCardText class="d-flex justify-center gap-3 flex-wrap">
@@ -1393,6 +1566,34 @@ html:fullscreen .remote-video {
   font-weight: 600;
   border-radius: 8px;
   z-index: 10;
+}
+
+.rec-notice {
+  position: absolute;
+  top: 52px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  z-index: 10;
+}
+
+.rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff4c51;
+  animation: rec-blink 1.2s ease-in-out infinite;
+}
+
+@keyframes rec-blink {
+  50% { opacity: 0.3; }
 }
 
 @media (max-width: 599px) {
