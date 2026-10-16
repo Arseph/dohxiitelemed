@@ -55,6 +55,17 @@ io.on('connection', socket => {
     socket.to(roomId).emit('form-saved', { form, by })
   })
 
+  // The host says whether they are recording, so the other side can show a notice.
+  socket.on('recording-state', ({ roomId, recording }) => {
+    socket.to(roomId).emit('recording-state', { recording: !!recording })
+  })
+
+  // Someone clicked End — end it on the other side too, instead of leaving them
+  // looking at a frozen video until they notice.
+  socket.on('end-call', ({ roomId }) => {
+    socket.to(roomId).emit('call-ended')
+  })
+
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id)
 
