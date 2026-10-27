@@ -55,8 +55,8 @@ function handlePatientUpdated(updatedPatient: any) {
 }
 
 const getImageUrl = (path: string) => {
-    if (!path) return "";
-    return `${import.meta.env.VITE_APP_BACKEND_URL}/${path}`;
+  if (!path) return "";
+  return `/${path.replace(/^\/+/, "")}`;
 };
 
 const isHidden = ref(false);
