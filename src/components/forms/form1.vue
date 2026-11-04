@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { cStatus } from "@/components/snackbars/cStatus";
-import { useDirtyTracker, useFormSync } from '@/composables/useFormSync';
-import { useUser } from '@/composables/useUser';
+import { useDirtyTracker } from '@/composables/useFormSync';
 import { axiosIns } from '@/plugins/axios';
-import { computed, onMounted, ref, watch } from "vue"; // ✅ Fix 1: added onMounted
+import { computed, onMounted, ref } from "vue";
 import { VForm } from 'vuetify/components/VForm';
 import { VCol, VRow, VTextarea, VTextField } from "vuetify/lib/components/index.mjs";
 
-const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 
 // Props — so this form can be reused for different calls
@@ -47,10 +45,6 @@ const nationalityList = ref([]);
 
 // Fetch countries
 
-// Collaborative editing — see useFormSync. The doctor and the staff member beside
-// the patient take turns: entering edit mode tells the other side, saving sends only
-// what changed, and the other side refetches so both screens match the record.
-//
 // Dirtiness is tracked on the payload shape rather than on `meeting`, because this
 // form renames fields on the way out (meetID -> meeting_id, name_physician2 ->
 // name_physician, and so on) and only those columns actually exist in the table.
@@ -67,21 +61,19 @@ const dpPayload = computed(() => ({
   phone_no: meeting.value.phone_no,
 }))
 
-const { connected, remoteEditor, notifySaved, setEditing } = useFormSync({
-  form: 'demographic_profile',
-  editorName: computed(() => user.value?.name ?? 'Other user'),
-  onRemoteSave: () => {
-    if (props.consultId)
-      fetchMeetingInfo(props.consultId)
-  },
-})
-
 const dpTracker = useDirtyTracker(dpPayload, ['meeting_id'])
 
 const isEditing = ref(false);
 
-// Announce edit mode both ways, so the other side's banner appears and clears.
-watch(isEditing, editing => setEditing(editing))
+// Doctors (the accepting side) can read the requester's copy of this form, read only.
+const myRole = ref<string | null>(null);
+const canEdit = ref(true); // false: a doctor reading a consultation they are not part of
+
+// Doctors can switch between the doctor's form and the RHU's. The RHU's is always read only.
+const viewing = ref<'mine' | 'rhu'>('mine');
+const baseMeeting = ref<Record<string, any>>({}); // patient data only, before any saved form values
+const otherDp = ref<Record<string, any> | null>(null);
+
 async function fetchCountries() {
   try {
     const response = await axiosIns.get('/api/tele/countries');
@@ -287,8 +279,33 @@ function applyPatientProfile(pat: Record<string, any>) {
   });
 }
 
+// Copies the saved values of a demographic profile row onto the form. Only non-empty
+// values overwrite, so the patient data underneath stays wherever nothing was saved.
+function applyDp(dp: Record<string, any>) {
+  const dpFieldMap: Record<string, string> = {
+    name_physician: 'name_physician',
+    address_health: 'facility_full_address',
+    tele_partner_platform: 'tele_partner_platform',
+    prior_tele_proper: 'prior_tele_proper',
+    is_patient_accompanied: 'is_patient_accompanied',
+    case_no: 'case_no',
+    name_of_companion: 'name_of_companion',
+    relationship: 'relationship',
+    phone_no: 'phone_no',
+  };
+
+  for (const [dpKey, meetKey] of Object.entries(dpFieldMap)) {
+    const val = dp[dpKey];
+    if (val !== null && val !== undefined && val !== '') {
+      meeting.value[meetKey] = val;
+    }
+  }
+}
+
 async function fetchMeetingInfo(meetId: number) {
   try {
+    viewing.value = 'mine';
+
     /* ── 1. Meeting meta (doctor, meeting dates, case_no, DP, patient_id) ── */
     const meetResp = await axiosIns.get('/api/meeting-infoV2', {
       params: { meet_id: meetId },
@@ -331,30 +348,19 @@ async function fetchMeetingInfo(meetId: number) {
       applyPatientProfile(data.patient ?? {});
     }
 
+    // Patient data before any saved form values, used as the base of the RHU's view.
+    baseMeeting.value = { ...meeting.value };
+
     /* ── 5. Demographic Profile — overlay only non-null DP values on top ── */
     const dp = data.demographic_profile ?? null;
+    myRole.value = data.my_role ?? null;
+    canEdit.value = data.can_edit ?? true;
+    otherDp.value = data.other?.demographic_profile ?? null;
 
     if (dp) {
       meeting.value.demoprofile_id = dp.id ?? null;
 
-      const dpFieldMap: Record<string, string> = {
-        name_physician: 'name_physician',
-        address_health: 'facility_full_address',
-        tele_partner_platform: 'tele_partner_platform',
-        prior_tele_proper: 'prior_tele_proper',
-        is_patient_accompanied: 'is_patient_accompanied',
-        case_no: 'case_no',
-        name_of_companion: 'name_of_companion',
-        relationship: 'relationship',
-        phone_no: 'phone_no',
-      };
-
-      for (const [dpKey, meetKey] of Object.entries(dpFieldMap)) {
-        const val = dp[dpKey];
-        if (val !== null && val !== undefined && val !== '') {
-          meeting.value[meetKey] = val;
-        }
-      }
+      applyDp(dp);
     } else {
       meeting.value.demoprofile_id = null;
       console.log('ℹ️ No DP record found — patient profile data used as baseline');
@@ -388,6 +394,9 @@ onMounted(() => {
 
 async function saveUpdateDP() {
   try {
+    if (viewing.value !== 'mine' || !canEdit.value)
+      return;
+
     const { valid } = await demProf.value.validate();
 
     if (!valid) {
@@ -410,11 +419,13 @@ async function saveUpdateDP() {
       dpTracker.markClean();
     }
 
-    notifySaved();
-
-    // What is on screen is now the record, so it becomes the restore point. Without
-    // this, cancelEdit() below put the pre-edit values back on the saver's screen.
-    originalMeeting.value = { ...meeting.value };
+    // Reload this user's own form so the screen shows what the server stored. That
+    // also resets the restore point, so cancelEdit() below can't bring back the
+    // pre-edit values. Only this user's form reloads; the other side is untouched.
+    if (props.consultId)
+      await fetchMeetingInfo(props.consultId)
+    else
+      originalMeeting.value = { ...meeting.value }
 
     successMessage.value = "Saved demographic profile.";
     isSuccess.value = true;
@@ -436,13 +447,98 @@ function cancelEdit() {
   isEditing.value = false;
 }
 
+// Switching only happens while not editing (the toggle is disabled otherwise), so no
+// unsaved typing is lost. The RHU's view can never be edited or saved.
+function showMyForm() {
+  Object.assign(meeting.value, originalMeeting.value);
+}
+
+function showRhuForm() {
+  isEditing.value = false;
+  Object.assign(meeting.value, baseMeeting.value);
+  if (otherDp.value)
+    applyDp(otherDp.value);
+}
+
+function onViewChange(view: 'mine' | 'rhu') {
+  if (view === 'rhu')
+    showRhuForm();
+  else
+    showMyForm();
+}
+
+// Reloads everything from the server and stays on the requester's form, so a doctor can
+// pick up what the requester saved since the page loaded. Nothing is pushed to the page
+// any more, so this is how the requester's form is brought up to date.
+const refreshing = ref(false);
+
+async function refreshRhuForm() {
+  if (!props.consultId)
+    return;
+
+  refreshing.value = true;
+  try {
+    await fetchMeetingInfo(props.consultId); // also puts the view back on the doctor's form
+    viewing.value = 'rhu';
+    showRhuForm();
+  }
+  finally {
+    refreshing.value = false;
+  }
+}
+
+const confirmReplace = ref(false);
+
+function isEmpty(value: unknown) {
+  return value === null || value === undefined || value === '';
+}
+
+// What the doctor can take from the requester. Not copied: the physician name and the
+// facility address (they identify whoever fills the form in) and the case number.
+const COPY_FIELDS = [
+  'tele_partner_platform',
+  'prior_tele_proper',
+  'is_patient_accompanied',
+  'name_of_companion',
+  'relationship',
+  'phone_no',
+];
+
+// Copies the requester's answers into the doctor's own form and leaves it open for
+// editing. Nothing is saved until the doctor presses Save, and Cancel restores the
+// saved values. overwrite=false only fills fields that are still empty.
+function copyToMine(overwrite: boolean) {
+  confirmReplace.value = false;
+  if (!canEdit.value || !otherDp.value)
+    return;
+
+  viewing.value = 'mine';
+  showMyForm();
+
+  let copied = 0;
+  for (const key of COPY_FIELDS) {
+    const from = otherDp.value[key] ?? null;
+    const take = overwrite ? meeting.value[key] !== from : !isEmpty(from) && isEmpty(meeting.value[key]);
+
+    if (take) {
+      meeting.value[key] = from;
+      copied++;
+    }
+  }
+
+  if (copied)
+    isEditing.value = true;
+
+  successMessage.value = copied
+    ? `Copied ${copied} field(s). Review them, then press Save.`
+    : 'Nothing to copy: your form already has those answers.';
+  isSuccess.value = true;
+}
+
 </script>
 
 <template>
   <VForm ref="demProf" style="align-self: stretch; width: 100%;">
-    <VAlert v-if="remoteEditor" type="warning" variant="tonal" density="compact" class="mb-3 form-remote-editing">
-      {{ remoteEditor }} is editing this form. It will refresh when they save.
-    </VAlert>
     <VTooltip v-if="isEditing == true" text="Save" location="top">
       <template #activator="{ props }">
         <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
@@ -455,7 +551,7 @@ function cancelEdit() {
           @click="cancelEdit" />
       </template>
     </VTooltip>
-    <VTooltip v-if="isEditing == false" text="Edit" location="top">
+    <VTooltip v-if="canEdit && viewing === 'mine' && isEditing == false" text="Edit" location="top">
       <template #activator="{ props }">
         <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-edit" size="48" class="fab-fixed-botr" rounded
           @click="isEditing = true" />
@@ -464,6 +560,88 @@ function cancelEdit() {
     <div class="d-flex flex-column justify-center">
     </div>
     <br></br>
+
+    <!-- Doctors can switch to the requester's form. It is read only. -->
+    <VRow v-if="myRole === 'accepter'">
+      <VCol cols="12">
+        <VBtnToggle v-model="viewing" mandatory divided color="primary" class="w-100 mb-4"
+          :disabled="isEditing" @update:model-value="onViewChange">
+          <VBtn value="mine" class="flex-grow-1">Accepter form</VBtn>
+          <VBtn value="rhu" class="flex-grow-1">Requester form</VBtn>
+        </VBtnToggle>
+      </VCol>
+    </VRow>
+      <VAlert
+      v-if="viewing === 'rhu'"
+      type="info"
+      variant="tonal"
+      density="compact"
+      class="mb-3"
+    >
+      <div class="d-flex flex-column flex-sm-row align-sm-center justify-space-between ga-2">
+        <!-- Message -->
+        <div class="text-body-2">
+          You are viewing the requester's form. It is read only.
+          <span v-if="!otherDp">The requester has not filled it in yet.</span>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex align-center flex-wrap ga-2 flex-shrink-0">
+          <VMenu v-if="canEdit && otherDp">
+            <template #activator="{ props }">
+              <VBtn
+                v-bind="props"
+                size="small"
+                variant="tonal"
+                color="success"
+                prepend-icon="tabler-copy"
+                append-icon="tabler-chevron-down"
+              >
+                Copy to my form
+              </VBtn>
+            </template>
+
+            <VList density="compact">
+              <VListItem
+                prepend-icon="tabler-forms"
+                @click="copyToMine(false)"
+              >
+                <VListItemTitle>Fill empty fields only</VListItemTitle>
+              </VListItem>
+              <VListItem
+                prepend-icon="tabler-replace"
+                @click="confirmReplace = true"
+              >
+                <VListItemTitle>Replace my form with this</VListItemTitle>
+              </VListItem>
+            </VList>
+          </VMenu>
+
+          <VBtn
+            size="small"
+            variant="tonal"
+            prepend-icon="tabler-refresh"
+            :loading="refreshing"
+            @click="refreshRhuForm"
+          >
+            Refresh
+          </VBtn>
+        </div>
+      </div>
+    </VAlert>
+
+    <VDialog v-model="confirmReplace" max-width="420">
+      <VCard title="Replace your form?">
+        <VCardText>
+          Everything in your form will be replaced by the requester's answers. Nothing is saved until you press Save, and Cancel brings your form back.
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn variant="text" @click="confirmReplace = false">Keep mine</VBtn>
+          <VBtn color="warning" variant="tonal" @click="copyToMine(true)">Replace</VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
 
     <!-- ══ EDITABLE DP FIELDS — saved to tele_demographic_profile ══ -->
 
@@ -664,26 +842,3 @@ function cancelEdit() {
     </VRow>
   </VForm>
 </template>
-
-<style>
-
-/*
-  Shown while the other participant is in edit mode. Deliberately loud: it is the
-  only warning that this form is about to be refreshed out from under you, taking
-  any unsaved typing with it.
-*/
-.form-remote-editing {
-  border: 2px solid #ff6d00;
-  color: #ff6d00 !important;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-
-  /* Black outline keeps the orange readable — the drawer sits over the video feed,
-     so the backdrop behind it is unpredictable. */
-  text-shadow:
-    -1px -1px 0 #000,
-    1px -1px 0 #000,
-    -1px 1px 0 #000,
-    1px 1px 0 #000;
-}
-</style>

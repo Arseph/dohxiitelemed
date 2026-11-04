@@ -11,8 +11,8 @@ const httpServer = http.createServer(app)
 
 const io = socketIo(httpServer, {
   cors: {
-    origin: 'https://telemed.doh12.com', // LIVE frontend origin
-    // origin: '*', // local testing only
+    // origin: 'https://telemed.doh12.com', // LIVE frontend origin
+    origin: '*', // local testing only
     methods: ['GET', 'POST'],
   },
 })
@@ -45,15 +45,7 @@ io.on('connection', socket => {
   // Relayed to the rest of the room only. The sender is the one that talks to the
   // API; these events just tell the other side when to look again.
 
-  // Someone entered or left edit mode on a form. { form, by, editing }
-  socket.on('form-editing', ({ roomId, form, by, editing }) => {
-    socket.to(roomId).emit('form-editing', { form, by, editing, id: socket.id })
-  })
 
-  // Someone saved a form — the other side refetches it. { form, by }
-  socket.on('form-saved', ({ roomId, form, by }) => {
-    socket.to(roomId).emit('form-saved', { form, by })
-  })
 
   // The host says whether they are recording, so the other side can show a notice.
   socket.on('recording-state', ({ roomId, recording }) => {
@@ -82,10 +74,10 @@ io.on('connection', socket => {
 
 // LIVE: bound to loopback only — the web server reverse-proxies /socket.io/
 // (and its WebSocket upgrade) to this port. Do not expose 3000 publicly.
-httpServer.listen(3000, '127.0.0.1', () => {
-  console.log('Socket.IO server running on port 3000')
-})
-
-// httpServer.listen(3000, '0.0.0.0', () => { // local testing - reachable from phone too
+// httpServer.listen(3000, '127.0.0.1', () => {
 //   console.log('Socket.IO server running on port 3000')
 // })
+
+httpServer.listen(3000, '0.0.0.0', () => { // local testing - reachable from phone too
+  console.log('Socket.IO server running on port 3000')
+})
