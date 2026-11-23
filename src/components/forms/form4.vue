@@ -281,7 +281,7 @@ async function saveUpdateDA() {
   } catch (error) {
     console.error("Error Saving Diagnosis / Assessment:", error);
     console.error("Details:", error.response?.data); // ✅ shows exact 422 fields
-    errorMessage.value = "Failed to save Diagnosis / Assessment.";
+    errorMessage.value = (error as any)?.response?.data?.message ?? "Failed to save Diagnosis / Assessment.";
     isError.value = true;
   }
 }
@@ -406,7 +406,7 @@ function cancelEdit() {
 
     <!-- <pre>diagrass vals{{ diagass }}</pre> -->
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="diagass.summary_assess" outlined dense auto-grow rows="2"
           :rules="[requiredValidator]" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }">
@@ -415,7 +415,7 @@ function cancelEdit() {
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VCombobox v-model="diagass.diagnosis" v-model:search="diagnosisSearch" :items="diagnosisItems"
           outlined dense no-filter :loading="isSearchingDiagnosis" maxlength="255"
           :rules="[requiredValidator]" :readonly="!isEditing"
@@ -427,7 +427,7 @@ function cancelEdit() {
       </VCol>
     </VRow>
     <VRow class="align-center" flex>
-      <VCol class="d-flex align-center">
+      <VCol cols="12" sm class="d-flex align-center">
         <label class="req-label">
           Clinical Classification
         </label>
@@ -442,7 +442,7 @@ function cancelEdit() {
       </VCol>
     </VRow>
     <VRow v-if="isCovidCase" class="align-center" flex>
-      <VCol class="d-flex align-center">
+      <VCol cols="12" sm class="d-flex align-center">
         <label class="req-label">
           If Covid-19 Case
         </label>

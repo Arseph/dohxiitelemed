@@ -1,3 +1,4 @@
+import { getAuthToken } from '@/utils/authStorage'
 import { globals } from '@/globals';
 import axios from 'axios';
 
@@ -7,7 +8,7 @@ export const fetchDocument = async () => {
   try {
     const response = await axios.get(`${API_URL}/document_type`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     })
 
@@ -23,7 +24,7 @@ export const fetchUserCOC = async (userId: number) => {
   try {
     const response = await axios.get(`${API_URL}/cocuser/${userId}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     });
 
@@ -43,7 +44,7 @@ export const FetchUpdateData = async (app_number: string) => {
   try {
     const response = await axios.get(`${API_URL}/cocretrive/${app_number}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     });
     return response.data;
@@ -57,7 +58,7 @@ export const FetchAttachment = async (appNumber: string) => {
   try {
     const response = await axios.get(`${API_URL}/retrieve/${appNumber}`,{
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     });
     return response.data;

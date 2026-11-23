@@ -311,7 +311,7 @@ async function saveUpdateCH() {
 
   } catch (error) {
     console.error("Error Saving Clinical History:", error);
-    errorMessage.value = "Failed to save Clinical History.";
+    errorMessage.value = (error as any)?.response?.data?.message ?? "Failed to save Clinical History.";
     isError.value = true;
     return false;
 
@@ -354,7 +354,7 @@ async function saveUpdatePE() {
   } catch (error) {
     console.error("Error Saving Physical Exam:", error);
     setTimeout(function () {
-      errorMessage.value = "Failed to save Physical Exam.";
+      errorMessage.value = (error as any)?.response?.data?.message ?? "Failed to save Physical Exam.";
     }, 1050);
     isError.value = true;
     return false;
@@ -589,51 +589,51 @@ async function saveAll() {
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="clinichis.date_referral" type="date" outlined dense hide-details label="Date of Referral:"
           :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="clinichis.date_onset_illness" type="date" outlined dense hide-details
           label="Date of Onset of Illness:" :rules="[requiredValidator]" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VAutocomplete v-model="clinichis.facilityOptions" :items="facilityOptions" item-title="facilityname"
           item-value="id" label="Name of Referral Health Facility (if Applicable):" outlined dense hide-details
           clearable persistent-hint :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="clinichis.known_medical_history" outlined dense hide-details auto-grow rows="2"
           label="Known Medical Condition/s & Medical History:" :rules="[requiredValidator]" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="clinichis.current_medication" outlined dense hide-details label="Current Medications:"
           :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="clinichis.blood_type" outlined dense hide-details label="Blood Type:"
           :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="clinichis.specific_findings" outlined dense hide-details auto-grow rows="2"
           label="Specific Findings:" :rules="[requiredValidator]" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="clinichis.clinical_status_time_consult" outlined dense hide-details auto-grow rows="2"
           label="Clinical Status at the Time of Consult:" :rules="[requiredValidator]" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }" />
@@ -649,13 +649,13 @@ async function saveAll() {
       </Vcol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="physexam.head" outlined dense hide-details auto-grow rows="2" label="Head:"
           :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow v-for="(item, index) in examFields" :key="index">
-      <VCol>
+      <VCol cols="12" sm>
         <!-- Field -->
         <VTextField v-model="physexam[item.field]" outlined dense hide-details :label="item.label + ':'" class="mb-2"
           :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
@@ -666,13 +666,13 @@ async function saveAll() {
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="physexam.others" outlined dense hide-details auto-grow rows="2" label="Others: "
           :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="physexam.waist_circumference" outlined dense hide-details auto-grow rows="2"
           label="Waist Circumference: " :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>

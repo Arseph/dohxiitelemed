@@ -803,7 +803,7 @@ async function saveUpdateCV() {
 
     } catch (error) {
         console.error("Error Saving covid-19 screening:", error);
-        errorMessage.value = "Failed to save covid-19 screening.";
+        errorMessage.value = (error as any)?.response?.data?.message ?? "Failed to save covid-19 screening.";
         isError.value = true;
         return false;
     }
@@ -849,7 +849,7 @@ async function saveUpdateCA() {
     } catch (error) {
         console.error("Error Saving covid-19 assessment:", error);
         setTimeout(function () {
-            errorMessage.value = "Failed to save covid-19 assessment.";
+            errorMessage.value = (error as any)?.response?.data?.message ?? "Failed to save covid-19 assessment.";
         }, 1050);
         isError.value = true;
         return false;
@@ -1157,7 +1157,7 @@ async function saveAll() {
             </Vcol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.employers_name" outlined dense label="Employer's Name"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
 
@@ -1165,26 +1165,26 @@ async function saveAll() {
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.place_of_work" outlined dense label="Place of Work" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }">
                 </VTextField>
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.house_bldg_name" outlined dense label="House #/Bldg Name:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.street" outlined dense label="Street:" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <!-- Province drives the city list below via PSGC. -->
                 <VAutocomplete :model-value="selectedProvPsgc" :items="provinceList" item-title="prov_name"
                     item-value="prov_psgc" label="Province/State:" outlined dense clearable
@@ -1193,7 +1193,7 @@ async function saveAll() {
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <!-- Most provinces have no cities loaded, so the field switches to free text
                      rather than showing a dropdown that can never be satisfied. -->
                 <VTextField v-if="cityIsFreeText" v-model="covids.municipal" outlined dense
@@ -1209,21 +1209,21 @@ async function saveAll() {
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VAutocomplete v-model="covids.country_id" :items="countrylist" item-title="en_short_name"
                     item-value="num_code" label="Country:" outlined dense clearable persistent-hint
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.office_phone_no" outlined dense :rules="[phoneValidator]"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" label="Office Phone No.">
                 </VTextField>
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.cellphone_no" outlined dense :rules="[phoneValidator]"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" label="Cellphon No.">
                 </VTextField>
@@ -1239,7 +1239,7 @@ async function saveAll() {
             </Vcol>
         </VRow>
         <VRow class="align-center">
-            <VCol>
+            <VCol cols="12" sm>
                 <label class="req-label">
                     History of Travel/Visit/Work in other countries with known COVID-19 transmission
                     14 days prior to onset of signs and symptoms
@@ -1255,7 +1255,7 @@ async function saveAll() {
         <!-- Travel sub-fields: only shown when history_travel = Yes -->
         <template v-if="travelYes">
             <VRow>
-                <VCol>
+                <VCol cols="12" sm>
                     <VTextField v-model="covids.port_of_exit" outlined dense
                         :rules="travelYes ? [requiredValidator] : []" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
@@ -1264,7 +1264,7 @@ async function saveAll() {
                 </VCol>
             </VRow>
             <VRow>
-                <VCol>
+                <VCol cols="12" sm>
                     <VTextField v-model="covids.airline_sea_vessel" outlined dense
                         :rules="travelYes ? [requiredValidator] : []" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
@@ -1273,7 +1273,7 @@ async function saveAll() {
                 </VCol>
             </VRow>
             <VRow>
-                <VCol>
+                <VCol cols="12" sm>
                     <VTextField v-model="covids.flight_vessel_no" outlined dense :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
                         <template #label><span>Flight/Vessel #</span></template>
@@ -1281,7 +1281,7 @@ async function saveAll() {
                 </VCol>
             </VRow>
             <VRow>
-                <VCol>
+                <VCol cols="12" sm>
                     <VTextField type="date" v-model="covids.date_departure" outlined dense
                         :rules="travelYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
@@ -1290,7 +1290,7 @@ async function saveAll() {
                 </VCol>
             </VRow>
             <VRow>
-                <VCol>
+                <VCol cols="12" sm>
                     <VTextField type="date" v-model="covids.date_arrival_ph" outlined dense
                         :rules="travelYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
@@ -1312,8 +1312,8 @@ async function saveAll() {
             </Vcol>
         </VRow>
         <VRow class="align-center" flex>
-            <VCol>
-                <div class="d-flex align-center">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label>
                         Known Covid-19 Case:
                     </label>
@@ -1340,8 +1340,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Accommodation</label>
 
                     <VRadioGroup v-model="covids.accomodation" inline density="compact" :rules="[
@@ -1386,8 +1386,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Food Establishment</label>
 
                     <VRadioGroup v-model="covids.food_establishment" inline density="compact" :rules="[
@@ -1432,8 +1432,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Store</label>
 
                     <VRadioGroup v-model="covids.store" inline density="compact" :rules="[
@@ -1480,8 +1480,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Health Facility</label>
 
                     <VRadioGroup v-model="covids.facility" inline density="compact" :rules="[
@@ -1531,8 +1531,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Event</label>
 
                     <VRadioGroup v-model="covids.event" inline density="compact" :rules="[
@@ -1566,8 +1566,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Workplace</label>
 
                     <VRadioGroup v-model="covids.workplace" inline density="compact" :rules="[
@@ -1597,7 +1597,7 @@ async function saveAll() {
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <label class="text-body-1 font-weight-medium">
                     List of names of persons in contact with during any of these occasions and their contact numbers:
                 </label>
@@ -1649,9 +1649,9 @@ async function saveAll() {
             </Vcol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VRow>
-                    <div class="d-flex align-center" style="padding-left: 10px;">
+                    <div class="d-flex flex-wrap align-center column-gap-3" style="padding-left: 10px;">
                         <label>
                             14 days PRIOR to first date of Exposure:
                         </label>
@@ -1664,7 +1664,7 @@ async function saveAll() {
                     </div>
                 </VRow>
                 <VRow v-if="prior14Yes">
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField type="date" v-model="clinas.days_14_date_onset_illness" outlined dense
                             :rules="prior14Yes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }">
@@ -1673,8 +1673,8 @@ async function saveAll() {
                     </VCol>
                 </VRow>
                 <VRow v-if="prior14No" class="align-center">
-                    <VCol>
-                        <div class="d-flex align-center">
+                    <VCol cols="12" sm>
+                        <div class="d-flex flex-wrap align-center column-gap-3">
                             <label class="text-body-1 font-weight-medium me-2">(If no) Place of Quarantine:</label>
                             <VCheckbox v-model="clinas.place_quarantine" label="Home" :value="1" :false-value="0"
                                 density="compact" :readonly="!isEditing"
@@ -1685,15 +1685,15 @@ async function saveAll() {
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="clinas.quarantine_facility" outlined dense label="Quarantine Facility:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow class="align-center" flex>
-            <VCol>
+            <VCol cols="12" sm>
                 <VRow>
-                    <div class="d-flex align-center" style="padding-left: 10px;">
+                    <div class="d-flex flex-wrap align-center column-gap-3" style="padding-left: 10px;">
                         <label>
                             Anytime during date of Exposure:
                         </label>
@@ -1707,12 +1707,12 @@ async function saveAll() {
                     </div>
                 </VRow>
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="clinas.name_facility" outlined dense
                             label="Name of Referral Health Facility:" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField type="date" v-model="clinas.referral_date" outlined dense label="Date of Referral:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
@@ -1721,21 +1721,21 @@ async function saveAll() {
             <VDivider />
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField type="number" v-model="clinas.fever" outlined dense label="Fever(°C):" suffix="°C"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol class="align-center" flex>
+            <VCol cols="12" sm class="align-center" flex>
                 <!-- false-value is 0, not Vuetify's default boolean false: these columns
                      are int and MySQL rejects 'false' once a box is unticked. -->
                 <VCheckbox v-model="clinas.cough" label="Cough" :value="1" :false-value="0" density="compact"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol class="align-center" flex>
+            <VCol cols="12" sm class="align-center" flex>
                 <VCheckbox v-model="clinas.colds" label="Colds" :value="1" :false-value="0" density="compact"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol class="align-center" flex>
+            <VCol cols="12" sm class="align-center" flex>
                 <VCheckbox v-model="clinas.sore_throat" label="Sore Throat" :value="1" :false-value="0"
                     density="compact" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
@@ -1751,7 +1751,7 @@ async function saveAll() {
                     :false-value="0" density="compact" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="clinas.other_symptoms" outlined dense label="Other Symptoms Specify:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
@@ -1771,7 +1771,7 @@ async function saveAll() {
                     <template #label><span class="req-label">Specify Illness</span></template>
                 </VTextField>
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VRadioGroup v-model="clinas.xray" inline density="compact" label="Chest Xray Done?:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label="Yes" :value="1" />
@@ -1783,7 +1783,7 @@ async function saveAll() {
                     <template #label><span class="req-label">Date of Chest X-ray</span></template>
                 </VTextField>
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VRadioGroup v-model="clinas.pregnant" inline density="compact" label="Are you pregnant?:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label=" Yes" :value="1" />
@@ -1799,7 +1799,7 @@ async function saveAll() {
         </VRow>
         <VRow>
             <VCol cols="12" md="7">
-                <div class="d-flex align-center" style="padding-left: 10px;">
+                <div class="d-flex flex-wrap align-center column-gap-3" style="padding-left: 10px;">
                     <label>
                         CXR Results:
                     </label>
@@ -1826,39 +1826,39 @@ async function saveAll() {
             </Vcol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="clinas.specimen_collected" outlined dense label="Specimen Collected:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField type="date" v-model="clinas.date_collected" outlined dense label="Date Collected:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField type="date" v-model="clinas.date_sent_ritm" outlined dense
                     label="Date Sent to RITM or any accredited laboratory:" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField type="date" v-model="clinas.date_received_ritm" outlined dense
                     label="Date Received in RITM:" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="clinas.virus_isolation_result" outlined dense label="Virus Isolation Result:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="clinas.rt_pcr_result" outlined dense label="RT-PCR Result:" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VDivider />
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <label class="text-body-1 font-weight-medium">
                     Scrum:
                 </label>
@@ -1894,7 +1894,7 @@ async function saveAll() {
             <VDivider />
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <label class="text-body-1 font-weight-medium">
                     Oropharyngeal/Nasopharyngeal Swab
                 </label>
@@ -1930,7 +1930,7 @@ async function saveAll() {
             <VDivider />
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <label class="text-body-1 font-weight-medium">
                     Others:
                 </label>

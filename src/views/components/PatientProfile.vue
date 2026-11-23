@@ -1,163 +1,307 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
-import { VAvatar, VCol, VForm, VIcon, VRow, VTab, VTabs, VWindow, VWindowItem } from "vuetify/components";
-import EditPatientProfile from "./EditPatientProfile.vue";
-import Teleconsultations from "./Teleconsultations.vue";
-import MedicalHistory from "./MedicalHistory.vue";
+import { useDisplay } from 'vuetify'
+import EditPatientProfile from './EditPatientProfile.vue'
+import MedicalHistory from './MedicalHistory.vue'
+import Teleconsultations from './Teleconsultations.vue'
 
+type TabKey = 'profile' | 'teleconsultations' | 'medicalhistory'
 
-const props = defineProps({
-    patient: { type: Object, required: true },
-});
+const props = defineProps<{ patient: Record<string, any> }>()
 
-const emit = defineEmits(["close", "updated", "saved"]);
+const emit = defineEmits<{
+  close: []
+  updated: []
+  saved: []
+}>()
 
-// Reactive copy of patient for dynamic updates
-const localPatient = reactive({ ...props.patient });
+const { smAndDown } = useDisplay()
 
-// Watch for prop changes from parent
-watch(
-    () => props.patient,
-    (newVal) => {
-        Object.assign(localPatient, newVal);
-    },
-    { immediate: true }
-);
+// Local copy so a save can update the header without waiting for the parent
+const localPatient = reactive<Record<string, any>>({ ...props.patient })
 
-const activeTab = ref("profile"); // default active tab
+watch(() => props.patient, val => {
+  Object.assign(localPatient, val)
+}, { immediate: true })
 
-// Civil status options for mapping
-const civilStatusOptions = [
-    { title: "Single", value: "0" },
-    { title: "Married", value: "1" },
-    { title: "Widowed", value: "2" },
-    { title: "Separated", value: "3" },
-    { title: "Divorced", value: "4" },
-];
+const tabs: { value: TabKey; title: string; short: string; icon: string }[] = [
+  { value: 'profile', title: 'Profile', short: 'Profile', icon: 'tabler-user' },
+  { value: 'teleconsultations', title: 'Teleconsultations', short: 'Consults', icon: 'tabler-video' },
+  { value: 'medicalhistory', title: 'Medical History', short: 'History', icon: 'tabler-heart-rate-monitor' },
+]
 
-// Computed title display for civil status, normalize both
-const civilStatusTitle = computed(() => {
-    if (!localPatient.civil_stat_code) return "";
+const activeTab = ref<TabKey>('profile')
 
-    const code = String(localPatient.civil_stat_code).toLowerCase(); // normalize
-    const match = civilStatusOptions.find(
-        (item) => String(item.value).toLowerCase() === code
-    );
+// Remount the profile form when coming back to it so it reloads fresh data
+const profileKey = ref(0)
 
-    return match ? match.title : "";
-});
+watch(activeTab, val => {
+  if (val === 'profile')
+    profileKey.value++
+})
 
-
-function handlePatientUpdated(updatedPatient: any) {
-    Object.assign(localPatient, updatedPatient);
-    emit("close");
-    emit("saved");
+const civilStatusOptions: Record<string, string> = {
+  0: 'Single',
+  1: 'Married',
+  2: 'Widowed',
+  3: 'Separated',
+  4: 'Divorced',
 }
 
-const getImageUrl = (path: string) => {
-  if (!path) return "";
-  return `/${path.replace(/^\/+/, "")}`;
-};
+const civilStatusTitle = computed(() => civilStatusOptions[String(localPatient.civil_stat_code ?? '')] ?? '')
 
-const isHidden = ref(false);
+const summary = computed(() => [
+  { label: 'Age', value: localPatient.age && localPatient.age !== 'N/A' ? `${localPatient.age} old` : '' },
+  { label: 'Born', value: localPatient.dob_formatted !== 'N/A' ? localPatient.dob_formatted : '' },
+  { label: 'Sex', value: localPatient.sex_code },
+  { label: 'Civil status', value: civilStatusTitle.value },
+].filter(item => item.value))
 
-const profileKey = ref(0);
+const imageUrl = computed(() => {
+  const path = localPatient.pat_image
 
-watch(activeTab, (val) => {
-    if (val === 'profile') {
-        profileKey.value++ }
-    });
+  return typeof path === 'string' && path ? `/${path.replace(/^\/+/, '')}` : ''
+})
 
+// Teleconsultations hides the sidebar while a consultation's forms are open
+const isHidden = ref(false)
+
+function handlePatientUpdated(updatedPatient: any) {
+  Object.assign(localPatient, updatedPatient)
+  emit('close')
+  emit('saved')
+}
 </script>
 
 <template>
-    <VForm>
-        <VRow>
-            <!-- Left Column: Sidebar Info -->
-            <Transition name="slide-left">
-                <VCol cols="12" md="3" v-if="!isHidden" style="position: sticky; top: 0; height: 100%; overflow: hidden;">
-                    <VRow>
-                        <!-- <pre>{{ localPatient }}</pre> -->
-                        <VCol class="text-center">
-                            <VAvatar size="175" class="mx-auto elevation-1 avatar-border-blue" rounded="lg"
-                                variant="tonal">
-                                <template v-if="previewImage || localPatient.pat_image">
-                                    <img :src="previewImage || getImageUrl(localPatient.pat_image)"
-                                        alt="Profile Picture"
-                                        style="width: 100%; height: 100%; object-fit: contain; object-position: center;" />
-                                </template>
-                                <template v-else>
-                                    <VIcon icon="tabler-user-circle" size="126" color="blue-grey-darken-2" />
-                                </template>
-                            </VAvatar>
-                        </VCol>
-                    </VRow>
-                    <VRow dense>
-                        <VCol dense class="text-h6">
-                            {{ localPatient.name }}
-                        </VCol>
-                    </VRow>
-                    <VRow dense>
-                        <VCol>{{ localPatient.age }} old</VCol>
-                    </VRow>
-                    <VRow dense>
-                        <VCol>Date of Birth: <b>{{ localPatient.dob_formatted }}</b></VCol>
-                    </VRow>
-                    <VRow dense>
-                        <VCol>Sex: <b>{{ localPatient.sex_code }}</b></VCol>
-                    </VRow>
-                    <VRow dense>
-                        <VCol>Civil Status: <b>{{ civilStatusTitle }}</b></VCol>
-                    </VRow>
-                    <!-- Tabs -->
-                    <VRow class="mt-4">
-                        <VCol cols="12">
-                            <VTabs v-model="activeTab" class="royalblue-tabs" direction="vertical"
-                                background-color="transparent">
-                                <VTab class="royalblue-tab" value="profile">
-                                    <VIcon class="tab-icon" start icon="tabler-user" />
-                                    Profile
-                                </VTab>
-                                <VTab class="royalblue-tab" value="teleconsultations">
-                                    <VIcon class="tab-icon" start icon="tabler-video" />
-                                    Teleconsultations
-                                </VTab>
-                                <VTab class="royalblue-tab" value="medicalhistory">
-                                    <VIcon class="tab-icon" start icon="tabler-video" />
-                                    Medical History
-                                </VTab>
-                            </VTabs>
-                        </VCol>
-                    </VRow>
-                </VCol>
-            </Transition>
-            <VDivider vertical length="100%" v-if="!isHidden" />
-            <!-- Right Column: Tab Content -->
-            <Transition name="fade-slide">
-                <VCol>
-                    <div class="right-scroll-container">
-                        <VWindow v-model="activeTab" class="mt-2" direction="vertical">
+  <div
+    class="patient-profile"
+    :class="{ 'patient-profile--phone': smAndDown }"
+  >
+    <!-- Sidebar on desktop; compact header with a tab strip on phones -->
+    <Transition name="slide-left">
+      <aside
+        v-if="!isHidden"
+        class="patient-profile__side"
+      >
+        <div class="patient-profile__identity">
+          <VAvatar
+            :size="smAndDown ? 72 : 175"
+            class="elevation-1 avatar-border-blue"
+            rounded="lg"
+            variant="tonal"
+          >
+            <VImg
+              v-if="imageUrl"
+              :src="imageUrl"
+              alt="Profile picture"
+            />
+            <VIcon
+              v-else
+              icon="tabler-user-circle"
+              :size="smAndDown ? 52 : 126"
+              color="blue-grey-darken-2"
+            />
+          </VAvatar>
 
-                            <!-- Profile Tab -->
-                            <VWindowItem value="profile" v-show="activeTab === 'profile'" style="opacity: 1;">
-                                <EditPatientProfile :key="profileKey" :patient="localPatient"
-                                    @updated="handlePatientUpdated" />
-                            </VWindowItem>
+          <div class="patient-profile__info">
+            <div class="patient-profile__name">
+              {{ localPatient.name }}
+            </div>
+            <dl class="patient-profile__facts">
+              <div
+                v-for="item in summary"
+                :key="item.label"
+              >
+                <dt>{{ item.label }}</dt>
+                <dd>{{ item.value }}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
 
-                            <!-- Teleconsultations Tab -->
-                            <VWindowItem value="teleconsultations" v-show="activeTab === 'teleconsultations'">
-                                <Teleconsultations :patient="localPatient" @updated="handlePatientUpdated"
-                                    @hideColumn="isHidden = $event" />
-                            </VWindowItem>
-                            
-                            <VWindowItem value="medicalhistory" v-show="activeTab === 'medicalhistory'">
-                                <MedicalHistory :patient="localPatient" @updated="handlePatientUpdated"
-                                    @hideColumn="isHidden = $event" />
-                            </VWindowItem>
-                        </VWindow>
-                    </div>
-                </VCol>
-            </Transition>
-        </VRow>
-    </VForm>
+        <VTabs
+          v-model="activeTab"
+          class="royalblue-tabs patient-profile__tabs"
+          :direction="smAndDown ? 'horizontal' : 'vertical'"
+          :grow="smAndDown"
+          :density="smAndDown ? 'comfortable' : 'default'"
+        >
+          <VTab
+            v-for="tab in tabs"
+            :key="tab.value"
+            :value="tab.value"
+            class="royalblue-tab"
+          >
+            <VIcon
+              :start="!smAndDown"
+              :icon="tab.icon"
+              :size="smAndDown ? 18 : 20"
+            />
+            <span :class="{ 'ms-1': smAndDown }">{{ smAndDown ? tab.short : tab.title }}</span>
+          </VTab>
+        </VTabs>
+      </aside>
+    </Transition>
+
+    <VDivider
+      v-if="!isHidden && !smAndDown"
+      vertical
+    />
+
+    <!-- Tab content -->
+    <section class="patient-profile__content">
+      <VWindow
+        v-model="activeTab"
+        :touch="false"
+      >
+        <VWindowItem value="profile">
+          <EditPatientProfile
+            :key="profileKey"
+            :patient="localPatient"
+            @updated="handlePatientUpdated"
+          />
+        </VWindowItem>
+
+        <VWindowItem value="teleconsultations">
+          <Teleconsultations
+            :patient="localPatient"
+            @updated="handlePatientUpdated"
+            @hide-column="isHidden = $event"
+          />
+        </VWindowItem>
+
+        <VWindowItem value="medicalhistory">
+          <MedicalHistory
+            :patient="localPatient"
+            @updated="handlePatientUpdated"
+            @hide-column="isHidden = $event"
+          />
+        </VWindowItem>
+      </VWindow>
+    </section>
+  </div>
 </template>
+
+<style lang="scss" scoped>
+.patient-profile {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+
+  &__side {
+    position: sticky;
+    inset-block-start: 0;
+    flex: 0 0 25%;
+    max-inline-size: 300px;
+  }
+
+  &__identity {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  &__identity > .v-avatar {
+    margin-inline: auto;
+  }
+
+  &__name {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  &__facts {
+    margin: 0.375rem 0 0;
+
+    div {
+      display: flex;
+      gap: 0.375rem;
+      line-height: 1.6;
+    }
+
+    dt {
+      color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+    }
+
+    dt::after {
+      content: ":";
+    }
+
+    dd {
+      margin: 0;
+      font-weight: 600;
+    }
+  }
+
+  &__tabs {
+    margin-block-start: 1.5rem;
+  }
+
+  &__content {
+    flex: 1 1 0;
+    min-inline-size: 0;
+  }
+
+  // Vuetify keeps a radio group's question on one line and cuts it off with "…";
+  // the consultation forms ask long questions ("Prior to teleconsultation proper…")
+  &__content :deep(.v-radio-group > .v-input__control > .v-label) {
+    overflow: visible;
+    white-space: normal;
+    line-height: 1.4;
+  }
+
+  // Phones: header (photo beside the details), tabs across, content below
+  &--phone {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+
+    .patient-profile__side {
+      position: static;
+      max-inline-size: none;
+    }
+
+    .patient-profile__identity {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.875rem;
+    }
+
+    .patient-profile__identity > .v-avatar {
+      flex: 0 0 auto;
+      margin-inline: 0;
+    }
+
+    .patient-profile__info {
+      min-inline-size: 0;
+    }
+
+    .patient-profile__name {
+      font-size: 1rem;
+    }
+
+    .patient-profile__facts {
+      display: flex;
+      flex-wrap: wrap;
+      column-gap: 0.875rem;
+      font-size: 0.8125rem;
+
+      div {
+        line-height: 1.5;
+      }
+    }
+
+    .patient-profile__tabs {
+      margin-block-start: 0.875rem;
+      border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+    }
+
+    :deep(.v-tab) {
+      padding-inline: 0.5rem;
+      min-inline-size: 0;
+    }
+  }
+}
+</style>

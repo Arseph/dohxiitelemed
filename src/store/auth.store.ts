@@ -1,5 +1,6 @@
 import { useOnlineStatus } from '@/composables/useOnlineStatus';
 import { axiosIns } from '@/plugins/axios';
+import { authStorage } from '@/utils/authStorage';
 import type { Commit, Dispatch, Module } from 'vuex';
 import type { RootState } from './types';
 
@@ -71,7 +72,7 @@ const auth: Module<AuthState, RootState> = {
     SET_USER(state: AuthState, value: User | null): void {
       state.user = value
       if (value) {
-        localStorage.setItem('auth_user', JSON.stringify(value))
+        authStorage.set('auth_user', JSON.stringify(value))
       }
     },
     SET_PROFILE(state: AuthState, value: Profile | null): void {
@@ -80,7 +81,7 @@ const auth: Module<AuthState, RootState> = {
   },
   actions: {
     async generateCsrfToken({ dispatch }: { dispatch: Dispatch }): Promise<void> {
-      const cachedToken = localStorage.getItem('auth_token')
+      const cachedToken = authStorage.get('auth_token')
       if(!cachedToken) {
         await axiosIns.get('/sanctum/csrf-cookie')
       }
@@ -93,7 +94,7 @@ const auth: Module<AuthState, RootState> = {
         const response = await axiosIns.post('api/auth/login', form)
         const token = response.data.accessToken
         if (token) {
-          localStorage.setItem('auth_token', token)
+          authStorage.startSession(token, Boolean(form.remember))
           await dispatch('user')
         }
       } catch (error) {
@@ -102,7 +103,7 @@ const auth: Module<AuthState, RootState> = {
     },
     async user({ commit }: { commit: Commit }): Promise<void> {
       const { isOnline } = useOnlineStatus()
-      const cachedUser = localStorage.getItem('auth_user')
+      const cachedUser = authStorage.get('auth_user')
       try {
         if(!cachedUser) {
           if (isOnline.value) {
@@ -149,9 +150,7 @@ const auth: Module<AuthState, RootState> = {
       try {
         await axiosIns.get('/api/auth/logout')
       } catch (_) {}
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_user')
-      localStorage.removeItem('auth_profile')
+      authStorage.clear()
       commit('SET_USER', null)
       commit('SET_PROFILE', null)
       commit('SET_CHECKED')

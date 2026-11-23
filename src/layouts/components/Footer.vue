@@ -4,6 +4,15 @@ import { changelog } from '@/changelog'
 // Set in vite.config.ts from package.json
 const version = __APP_VERSION__
 const isChangelogOpen = ref(false)
+
+// One tab per version; opens on the running version (or the newest entry)
+const defaultTab = changelog.some(e => e.version === version) ? version : changelog[0]?.version
+const activeVersion = ref(defaultTab)
+
+watch(isChangelogOpen, open => {
+  if (open)
+    activeVersion.value = defaultTab
+})
 </script>
 
 <template>
@@ -35,36 +44,51 @@ const isChangelogOpen = ref(false)
   >
     <DialogCloseBtn @click="isChangelogOpen = false" />
     <VCard title="What's new">
-      <VCardText>
-        <div
-          v-for="(entry, i) in changelog"
+      <VTabs
+        v-model="activeVersion"
+        show-arrows
+        class="px-4"
+      >
+        <VTab
+          v-for="entry in changelog"
           :key="entry.version"
-          :class="{ 'mt-6': i > 0 }"
+          :value="entry.version"
         >
-          <div class="d-flex align-center gap-2 mb-2">
-            <h6 class="text-h6">
-              Version {{ entry.version }}
-            </h6>
-            <VChip
-              v-if="entry.version === version"
-              size="small"
-              color="primary"
-              label
-            >
-              Current
-            </VChip>
-            <span class="text-body-2 text-disabled ms-auto">{{ entry.date }}</span>
-          </div>
-          <ul class="ps-5 text-body-1">
-            <li
-              v-for="change in entry.changes"
-              :key="change"
-              class="mb-1"
-            >
-              {{ change }}
-            </li>
-          </ul>
-        </div>
+          {{ entry.version }}
+          <VChip
+            v-if="entry.version === version"
+            size="x-small"
+            color="primary"
+            label
+            class="ms-2"
+          >
+            Current
+          </VChip>
+        </VTab>
+      </VTabs>
+      <VDivider />
+
+      <VCardText>
+        <VWindow
+          v-model="activeVersion"
+          :touch="false"
+        >
+          <VWindowItem
+            v-for="entry in changelog"
+            :key="entry.version"
+            :value="entry.version"
+          >
+            <ul class="ps-5 text-body-1">
+              <li
+                v-for="change in entry.changes"
+                :key="change"
+                class="mb-1"
+              >
+                {{ change }}
+              </li>
+            </ul>
+          </VWindowItem>
+        </VWindow>
       </VCardText>
     </VCard>
   </VDialog>

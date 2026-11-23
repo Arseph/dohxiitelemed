@@ -433,7 +433,7 @@ async function saveUpdateDP() {
 
   } catch (error) {
     console.error("Error Saving Demographic Profile:", error);
-    errorMessage.value = "Failed to save demographic profile.";
+    errorMessage.value = (error as any)?.response?.data?.message ?? "Failed to save demographic profile.";
     isError.value = true;
   }
 }
@@ -656,7 +656,7 @@ function copyToMine(overwrite: boolean) {
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea auto-grow rows="2" v-model="meeting.facility_full_address" outlined dense hide-details
           label="Name and Address of Health Facility (if applicable):" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }" />
@@ -670,7 +670,7 @@ function copyToMine(overwrite: boolean) {
       </VCol>
     </VRow>
     <VRow class="align-center">
-      <VCol>
+      <VCol cols="12" sm>
         <VRadioGroup v-model="meeting.prior_tele_proper"
           label="* Prior to teleconsultation proper, obtain patient consent:" inline
           :rules="[v => v === 0 || v === 1 ? true : 'This field is required']"
@@ -681,7 +681,7 @@ function copyToMine(overwrite: boolean) {
       </VCol>
     </VRow>
     <VRow class="align-center">
-      <VCol>
+      <VCol cols="12" sm>
         <VRadioGroup v-model="meeting.is_patient_accompanied"
           label="* Is patient accompanied/assisted by another person during the consultation:" inline
           :rules="[v => v === 0 || v === 1 ? true : 'This field is required']"
@@ -694,10 +694,10 @@ function copyToMine(overwrite: boolean) {
 
     <!-- ══ PATIENT PROFILE SECTION — display only, pre-filled from tbl_master_patient ══ -->
     <VRow class="align-center">
-      <VCol>
+      <VCol cols="12" sm>
         <h5 class="text-h5 font-weight-medium mb-2">Patient Profile</h5>
       </VCol>
-      <VCol inline>
+      <VCol cols="12" sm inline>
         <div class="d-flex align-center">
           <label class="mr-2">Case #:</label>
           <VTextField v-model="meeting.case_no" outlined dense hide-details label="" disabled class="custom-disabled" />
@@ -705,83 +705,83 @@ function copyToMine(overwrite: boolean) {
       </VCol>
     </VRow>
     <VRow class="align-center">
-      <VCol>
+      <VCol cols="12" sm>
         <VSelect v-model="meeting.type_of_membership" label="PhilHealth Type:" :items="[
           { title: 'Direct Contributor', value: 'Direct Contributor' },
           { title: 'Indirect Contributors', value: 'Indirect Contributors' }
         ]" item-title="title" item-value="value" variant="outlined" disabled class="custom-disabled" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.phic_id" outlined dense hide-details label="PhilHealth ID:" disabled
           class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.fname" outlined dense hide-details label="First Name:" disabled
           class="custom-disabled" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.mname" outlined dense hide-details label="Middle Name:" disabled
           class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.lname" outlined dense hide-details label="Last Name:" disabled
           class="custom-disabled" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.phone_no" outlined dense hide-details label="Contact Number:"
           :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.dob" type="date" outlined dense hide-details label="Birth Date:" disabled
           class="custom-disabled" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.sex" outlined dense hide-details label="Sex:" disabled class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VSelect v-model="meeting.civil_status" :items="civilStatusOptions" label="Civil Status:" item-title="title"
           item-value="value" variant="outlined" disabled class="custom-disabled" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VAutocomplete v-model="meeting.religion" :items="religions" label="Religion:" item-title="text"
           item-value="code" disabled class="custom-disabled" />
       </VCol>
     </VRow>
     <!-- Companion fields — show when married/separated/divorced -->
     <VRow v-if="['1', '3', '4'].includes(String(meeting.civil_status))">
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.relationship" outlined dense hide-details label="Relationship:"
           :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.name_of_companion" outlined dense hide-details label="Name of Companion:"
           :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VSelect v-model="meeting.edu_attain" :items="educationalAttainments" label="Educational Attainment:"
           item-title="text" item-value="code" disabled class="custom-disabled" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.occupation" outlined dense hide-details label="Occupation:" disabled
           class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.monthly_income" outlined dense hide-details label="Monthly Income:" disabled
           class="custom-disabled" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VSelect v-model="meeting.id_type" :items="[
           'NOT APPLICABLE',
           'UMID',
@@ -793,11 +793,11 @@ function copyToMine(overwrite: boolean) {
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.id_type_no" outlined dense hide-details label="CRN:" disabled
           class="custom-disabled" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VAutocomplete v-model="meeting.nationality_id" :items="nationalityList" item-title="nationality"
           item-value="num_code" label="Nationality:" outlined hide-details disabled class="custom-disabled" />
       </VCol>
@@ -805,37 +805,37 @@ function copyToMine(overwrite: boolean) {
 
     <!-- ══ ADDRESS — display only, pre-filled from tbl_master_patient ══ -->
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.house_no" outlined dense hide-details label="House no./Lot/Bldg:" disabled
           class="custom-disabled" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="meeting.street" outlined dense hide-details label="Street:" disabled
           class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VAutocomplete v-model="meeting.region" :items="regionList" item-title="reg_desc" item-value="reg_code"
           label="Region:" outlined hide-details disabled class="custom-disabled" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VAutocomplete v-model="meeting.pprov" :items="provinceList" item-title="prov_name" item-value="prov_code"
           label="Province:" outlined hide-details disabled class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VAutocomplete v-model="meeting.pmuniname" :items="cityList" item-title="muni_name" item-value="zipcode"
           label="Municipality/City:" disabled class="custom-disabled" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VAutocomplete v-model="meeting.pbrgyname" :items="barangayList" item-title="brg_name" item-value="brg_psgc"
           label="Barangay:" disabled class="custom-disabled" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <label>Complete Address:</label>
         <VTextarea v-model="patientfulladd" row="2" outlined disabled class="custom-disabled" />
       </VCol>

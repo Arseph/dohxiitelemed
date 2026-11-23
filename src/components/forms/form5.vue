@@ -271,7 +271,7 @@ async function saveUpdatePM() {
   } catch (error) {
     console.error("Error Saving plan of management:", error);
     console.error("Details:", error.response?.data); // ✅ shows exact 422 errors
-    errorMessage.value = "Failed to save plan of management.";
+    errorMessage.value = (error as any)?.response?.data?.message ?? "Failed to save plan of management.";
     isError.value = true;
   }
 }
@@ -400,7 +400,7 @@ function openPrescriptionDialog() {
 
     <!-- <pre>planma val{{ planma }}</pre> -->
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="planma.plan_management" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
           :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
           <template #label><span class="req-label">Plan of Management</span></template>
@@ -408,7 +408,7 @@ function openPrescriptionDialog() {
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <!-- Prescription: clicking opens picker only when editing; readonly always so user can't type freely -->
         <VTextField v-model="planma.prescription" outlined dense :rules="[requiredValidator]" :readonly="true"
           :class="{ 'custom-disabled': !isEditing }" @click="openPrescriptionDialog" append-inner-icon="tabler-pill"
@@ -443,7 +443,7 @@ function openPrescriptionDialog() {
     </VDialog>
 
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="planma.referral" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
           :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
           <template #label><span class="req-label">Referral</span></template>
@@ -451,7 +451,7 @@ function openPrescriptionDialog() {
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="planma.disposition" outlined dense auto-grow rows="2" :rules="[requiredValidator]"
           :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
           <template #label><span class="req-label">Disposition</span></template>
@@ -459,7 +459,7 @@ function openPrescriptionDialog() {
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <!-- Physician name is auto-filled from meeting info — read-only always -->
         <VTextField v-model="planma.name_physician" outlined dense :readonly="true"
           :class="{ 'custom-disabled': !isEditing }" hint="Auto-filled from meeting record" persistent-hint>
@@ -468,14 +468,14 @@ function openPrescriptionDialog() {
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <!-- License # is a short code, not a paragraph — use VTextField -->
         <VTextField v-model="planma.license_no" outlined dense :rules="[requiredValidator]" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }">
           <template #label><span class="req-label">License #</span></template>
         </VTextField>
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="planma.prof_tax_receipt" outlined dense :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }">
           <template #label><span>Professional Tax Receipt</span></template>
