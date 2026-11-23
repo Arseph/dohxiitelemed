@@ -1,5 +1,8 @@
 <script lang="ts" setup>
-import navItems from '@/navigation/vertical'
+import { useStore } from 'vuex'
+import QrCodeScanner from './QrCodeScanner.vue'
+import baseNavItems, { dashboardNavItems } from '@/navigation/vertical'
+import { showDashboardTab } from '@/utils/roles'
 import { themeConfig } from '@themeConfig'
 
 // Components
@@ -8,10 +11,16 @@ import NavBarNotifications from '@/layouts/components/NavBarNotifications.vue'
 import NavbarThemeSwitcher from '@/layouts/components/NavbarThemeSwitcher.vue'
 import UserProfile from '@/layouts/components/UserProfile.vue'
 import NavBarI18n from '@core/components/I18n.vue'
-import QrCodeScanner from './QrCodeScanner.vue'
 
 // @layouts plugin
 import { VerticalNavLayout } from '@layouts'
+
+// Statistics Dashboard tab, when showDashboardTab allows it (hidden for now)
+const store = useStore()
+
+const navItems = computed(() => showDashboardTab(store.getters['auth/user']?.level)
+  ? [...dashboardNavItems, ...baseNavItems]
+  : baseNavItems)
 
 // SECTION: Loading Indicator
 const isFallbackStateActive = ref(false)

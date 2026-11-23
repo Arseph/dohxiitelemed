@@ -44,25 +44,25 @@
       <VRow>
         <VCol md="6" cols="12">
           <AppTextField
-            v-model="accountData.firstName"
+            v-model="accountData.fname"
             label="First Name"
           />
         </VCol>
         <VCol md="6" cols="12">
           <AppTextField
-            v-model="accountData.middleName"
+            v-model="accountData.mname"
             label="Middle Name"
           />
         </VCol>
         <VCol md="6" cols="12">
           <AppTextField
-            v-model="accountData.lastName"
+            v-model="accountData.lname"
             label="Last Name"
           />
         </VCol>
         <VCol md="6" cols="12">
           <AppTextField
-            v-model="accountData.titleName"
+            v-model="accountData.title"
             label="Title (e.g., MD, CESO III)"
           />
         </VCol>
@@ -76,7 +76,7 @@
         </VCol>
         <VCol cols="12" md="6">
           <AppTextField
-            v-model="accountData.phone"
+            v-model="accountData.contact"
             label="Phone Number"
             placeholder="+1 (917) 543-9876"
           />
@@ -109,7 +109,9 @@ import { useUserProfile } from "@/composables/userProfile"
 import { useUser } from "@/composables/useUser"
 import { axiosIns } from "@/plugins/axios"
 import { ref, watch } from "vue"
+import { useStore } from "vuex"
 
+const store = useStore()
 const { user } = useUser()
 const { profile } = useUserProfile()
 
@@ -119,15 +121,22 @@ const loadingButton = ref(false)
 const refInputEl = ref<HTMLElement>()
 const selectedProfile = ref<File | null>(null)
 
-const initialData = {
-  firstName: user.value?.info?.first_name,
-  middleName: user.value?.info?.middle_name,
-  lastName: user.value?.info?.sur_name,
-  titleName: user.value?.info?.title_name,
-  email: user.value?.email,
-  phone: user.value?.info?.cell_no,
-}
+const fromUser = (u: any) => ({
+  fname: u?.fname ?? '',
+  mname: u?.mname ?? '',
+  lname: u?.lname ?? '',
+  title: u?.title ?? '',
+  email: u?.email ?? '',
+  contact: u?.contact ?? '',
+})
+let initialData = fromUser(user.value)
 const accountData = ref(structuredClone(initialData))
+
+// The user may load after this component mounts
+watch(user, (u) => {
+  initialData = fromUser(u)
+  accountData.value = structuredClone(initialData)
+})
 
 const changeAvatar = (file: Event) => {
   const fileReader = new FileReader()
@@ -164,6 +173,7 @@ const saveProfile = async () => {
   formData.append('file', selectedProfile.value)
   try {
     await axiosIns.post(`/api/employee/store/profile-pic`, formData)
+    await store.dispatch('auth/refreshUser')
     successMessage.value = 'Successfully saved profile picture'
     isSuccess.value = true
   } catch (error) {
@@ -177,11 +187,12 @@ const resetForm = () => {
 const submit = async () => {
   loadingButton.value = true
   try {
-    await axiosIns.post(`/api/employee/store/profile`, accountData.value)
+    const { data } = await axiosIns.post(`/api/employee/store/profile`, accountData.value)
+    store.commit('auth/SET_USER', data.user)
     successMessage.value = 'Successfully saved profile'
     isSuccess.value = true
   } catch (error) {
-    errorMessage.value = 'Something went wrong. Please try again.'
+    errorMessage.value = error.response?.data?.message || 'Something went wrong. Please try again.'
     isError.value = true
   } finally {
     loadingButton.value = false

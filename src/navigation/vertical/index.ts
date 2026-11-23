@@ -1,4 +1,3 @@
-
 export default [
   {
     title: 'Home',
@@ -17,4 +16,11 @@ export default [
   },
 ]
 
-
+// Added in front of the items above for the users canSeeDashboard allows
+export const dashboardNavItems = [
+  {
+    title: 'Dashboard',
+    to: { name: 'dashboard.index' },
+    icon: { icon: 'tabler-chart-bar' },
+  },
+]

@@ -1,3 +1,4 @@
+import { getAuthToken } from '@/utils/authStorage'
 import { globals } from '@/globals';
 import axios from 'axios';
 
@@ -7,7 +8,7 @@ export const fetchLeaveType = async () => {
   try {
     const response = await axios.get(`${API_URL}/leavetype`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     })
 
@@ -23,7 +24,7 @@ export const fetchLeaveDetails = async (leaveTypeId: number) => {
   try {
     const response = await axios.get(`${API_URL}/leavedetails?leaveTypeId=${leaveTypeId}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     })
 
@@ -38,7 +39,7 @@ export const FetchUpdateData = async (id: number) => {
   try {
     const response = await axios.get(`${API_URL}/leaveretrive/${id}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     });
     return response.data;
@@ -52,7 +53,7 @@ export const fetchUserLeaves = async (userId: number) => {
   try {
     const response = await axios.get(`${API_URL}/leaveuser/${userId}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     });
 

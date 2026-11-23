@@ -1,5 +1,7 @@
 <script lang="ts" setup>
-import navItems from '@/navigation/horizontal'
+import { useStore } from 'vuex'
+import baseNavItems, { dashboardNavItems } from '@/navigation/horizontal'
+import { showDashboardTab } from '@/utils/roles'
 
 import { themeConfig } from '@themeConfig'
 
@@ -11,6 +13,13 @@ import UserProfile from '@/layouts/components/UserProfile.vue'
 import NavBarI18n from '@core/components/I18n.vue'
 import { HorizontalNavLayout } from '@layouts'
 import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
+
+// Statistics Dashboard tab, when showDashboardTab allows it (hidden for now)
+const store = useStore()
+
+const navItems = computed(() => showDashboardTab(store.getters['auth/user']?.level)
+  ? [...dashboardNavItems, ...baseNavItems]
+  : baseNavItems)
 
 // SECTION: Loading Indicator
 const isFallbackStateActive = ref(false)

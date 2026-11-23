@@ -1,3 +1,4 @@
+import { getAuthToken } from '@/utils/authStorage'
 import { globals } from '@/globals';
 import axios from 'axios';
 
@@ -7,7 +8,7 @@ export const fetchDivision = async () => {
   try {
     const response = await axios.get(`${API_URL}/division`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     });
 
@@ -23,7 +24,7 @@ export const fetchSectionsByDivision  = async (divisionid: number) => {
   try {
     const response = await axios.get(`${API_URL}/sections/${divisionid}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     });
 
@@ -39,7 +40,7 @@ export const fetchEmployee = async (params: { divid?: number; secid?: number }) 
     const response = await axios.get(`${API_URL}/employees`, {
       params, // Pass division and section IDs as query parameters
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     });
 
@@ -54,7 +55,7 @@ export const fetchPosition = async (employeeId: number) => {
   try {
     const response = await axios.get(`${API_URL}/position/${employeeId}`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     });
 
@@ -69,7 +70,7 @@ export const fetchNomineesData  = async () => {
   try {
     const response = await axios.get(`${API_URL}/fetch-nominees`, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     });
 
@@ -85,7 +86,7 @@ export const fetchNomineeData = async (employeeId: number) => {
     const response = await axios.get(`${API_URL}/get-position-emp`, {
       params: { id: employeeId }, // Pass the employee ID as a query parameter
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        Authorization: `Bearer ${getAuthToken()}`,
       },
     });
 

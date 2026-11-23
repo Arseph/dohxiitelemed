@@ -553,14 +553,14 @@ watch(
                         class="fab-fixed-botr" rounded @click="isEditing = true" />
                 </template>
             </VTooltip>
-            <VCol>
+            <VCol cols="12" sm>
                 <VRow>
-                    <VCol class="text-h4">
+                    <VCol cols="12" sm class="text-h4">
                         Patient Profile
                     </VCol>
                 </VRow>
                 <VRow v-if="previewUrl">
-                    <VCol class="d-flex justify-center">
+                    <VCol cols="12" sm class="d-flex justify-center">
                         <VAvatar size="200" class="mx-auto elevation-1 avatar-border-blue" rounded="lg" variant="tonal">
                             <img :src="previewUrl" alt="Preview"
                                 style="width: 100%; height: 100%; object-fit: contain; object-position: center;"
@@ -569,7 +569,7 @@ watch(
                     </VCol>
                 </VRow>
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VFileInput label="Upload Photo" accept="image/*" capture="environment"
                             @change="onImageSelected" variant="outlined" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" />
@@ -579,10 +579,10 @@ watch(
 
                 <!-- Master & Temporary IDs -->
                 <!-- <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.master_patient_perm_id" label="Master Patient Permanent ID:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.pat_temp_id" label="Temporary Patient ID:" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}" />
                     </VCol>
                 </VRow> -->
@@ -629,7 +629,7 @@ watch(
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }"
                             @input="() => { toUpperCase('suffix_code'); }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VSelect v-model="profileformp.sex_code" :items="[
                             { title: 'Male', value: 'Male' },
                             { title: 'Female', value: 'Female' }]" variant="outlined" clearable :readonly="!isEditing"
@@ -641,19 +641,19 @@ watch(
 
                 <!-- Sex, Birth, Civil Status -->
                 <VRow class="mt-5">
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.pat_birthDate" type="date" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" :rules="[requiredValidator]">
                             <template #label><span>Birth Date: <span
                                         class="text-error text-lg">*</span></span></template>
                         </VTextField>
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.pat_birthplace" label="Birthplace:" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }"
                             @input="() => { toUpperCase('pat_birthplace'); }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VSelect v-model="profileformp.civil_stat_code" :items="civilStatusOptions"
                             label="Civil Status:" item-title="title" item-value="value" variant="outlined" clearable
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
@@ -667,12 +667,12 @@ watch(
                 <VRow
                     v-if="['Mrs.', 'Mrs'].includes(profileformp.prefix_code) || (profileformp.sex_code === 'Female' && profileformp.civil_stat_code === '1')">
                     `
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.maiden_middlename" label="Maiden Middle Name:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }"
                             @input="() => { toUpperCase('maiden_middlename'); }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.maiden_lastname" label="Maiden Last Name:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }"
                             @input="() => { toUpperCase('maiden_lastname'); }" />
@@ -681,24 +681,24 @@ watch(
 
                 <!-- Education & Occupation -->
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VSelect v-model="profileformp.educattainment" :items="educationalAttainments"
                             label="Educational Attainment:" item-title="text" item-value="code" clearable
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VSelect v-model="profileformp.occupation_code" label="Employment Status:"
                             :items="employmentStatusOptions" item-title="title" item-value="value" variant="outlined"
                             clearable :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
                 </VRow>
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.occupation_sp" label="Specific Occupation:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }"
                             @input="() => { toUpperCase('occupation_sp'); }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.date_of_effectivity" label="Date of Effectivity:" type="date"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
@@ -706,18 +706,18 @@ watch(
 
                 <!-- Employer & Income -->
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.enlist_date" label="Date of Enlisted:" type="date"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.phic_employer_name" label="Name of Employer:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }"
                             @input="() => { toUpperCase('phic_employer_name'); }" />
                     </VCol>
                 </VRow>
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.phic_employer_no" label="Employer PHIC No.:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }"
                             @input="() => { toUpperCase('phic_employer_no'); }" />
@@ -736,11 +736,11 @@ watch(
 
                 <!-- Tax / Religion / Ethnicity -->
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField type="number" v-model="profileformp.tax_id_num" label="TIN No.:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VAutocomplete v-model="profileformp.religion_code" :items="religions" label="Religion:"
                             item-title="text" item-value="code" clearable autocomplete :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" />
@@ -766,22 +766,22 @@ watch(
 
                 <!-- Mother's Info -->
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.mot_fname" label="Mother’s First Name:" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" @input="() => { toUpperCase('mot_fname'); }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.mot_mname" label="Mother’s Middle Name:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }"
                             @input="() => { toUpperCase('mot_mname'); }" />
                     </VCol>
                 </VRow>
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.mot_lname" label="Mother’s Last Name:" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" @input="() => { toUpperCase('mot_lname'); }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.mot_birthdate" label="Mother’s Birthdate:" type="date"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
@@ -837,7 +837,7 @@ watch(
 
                 <!-- Address -->
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VAutocomplete v-model="profileformp.country_code" :items="nationalityList"
                             item-title="en_short_name" item-value="num_code" label="Country:" outlined hide-details
                             clearable persistent-hint :readonly="!isEditing"
@@ -845,24 +845,24 @@ watch(
                     </VCol>
                 </VRow>
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.fhNumber" label="House No./Lot/Bldg:" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" @input="() => { toUpperCase('fhNumber'); }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.pat_str" label="Street:" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" @input="() => { toUpperCase('pat_str'); }" />
                     </VCol>
                 </VRow>
                 <VRow class="mt-5">
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VAutocomplete v-model="profileformp.regcode" :items="regionList" item-title="reg_desc"
                             item-value="reg_code" outlined hide-details clearable :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" :rules="[requiredValidator]">
                             <template #label><span>Region: <span class="text-error text-lg">*</span></span></template>
                         </VAutocomplete>
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VAutocomplete v-model="profileformp.provcode" :items="provinceList" item-title="prov_name"
                             item-value="prov_code" outlined hide-details clearable :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" :rules="[requiredValidator]">
@@ -871,7 +871,7 @@ watch(
                     </VCol>
                 </VRow>
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VAutocomplete v-model="profileformp.citycode" :items="cityList" item-title="muni_name"
                             item-value="zipcode" clearable :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" :rules="[requiredValidator]">
@@ -879,20 +879,20 @@ watch(
                                         class="text-error text-lg">*</span></span></template>
                         </VAutocomplete>
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VAutocomplete v-model="profileformp.bgycode" :items="barangayList" item-title="brg_name"
                             item-value="brg_psgc" clearable :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" :rules="[requiredValidator]">
                             <template #label><span>Barangay: <span class="text-error text-lg">*</span></span></template>
                         </VAutocomplete>
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField type="number" v-model="profileformp.zipcode" label="ZIP Code:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
                 </VRow>
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.patient_address" label="Complete Address:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }"
                             @input="() => { toUpperCase('patient_address'); }" />
@@ -907,15 +907,15 @@ watch(
 
                 <!-- Contact -->
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.pat_email" label="Email Address:" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" @input="() => { toUpperCase('pat_email'); }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField type="number" v-model="profileformp.pat_mobile" label="Mobile Number:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField type="number" v-model="profileformp.pat_landline" label="Landline:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
@@ -923,12 +923,12 @@ watch(
 
                 <!-- PhilHealth Info -->
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VCheckbox v-model="profileformp.phic_member" label="PhilHealth Member" hide-details
                             density="compact" :true-value="'1'" :false-value="'0'" class="ml-3" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="profileformp.pat_philhealth" label="PhilHealth ID.:" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
@@ -938,7 +938,7 @@ watch(
                     </VCol>
                 </VRow>
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VSelect v-model="profileformp.philhealth_status_code" :items="philheatlhStatusTypes"
                             label="PhilHealth Type:" item-title="title" item-value="value" variant="outlined" clearable
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
@@ -958,7 +958,7 @@ watch(
                     </VCol>
                 </VRow>
                 <!-- <VRow>
-                <VCol>
+                <VCol cols="12" sm>
                     <VCheckbox v-model="sameAsPatient" label="Member Name as Patient Name" density="compact"
                         @change="applyPatientName" :readonly="!isEditing" :class="{'custom-disabled': !isEditing}"  />
                 </VCol>
@@ -968,7 +968,7 @@ watch(
                     Dependent:
                 </div>
                 <VRow v-if="profileformp.philhealth_status_code === '0'">
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VRow>
                             <VCol cols="12" md="6">
                                 <VSelect v-model="profileformp.pDependentType_code" :items="relationshipToMember"
@@ -999,12 +999,12 @@ watch(
                                 <VTextField type="date" v-model="profileformp.pMemberBdate" label="Member Birth Date:"
                                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                             </VCol>
-                            <VCol>
+                            <VCol cols="12" sm>
                                 <VTextField v-model="profileformp.pMemberSuffix" label="Member Suffix"
                                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }"
                                     @input="() => { toUpperCase('pMemberSuffix'); }" />
                             </VCol>
-                            <VCol>
+                            <VCol cols="12" sm>
                                 <VSelect v-model="profileformp.pMemberSex" label="Member Sex" :items="[
                                     { title: 'Male', value: '0' },
                                     { title: 'Female', value: '1' }]"
@@ -1015,11 +1015,11 @@ watch(
                     </VCol>
                 </VRow>
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField type="date" v-model="profileformp.PHIEsubmitted_date" label="PHIE Submit Date:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
-                    <VCol class="d-flex">
+                    <VCol cols="12" sm class="d-flex">
                         <VCheckbox v-model="profileformp.validated" label="Validated" hide-details density="compact"
                             :true-value="'1'" :false-value="'0'" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" />

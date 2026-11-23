@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { cStatus } from "@/components/snackbars/cStatus";
-import { useDirtyTracker, useFormSync } from '@/composables/useFormSync';
-import { useUser } from '@/composables/useUser';
+import { useDirtyTracker } from '@/composables/useFormSync';
 import { axiosIns } from '@/plugins/axios';
 import { computed, onMounted, ref, watch } from "vue";
 import { VForm } from 'vuetify/components/VForm';
 import { VCheckbox, VCol, VRadioGroup, VRow, VTextField } from "vuetify/lib/components/index.mjs";
 
 const cvdform = ref<VForm>();
-const { user } = useUser();
 const { isError, errorMessage, isSuccess, successMessage } = cStatus();
 const emit = defineEmits(['loaded']);
 
@@ -397,8 +395,150 @@ watch(() => clinas.value.history_illness, (newVal) => {
 });
 
 //save/update
+// Puts a saved COVID-19 screening row on the form, including the contact list that is
+// stored as one string. Used by the load and by the requester's view.
+function applyCv(cv: Record<string, any>) {
+    covids.value.meeting_id = cv.meeting_id ?? null;
+    covids.value.employers_name = cv.employers_name ?? null;
+    covids.value.place_of_work = cv.place_of_work ?? null;
+    covids.value.house_bldg_name = cv.house_bldg_name ?? null;
+    covids.value.street = cv.street ?? null;
+    covids.value.municipal = cv.municipal ?? null;
+    covids.value.province = cv.province ?? null;
+    covids.value.country_id = cv.country_id ?? DEFAULT_COUNTRY_ID;
+    covids.value.office_phone_no = cv.office_phone_no ?? null;
+    covids.value.cellphone_no = cv.cellphone_no ?? null;
+    covids.value.history_travel_country_symptoms = cv.history_travel_country_symptoms ?? null;
+    covids.value.port_of_exit = cv.port_of_exit ?? null;
+    covids.value.airline_sea_vessel = cv.airline_sea_vessel ?? null;
+    covids.value.flight_vessel_no = cv.flight_vessel_no ?? null;
+    covids.value.date_departure = cv.date_departure ?? null;
+    covids.value.date_arrival_ph = cv.date_arrival_ph ?? null;
+    covids.value.known_covid_case = cv.known_covid_case ?? null;
+    covids.value.date_contact_known_covid_case = cv.date_contact_known_covid_case ?? null;
+    covids.value.accomodation = cv.accomodation ?? null;
+    covids.value.acco_specify_type = cv.acco_specify_type ?? null;
+    covids.value.acco_address = cv.acco_address ?? null;
+    covids.value.acco_date_last_expose = cv.acco_date_last_expose ?? null;
+    covids.value.acco_name = cv.acco_name ?? null;
+    covids.value.acco_name_type = cv.acco_name_type ?? null;
+    covids.value.food_establishment = cv.food_establishment ?? null;
+    covids.value.food_es_specify_type = cv.food_es_specify_type ?? null;
+    covids.value.food_es_address = cv.food_es_address ?? null;
+    covids.value.food_es_date_last_expose = cv.food_es_date_last_expose ?? null;
+    covids.value.food_es_name = cv.food_es_name ?? null;
+    covids.value.food_es_name_type = cv.food_es_name_type ?? null;
+    covids.value.store = Number(cv.store) ?? null; //number because varchar in db
+    covids.value.store_specify_type = cv.store_specify_type ?? null;
+    covids.value.store_address = cv.store_address ?? null;
+    covids.value.store_date_last_expose = cv.store_date_last_expose ?? null;
+    covids.value.store_name = cv.store_name ?? null;
+    covids.value.store_name_type = cv.store_name_type ?? null;
+    covids.value.facility = cv.facility ?? null;
+    covids.value.fac_specify_type = cv.fac_specify_type ?? null;
+    covids.value.fac_address = cv.fac_address ?? null;
+    covids.value.fac_date_last_expose = cv.fac_date_last_expose ?? null;
+    covids.value.fac_name = cv.fac_name ?? null;
+    covids.value.fac_name_type = cv.fac_name_type ?? null;
+    covids.value.fac_significant_other = cv.fac_significant_other ?? null;
+    covids.value.event = cv.event ?? null;
+    covids.value.event_specify_type = cv.event_specify_type ?? null;
+    covids.value.event_date_last_expose = cv.event_date_last_expose ?? null;
+    covids.value.event_place = cv.event_place ?? null;
+    covids.value.workplace = cv.workplace ?? null;
+    covids.value.wp_company_name = cv.wp_company_name ?? null;
+    covids.value.wp_date_last_expose = cv.wp_date_last_expose ?? null;
+    covids.value.wp_address = cv.wp_address ?? null;
+    covids.value.list_name_occasion = cv.list_name_occasion ?? null;
+
+    //contacts explode
+    if (cv.list_name_occasion) {
+        const matches = cv.list_name_occasion.match(/\{([^}]+)\}/g) || [];
+        contactList.value = matches.map(item => {
+            const [number, name] = item.replace(/[{}]/g, '').split(',');
+            return {
+                name: number?.trim() || '',
+                number: name?.trim() || '',
+            };
+        });
+    } else {
+        contactList.value = [];
+    }
+}
+
+// Same for the clinical assessment, with its three lists.
+function applyCa(ca: Record<string, any>) {
+    clinas.value.meeting_id = ca.meeting_id ?? null;
+    clinas.value.days_14_prior_expose = ca.days_14_prior_expose ?? null;
+    clinas.value.anytime_during_expose = ca.anytime_during_expose ?? null;
+    clinas.value.days_14_date_onset_illness = ca.days_14_date_onset_illness ?? null;
+    clinas.value.name_facility = ca.name_facility ?? null;
+    clinas.value.referral_date = ca.referral_date ?? null;
+    clinas.value.place_quarantine = ca.place_quarantine ?? null;
+    clinas.value.quarantine_facility = ca.quarantine_facility ?? null;
+    clinas.value.fever = ca.fever ?? null;
+    clinas.value.cough = ca.cough ?? null;
+    clinas.value.colds = ca.colds ?? null;
+    clinas.value.sore_throat = ca.sore_throat ?? null;
+    clinas.value.diarrhea = ca.diarrhea ?? null;
+    clinas.value.short_breathing = ca.short_breathing ?? null;
+    clinas.value.other_symptoms = ca.other_symptoms ?? null;
+    clinas.value.history_illness = ca.history_illness ?? null;
+    clinas.value.history_specify = ca.history_specify ?? null;
+    clinas.value.xray = ca.xray ?? null;
+    clinas.value.xray_date = ca.xray_date ?? null;
+    clinas.value.pregnant = ca.pregnant ?? null;
+    clinas.value.lmp = ca.lmp ?? null;
+    clinas.value.cxr_result = ca.cxr_result ?? null;
+    clinas.value.radiologic_findings = ca.radiologic_findings ?? null;
+    clinas.value.specimen_collected = ca.specimen_collected ?? null;
+    clinas.value.date_collected = ca.date_collected ?? null;
+    clinas.value.date_sent_ritm = ca.date_sent_ritm ?? null;
+    clinas.value.date_received_ritm = ca.date_received_ritm ?? null;
+    clinas.value.virus_isolation_result = ca.virus_isolation_result ?? null;
+    clinas.value.rt_pcr_result = ca.rt_pcr_result ?? null;
+    clinas.value.scrum = ca.scrum ?? null;
+    clinas.value.oro_naso_swab = ca.oro_naso_swab ?? null;
+    clinas.value.spe_others = ca.spe_others ?? null;
+    clinas.value.classification = ca.classification ?? null;
+    clinas.value.outcome_date_discharge = ca.outcome_date_discharge ?? null;
+    clinas.value.outcome_condition_discharge = ca.outcome_condition_discharge ?? null;
+
+    // ✅ Scrum list
+    if (clinas.value.scrum) {
+        const matches = clinas.value.scrum.match(/\{([^}]+)\}/g) || [];
+        scrumList.value = matches.map(item => ({
+            scrum: item.replace(/[{}]/g, '').trim() || '',
+        }));
+    } else {
+        scrumList.value = [];
+    }
+
+    // ✅ Oro Naso Swab list
+    if (clinas.value.oro_naso_swab) {
+        const matches = clinas.value.oro_naso_swab.match(/\{([^}]+)\}/g) || [];
+        oroNasoSwabList.value = matches.map(item => ({
+            oro_naso_swab: item.replace(/[{}]/g, '').trim() || '',
+        }));
+    } else {
+        oroNasoSwabList.value = [];
+    }
+
+    // ✅ Special Others list
+    if (clinas.value.spe_others) {
+        const matches = clinas.value.spe_others.match(/\{([^}]+)\}/g) || [];
+        speOthersList.value = matches.map(item => ({
+            spe_others: item.replace(/[{}]/g, '').trim() || '',
+        }));
+    } else {
+        speOthersList.value = [];
+    }
+}
+
 async function fetchMeetingInfo() {
     try {
+        viewing.value = 'mine';
+
         // Whether each record already exists decides if the next save can send only
         // changed fields, or must send everything to satisfy NOT NULL columns.
         let cvExists = false;
@@ -408,80 +548,16 @@ async function fetchMeetingInfo() {
         if (covids.value.meeting_id) {
             const cvResponse = await axiosIns.get(`/api/get-covidscreening/${covids.value.meeting_id}`);
             const cv = cvResponse.data.data;
+            myRole.value = cvResponse.data.my_role ?? myRole.value;
+            canEdit.value = cvResponse.data.can_edit ?? true;
+            otherCV.value = cvResponse.data.other ?? null;
 
             cvExists = !!cv;
 
             if (cv) {
                 console.log("✅ Existing covid screening found:",);
 
-                // Merge existing DP data into covids.value
-                covids.value.meeting_id = cv.meeting_id ?? null;
-                covids.value.employers_name = cv.employers_name ?? null;
-                covids.value.place_of_work = cv.place_of_work ?? null;
-                covids.value.house_bldg_name = cv.house_bldg_name ?? null;
-                covids.value.street = cv.street ?? null;
-                covids.value.municipal = cv.municipal ?? null;
-                covids.value.province = cv.province ?? null;
-                covids.value.country_id = cv.country_id ?? DEFAULT_COUNTRY_ID;
-                covids.value.office_phone_no = cv.office_phone_no ?? null;
-                covids.value.cellphone_no = cv.cellphone_no ?? null;
-                covids.value.history_travel_country_symptoms = cv.history_travel_country_symptoms ?? null;
-                covids.value.port_of_exit = cv.port_of_exit ?? null;
-                covids.value.airline_sea_vessel = cv.airline_sea_vessel ?? null;
-                covids.value.flight_vessel_no = cv.flight_vessel_no ?? null;
-                covids.value.date_departure = cv.date_departure ?? null;
-                covids.value.date_arrival_ph = cv.date_arrival_ph ?? null;
-                covids.value.known_covid_case = cv.known_covid_case ?? null;
-                covids.value.date_contact_known_covid_case = cv.date_contact_known_covid_case ?? null;
-                covids.value.accomodation = cv.accomodation ?? null;
-                covids.value.acco_specify_type = cv.acco_specify_type ?? null;
-                covids.value.acco_address = cv.acco_address ?? null;
-                covids.value.acco_date_last_expose = cv.acco_date_last_expose ?? null;
-                covids.value.acco_name = cv.acco_name ?? null;
-                covids.value.acco_name_type = cv.acco_name_type ?? null;
-                covids.value.food_establishment = cv.food_establishment ?? null;
-                covids.value.food_es_specify_type = cv.food_es_specify_type ?? null;
-                covids.value.food_es_address = cv.food_es_address ?? null;
-                covids.value.food_es_date_last_expose = cv.food_es_date_last_expose ?? null;
-                covids.value.food_es_name = cv.food_es_name ?? null;
-                covids.value.food_es_name_type = cv.food_es_name_type ?? null;
-                covids.value.store = Number(cv.store) ?? null; //number because varchar in db
-                covids.value.store_specify_type = cv.store_specify_type ?? null;
-                covids.value.store_address = cv.store_address ?? null;
-                covids.value.store_date_last_expose = cv.store_date_last_expose ?? null;
-                covids.value.store_name = cv.store_name ?? null;
-                covids.value.store_name_type = cv.store_name_type ?? null;
-                covids.value.facility = cv.facility ?? null;
-                covids.value.fac_specify_type = cv.fac_specify_type ?? null;
-                covids.value.fac_address = cv.fac_address ?? null;
-                covids.value.fac_date_last_expose = cv.fac_date_last_expose ?? null;
-                covids.value.fac_name = cv.fac_name ?? null;
-                covids.value.fac_name_type = cv.fac_name_type ?? null;
-                covids.value.fac_significant_other = cv.fac_significant_other ?? null;
-                covids.value.event = cv.event ?? null;
-                covids.value.event_specify_type = cv.event_specify_type ?? null;
-                covids.value.event_date_last_expose = cv.event_date_last_expose ?? null;
-                covids.value.event_place = cv.event_place ?? null;
-                covids.value.workplace = cv.workplace ?? null;
-                covids.value.wp_company_name = cv.wp_company_name ?? null;
-                covids.value.wp_date_last_expose = cv.wp_date_last_expose ?? null;
-                covids.value.wp_address = cv.wp_address ?? null;
-                covids.value.list_name_occasion = cv.list_name_occasion ?? null;
-
-                //contacts explode
-                if (cv.list_name_occasion) {
-                    const matches = cv.list_name_occasion.match(/\{([^}]+)\}/g) || [];
-                    contactList.value = matches.map(item => {
-                        const [number, name] = item.replace(/[{}]/g, '').split(',');
-                        return {
-                            name: number?.trim() || '',
-                            number: name?.trim() || '',
-                        };
-                    });
-                } else {
-                    contactList.value = [];
-                }
-
+                applyCv(cv);
             } else {
                 console.log("ℹ️ No covid screening found for this meeting ID.");
             }
@@ -491,79 +567,15 @@ async function fetchMeetingInfo() {
         if (clinas.value.meeting_id) {
             const caResponse = await axiosIns.get(`/api/get-covidassessment/${clinas.value.meeting_id}`);
             const ca = caResponse.data.data;
+            myRole.value = caResponse.data.my_role ?? myRole.value;
+            otherCA.value = caResponse.data.other ?? null;
 
             caExists = !!ca;
 
             if (ca) {
                 console.log("✅ Existing covid assessment profile found:",);
 
-                // Merge existing DP data into covids.value
-                clinas.value.meeting_id = ca.meeting_id ?? null;
-                clinas.value.days_14_prior_expose = ca.days_14_prior_expose ?? null;
-                clinas.value.anytime_during_expose = ca.anytime_during_expose ?? null;
-                clinas.value.days_14_date_onset_illness = ca.days_14_date_onset_illness ?? null;
-                clinas.value.name_facility = ca.name_facility ?? null;
-                clinas.value.referral_date = ca.referral_date ?? null;
-                clinas.value.place_quarantine = ca.place_quarantine ?? null;
-                clinas.value.quarantine_facility = ca.quarantine_facility ?? null;
-                clinas.value.fever = ca.fever ?? null;
-                clinas.value.cough = ca.cough ?? null;
-                clinas.value.colds = ca.colds ?? null;
-                clinas.value.sore_throat = ca.sore_throat ?? null;
-                clinas.value.diarrhea = ca.diarrhea ?? null;
-                clinas.value.short_breathing = ca.short_breathing ?? null;
-                clinas.value.other_symptoms = ca.other_symptoms ?? null;
-                clinas.value.history_illness = ca.history_illness ?? null;
-                clinas.value.history_specify = ca.history_specify ?? null;
-                clinas.value.xray = ca.xray ?? null;
-                clinas.value.xray_date = ca.xray_date ?? null;
-                clinas.value.pregnant = ca.pregnant ?? null;
-                clinas.value.lmp = ca.lmp ?? null;
-                clinas.value.cxr_result = ca.cxr_result ?? null;
-                clinas.value.radiologic_findings = ca.radiologic_findings ?? null;
-                clinas.value.specimen_collected = ca.specimen_collected ?? null;
-                clinas.value.date_collected = ca.date_collected ?? null;
-                clinas.value.date_sent_ritm = ca.date_sent_ritm ?? null;
-                clinas.value.date_received_ritm = ca.date_received_ritm ?? null;
-                clinas.value.virus_isolation_result = ca.virus_isolation_result ?? null;
-                clinas.value.rt_pcr_result = ca.rt_pcr_result ?? null;
-                clinas.value.scrum = ca.scrum ?? null;
-                clinas.value.oro_naso_swab = ca.oro_naso_swab ?? null;
-                clinas.value.spe_others = ca.spe_others ?? null;
-                clinas.value.classification = ca.classification ?? null;
-                clinas.value.outcome_date_discharge = ca.outcome_date_discharge ?? null;
-                clinas.value.outcome_condition_discharge = ca.outcome_condition_discharge ?? null;
-
-                // ✅ Scrum list
-                if (clinas.value.scrum) {
-                    const matches = clinas.value.scrum.match(/\{([^}]+)\}/g) || [];
-                    scrumList.value = matches.map(item => ({
-                        scrum: item.replace(/[{}]/g, '').trim() || '',
-                    }));
-                } else {
-                    scrumList.value = [];
-                }
-
-                // ✅ Oro Naso Swab list
-                if (clinas.value.oro_naso_swab) {
-                    const matches = clinas.value.oro_naso_swab.match(/\{([^}]+)\}/g) || [];
-                    oroNasoSwabList.value = matches.map(item => ({
-                        oro_naso_swab: item.replace(/[{}]/g, '').trim() || '',
-                    }));
-                } else {
-                    oroNasoSwabList.value = [];
-                }
-
-                // ✅ Special Others list
-                if (clinas.value.spe_others) {
-                    const matches = clinas.value.spe_others.match(/\{([^}]+)\}/g) || [];
-                    speOthersList.value = matches.map(item => ({
-                        spe_others: item.replace(/[{}]/g, '').trim() || '',
-                    }));
-                } else {
-                    speOthersList.value = [];
-                }
-
+                applyCa(ca);
             } else {
                 console.log("ℹ️ No covid assessment found for this meeting ID.");
             }
@@ -574,6 +586,9 @@ async function fetchMeetingInfo() {
         // or must send everything to satisfy the tables' NOT NULL columns on INSERT.
         // Stored province/municipal are names; map them back onto the dropdowns.
         syncAddressSelections();
+
+        // The doctor's own copy, restored when switching back from the requester's form.
+        ownState.value = takeSnapshot();
 
         cvTracker.setRecordExists(cvExists);
         caTracker.setRecordExists(caExists);
@@ -631,28 +646,30 @@ onMounted(() => {
 // Payload shapes kept exactly as they were, now reusable so dirtiness can be
 // measured against what the API actually receives rather than the raw models.
 
-// Collaborative editing — see useFormSync. This card holds two records (COVID-19
-// screening and clinical assessment) but is one form to the user and to the other
-// participant, so there is a single presence/refetch channel and one dirty tracker
-// per record.
+// This card holds two records (COVID-19 screening and clinical assessment), so there
+// is one dirty tracker per record.
 //
 // Trackers sit on the payload shapes, not the raw models: several fields are
 // renamed or normalised on the way out, and the assessment payload carries arrays
 // (contacts, specimens) that are mutated in place — the tracker compares by value
 // for exactly that reason.
-const { connected, remoteEditor, notifySaved, setEditing } = useFormSync({
-  form: 'covid_screening',
-  editorName: computed(() => user.value?.name ?? 'Other user'),
-  onRemoteSave: () => fetchMeetingInfo(),
-})
-
 const cvTracker = useDirtyTracker(computed(() => cvPayload()), ['meeting_id'])
 const caTracker = useDirtyTracker(computed(() => caPayload()), ['meeting_id'])
 
 const isEditing = ref(false);
 
-// Announce edit mode both ways, so the other side's banner appears and clears.
-watch(isEditing, editing => setEditing(editing))
+// Doctors (the accepting side) can read the requester's copy of these forms, read only.
+const myRole = ref<string | null>(null);
+const canEdit = ref(true); // false: a doctor reading a consultation they are not part of
+const otherCV = ref<Record<string, any> | null>(null);
+const otherCA = ref<Record<string, any> | null>(null);
+
+// Doctors can switch between the accepter's form and the requester's. The requester's
+// is always read only.
+const viewing = ref<'mine' | 'rhu'>('mine');
+const ownState = ref<any>(null); // the doctor's own copy, set after every load
+const refreshing = ref(false);
+
 function cvPayload() {
     return {
             meeting_id: covids.value.meeting_id,
@@ -752,13 +769,16 @@ function caPayload() {
 
 async function saveUpdateCV() {
     try {
+        if (viewing.value !== 'mine' || !canEdit.value)
+            return false;
+
         // Ensure form validation
         const { valid } = await cvdform.value.validate();
 
         if (!valid) {
             errorMessage.value = "Please fill in all required fields correctly.";
             isError.value = true;
-            return;
+            return false;
         }
 
         // ✅ Prepare payload using all meeting data
@@ -779,24 +799,28 @@ async function saveUpdateCV() {
         // Success response handling
         successMessage.value = "Saved covid-19 screening.";
         isSuccess.value = true;
+        return true;
 
     } catch (error) {
         console.error("Error Saving covid-19 screening:", error);
-        errorMessage.value = "Failed to save covid-19 screening.";
+        errorMessage.value = (error as any)?.response?.data?.message ?? "Failed to save covid-19 screening.";
         isError.value = true;
-
+        return false;
     }
 }
 
 async function saveUpdateCA() {
     try {
+        if (viewing.value !== 'mine' || !canEdit.value)
+            return false;
+
         // Ensure form validation
         const { valid } = await cvdform.value.validate();
 
         if (!valid) {
             errorMessage.value = "Please fill in all required fields correctly.";
             isError.value = true;
-            return;
+            return false;
         }
 
         // ✅ Prepare payload using all meeting data
@@ -814,24 +838,21 @@ async function saveUpdateCA() {
             caTracker.markClean();
         }
 
-        // Both records save from this one card, so announce once, here.
-        notifySaved();
-
         // Success response handling
         setTimeout(function () {
             successMessage.value = "Saved covid-19 assessment.";
         }, 1050);
         isSuccess.value = true;
         cancelEdit();
-
+        return true;
 
     } catch (error) {
         console.error("Error Saving covid-19 assessment:", error);
         setTimeout(function () {
-            errorMessage.value = "Failed to save covid-19 assessment.";
+            errorMessage.value = (error as any)?.response?.data?.message ?? "Failed to save covid-19 assessment.";
         }, 1050);
         isError.value = true;
-
+        return false;
     }
 }
 
@@ -860,21 +881,169 @@ function cancelEdit() {
     isEditing.value = false;
 }
 
-// One after the other, not in parallel: saveUpdateCA is the one that tells the other
-// participant to refetch, and if it finished first they would reload before the
-// screening row was written and show the old values.
+// Everything the screen shows for the two records, lists included, so the doctor's own
+// copy can be put back exactly after looking at the requester's.
+function clone<T>(value: T): T {
+    return JSON.parse(JSON.stringify(value));
+}
+
+function takeSnapshot() {
+    return clone({
+        covids: covids.value,
+        clinas: clinas.value,
+        contactList: contactList.value,
+        scrumList: scrumList.value,
+        oroNasoSwabList: oroNasoSwabList.value,
+        speOthersList: speOthersList.value,
+    });
+}
+
+function restoreSnapshot(snap: any) {
+    Object.assign(covids.value, clone(snap.covids));
+    Object.assign(clinas.value, clone(snap.clinas));
+    contactList.value = clone(snap.contactList);
+    scrumList.value = clone(snap.scrumList);
+    oroNasoSwabList.value = clone(snap.oroNasoSwabList);
+    speOthersList.value = clone(snap.speOthersList);
+    syncAddressSelections();
+}
+
+// The empty form, taken before anything is loaded.
+const blankState = takeSnapshot();
+
+// Switching only happens while not editing (the toggle is disabled otherwise), so no
+// unsaved typing is lost. The requester's view can never be edited or saved.
+function showMyForm() {
+    if (ownState.value)
+        restoreSnapshot(ownState.value);
+}
+
+function showRhuForm() {
+    isEditing.value = false;
+    restoreSnapshot(blankState);
+    if (otherCV.value)
+        applyCv(otherCV.value);
+    if (otherCA.value)
+        applyCa(otherCA.value);
+    syncAddressSelections();
+}
+
+function onViewChange(view: 'mine' | 'rhu') {
+    if (view === 'rhu')
+        showRhuForm();
+    else
+        showMyForm();
+}
+
+// Reloads everything from the server and stays on the requester's form, so a doctor can
+// pick up what the requester saved since the page loaded. Nothing is pushed to the page
+// any more, so this is how the requester's form is brought up to date.
+async function refreshRhuForm() {
+    if (!props.consultId)
+        return;
+
+    refreshing.value = true;
+    try {
+        await fetchMeetingInfo(); // also puts the view back on the doctor's form
+        viewing.value = 'rhu';
+        showRhuForm();
+    }
+    finally {
+        refreshing.value = false;
+    }
+}
+
+// Cancel button: put the doctor's own saved values back, which also undoes a copy.
+// (cancelEdit stays as it is, because the saves call it once they succeed.)
+function discardEdits() {
+    showMyForm();
+    isEditing.value = false;
+}
+
+const confirmReplace = ref(false);
+
+function isEmpty(value: unknown) {
+    return value === null || value === undefined || value === '';
+}
+
+// Copies the requester's answers into the doctor's own form and leaves it open for
+// editing. Nothing is saved until the doctor presses Save, and Cancel restores the
+// saved values. overwrite=false only fills fields and lists that are still empty.
+function copyToMine(overwrite: boolean) {
+    confirmReplace.value = false;
+    if (!canEdit.value || !ownState.value || (!otherCV.value && !otherCA.value))
+        return;
+
+    // The requester's answers in the same shape as the screen, built on the empty form.
+    restoreSnapshot(blankState);
+    if (otherCV.value)
+        applyCv(otherCV.value);
+    if (otherCA.value)
+        applyCa(otherCA.value);
+    const rhu = takeSnapshot();
+
+    // Back to the doctor's own saved values, then bring the requester's answers over.
+    viewing.value = 'mine';
+    restoreSnapshot(ownState.value);
+
+    let copied = 0;
+
+    const takeFields = (target: Record<string, any>, from: Record<string, any>) => {
+        for (const [key, value] of Object.entries(from)) {
+            if (key === 'meeting_id')
+                continue;
+
+            const doCopy = overwrite ? target[key] !== value : !isEmpty(value) && isEmpty(target[key]);
+            if (doCopy) {
+                target[key] = value;
+                copied++;
+            }
+        }
+    };
+
+    const takeList = (list: { value: any[] }, from: any[]) => {
+        const mineIsEmpty = !list.value.length || list.value.every(row => Object.values(row).every(isEmpty));
+        const doCopy = overwrite ? JSON.stringify(list.value) !== JSON.stringify(from) : from.length > 0 && mineIsEmpty;
+
+        if (doCopy) {
+            list.value = clone(from);
+            copied++;
+        }
+    };
+
+    takeFields(covids.value, rhu.covids);
+    takeFields(clinas.value, rhu.clinas);
+    takeList(contactList, rhu.contactList);
+    takeList(scrumList, rhu.scrumList);
+    takeList(oroNasoSwabList, rhu.oroNasoSwabList);
+    takeList(speOthersList, rhu.speOthersList);
+    syncAddressSelections();
+
+    if (copied)
+        isEditing.value = true;
+
+    successMessage.value = copied
+        ? `Copied ${copied} field(s). Review them, then press Save.`
+        : 'Nothing to copy: your form already has those answers.';
+    isSuccess.value = true;
+}
+
+// One after the other, not in parallel, so the reload below sees both rows.
 async function saveAll() {
-    await saveUpdateCV();
-    await saveUpdateCA();
+    const cvOk = await saveUpdateCV();
+    const caOk = await saveUpdateCA();
+
+    // Reload this user's own form so the screen shows what the server stored. Only
+    // after both saves went through, so a failed validation can't wipe unsaved typing.
+    // The other participant's form is not touched.
+    if (cvOk && caOk)
+        await fetchMeetingInfo();
 }
 
 </script>
 
 <template>
     <VForm ref="cvdform" style="align-self: stretch; width: 100%;">
-    <VAlert v-if="remoteEditor" type="warning" variant="tonal" density="compact" class="mb-3 form-remote-editing">
-      {{ remoteEditor }} is editing this form. It will refresh when they save.
-    </VAlert>
         <VTooltip v-if="isEditing == true" text="Save" location="top">
             <template #activator="{ props }">
                 <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
@@ -884,10 +1053,10 @@ async function saveAll() {
         <VTooltip v-if="isEditing == true" text="Cancel" location="top">
             <template #activator="{ props }">
                 <VBtn v-bind="props" variant="tonal" color="error" icon="tabler-x" size="48"
-                    class="fab-fixed-botr mr-15" @click="cancelEdit" />
+                    class="fab-fixed-botr mr-15" @click="discardEdits" />
             </template>
         </VTooltip>
-        <VTooltip v-if="isEditing == false" text="Edit" location="top">
+        <VTooltip v-if="canEdit && viewing === 'mine' && isEditing == false" text="Edit" location="top">
             <template #activator="{ props }">
                 <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-edit" size="48" class="fab-fixed-botr"
                     rounded @click="isEditing = true" />
@@ -897,6 +1066,89 @@ async function saveAll() {
         <div class="d-flex flex-column justify-center">
         </div>
         <br></br>
+
+        <!-- Doctors can switch to the requester's form. It is read only. -->
+        <VRow v-if="myRole === 'accepter'">
+            <VCol cols="12">
+                <VBtnToggle v-model="viewing" mandatory divided color="primary" class="w-100 mb-4"
+                    :disabled="isEditing" @update:model-value="onViewChange">
+                    <VBtn value="mine" class="flex-grow-1">Accepter form</VBtn>
+                    <VBtn value="rhu" class="flex-grow-1">Requester form</VBtn>
+                </VBtnToggle>
+            </VCol>
+        </VRow>
+        <VAlert
+            v-if="viewing === 'rhu'"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-3"
+            >
+            <div class="d-flex flex-column flex-sm-row align-sm-center justify-space-between ga-2">
+                <!-- Message -->
+                <div class="text-body-2">
+                You are viewing the requester's form. It is read only.
+                <span v-if="!otherCV && !otherCA">The requester has not filled it in yet.</span>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-flex align-center flex-wrap ga-2 flex-shrink-0">
+                <VMenu v-if="canEdit && (otherCV || otherCA)">
+                    <template #activator="{ props }">
+                    <VBtn
+                        v-bind="props"
+                        size="small"
+                        variant="tonal"
+                        color="success"
+                        prepend-icon="tabler-copy"
+                        append-icon="tabler-chevron-down"
+                    >
+                        Copy to my form
+                    </VBtn>
+                    </template>
+
+                    <VList density="compact">
+                    <VListItem
+                        prepend-icon="tabler-forms"
+                        @click="copyToMine(false)"
+                    >
+                        <VListItemTitle>Fill empty fields only</VListItemTitle>
+                    </VListItem>
+                    <VListItem
+                        prepend-icon="tabler-replace"
+                        @click="confirmReplace = true"
+                    >
+                        <VListItemTitle>Replace my form with this</VListItemTitle>
+                    </VListItem>
+                    </VList>
+                </VMenu>
+
+                <VBtn
+                    size="small"
+                    variant="tonal"
+                    prepend-icon="tabler-refresh"
+                    :loading="refreshing"
+                    @click="refreshRhuForm"
+                >
+                    Refresh
+                </VBtn>
+                </div>
+            </div>
+            </VAlert>
+
+        <VDialog v-model="confirmReplace" max-width="420">
+            <VCard title="Replace your form?">
+                <VCardText>
+                    Everything in your form will be replaced by the requester's answers. Nothing is saved until you press Save, and Cancel brings your form back.
+                </VCardText>
+                <VCardActions>
+                    <VSpacer />
+                    <VBtn variant="text" @click="confirmReplace = false">Keep mine</VBtn>
+                    <VBtn color="warning" variant="tonal" @click="copyToMine(true)">Replace</VBtn>
+                </VCardActions>
+            </VCard>
+        </VDialog>
+
         <VRow style="background-color:rgba(244, 67, 54, 0.15); padding: 10px;" class="rounded">
             <Vcol>
                 <span class=" text-h5 font-weight-medium mb-2" style="color:#ff7b71;">
@@ -905,7 +1157,7 @@ async function saveAll() {
             </Vcol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.employers_name" outlined dense label="Employer's Name"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
 
@@ -913,26 +1165,26 @@ async function saveAll() {
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.place_of_work" outlined dense label="Place of Work" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }">
                 </VTextField>
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.house_bldg_name" outlined dense label="House #/Bldg Name:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.street" outlined dense label="Street:" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <!-- Province drives the city list below via PSGC. -->
                 <VAutocomplete :model-value="selectedProvPsgc" :items="provinceList" item-title="prov_name"
                     item-value="prov_psgc" label="Province/State:" outlined dense clearable
@@ -941,7 +1193,7 @@ async function saveAll() {
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <!-- Most provinces have no cities loaded, so the field switches to free text
                      rather than showing a dropdown that can never be satisfied. -->
                 <VTextField v-if="cityIsFreeText" v-model="covids.municipal" outlined dense
@@ -957,21 +1209,21 @@ async function saveAll() {
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VAutocomplete v-model="covids.country_id" :items="countrylist" item-title="en_short_name"
                     item-value="num_code" label="Country:" outlined dense clearable persistent-hint
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.office_phone_no" outlined dense :rules="[phoneValidator]"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" label="Office Phone No.">
                 </VTextField>
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="covids.cellphone_no" outlined dense :rules="[phoneValidator]"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" label="Cellphon No.">
                 </VTextField>
@@ -987,7 +1239,7 @@ async function saveAll() {
             </Vcol>
         </VRow>
         <VRow class="align-center">
-            <VCol>
+            <VCol cols="12" sm>
                 <label class="req-label">
                     History of Travel/Visit/Work in other countries with known COVID-19 transmission
                     14 days prior to onset of signs and symptoms
@@ -1003,7 +1255,7 @@ async function saveAll() {
         <!-- Travel sub-fields: only shown when history_travel = Yes -->
         <template v-if="travelYes">
             <VRow>
-                <VCol>
+                <VCol cols="12" sm>
                     <VTextField v-model="covids.port_of_exit" outlined dense
                         :rules="travelYes ? [requiredValidator] : []" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
@@ -1012,7 +1264,7 @@ async function saveAll() {
                 </VCol>
             </VRow>
             <VRow>
-                <VCol>
+                <VCol cols="12" sm>
                     <VTextField v-model="covids.airline_sea_vessel" outlined dense
                         :rules="travelYes ? [requiredValidator] : []" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
@@ -1021,7 +1273,7 @@ async function saveAll() {
                 </VCol>
             </VRow>
             <VRow>
-                <VCol>
+                <VCol cols="12" sm>
                     <VTextField v-model="covids.flight_vessel_no" outlined dense :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
                         <template #label><span>Flight/Vessel #</span></template>
@@ -1029,7 +1281,7 @@ async function saveAll() {
                 </VCol>
             </VRow>
             <VRow>
-                <VCol>
+                <VCol cols="12" sm>
                     <VTextField type="date" v-model="covids.date_departure" outlined dense
                         :rules="travelYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
@@ -1038,7 +1290,7 @@ async function saveAll() {
                 </VCol>
             </VRow>
             <VRow>
-                <VCol>
+                <VCol cols="12" sm>
                     <VTextField type="date" v-model="covids.date_arrival_ph" outlined dense
                         :rules="travelYes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
                         :class="{ 'custom-disabled': !isEditing }">
@@ -1060,8 +1312,8 @@ async function saveAll() {
             </Vcol>
         </VRow>
         <VRow class="align-center" flex>
-            <VCol>
-                <div class="d-flex align-center">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label>
                         Known Covid-19 Case:
                     </label>
@@ -1088,8 +1340,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Accommodation</label>
 
                     <VRadioGroup v-model="covids.accomodation" inline density="compact" :rules="[
@@ -1134,8 +1386,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Food Establishment</label>
 
                     <VRadioGroup v-model="covids.food_establishment" inline density="compact" :rules="[
@@ -1180,8 +1432,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Store</label>
 
                     <VRadioGroup v-model="covids.store" inline density="compact" :rules="[
@@ -1228,8 +1480,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Health Facility</label>
 
                     <VRadioGroup v-model="covids.facility" inline density="compact" :rules="[
@@ -1279,8 +1531,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Event</label>
 
                     <VRadioGroup v-model="covids.event" inline density="compact" :rules="[
@@ -1314,8 +1566,8 @@ async function saveAll() {
         <VDivider />
         <br />
         <VRow class="mb-4">
-            <VCol>
-                <div class="d-flex align-center gap-3">
+            <VCol cols="12" sm>
+                <div class="d-flex flex-wrap align-center column-gap-3">
                     <label class="text-body-1 font-weight-medium">Workplace</label>
 
                     <VRadioGroup v-model="covids.workplace" inline density="compact" :rules="[
@@ -1345,7 +1597,7 @@ async function saveAll() {
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <label class="text-body-1 font-weight-medium">
                     List of names of persons in contact with during any of these occasions and their contact numbers:
                 </label>
@@ -1397,9 +1649,9 @@ async function saveAll() {
             </Vcol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VRow>
-                    <div class="d-flex align-center" style="padding-left: 10px;">
+                    <div class="d-flex flex-wrap align-center column-gap-3" style="padding-left: 10px;">
                         <label>
                             14 days PRIOR to first date of Exposure:
                         </label>
@@ -1412,7 +1664,7 @@ async function saveAll() {
                     </div>
                 </VRow>
                 <VRow v-if="prior14Yes">
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField type="date" v-model="clinas.days_14_date_onset_illness" outlined dense
                             :rules="prior14Yes ? [requiredValidator, dateValidator] : []" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }">
@@ -1421,8 +1673,8 @@ async function saveAll() {
                     </VCol>
                 </VRow>
                 <VRow v-if="prior14No" class="align-center">
-                    <VCol>
-                        <div class="d-flex align-center">
+                    <VCol cols="12" sm>
+                        <div class="d-flex flex-wrap align-center column-gap-3">
                             <label class="text-body-1 font-weight-medium me-2">(If no) Place of Quarantine:</label>
                             <VCheckbox v-model="clinas.place_quarantine" label="Home" :value="1" :false-value="0"
                                 density="compact" :readonly="!isEditing"
@@ -1433,15 +1685,15 @@ async function saveAll() {
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="clinas.quarantine_facility" outlined dense label="Quarantine Facility:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow class="align-center" flex>
-            <VCol>
+            <VCol cols="12" sm>
                 <VRow>
-                    <div class="d-flex align-center" style="padding-left: 10px;">
+                    <div class="d-flex flex-wrap align-center column-gap-3" style="padding-left: 10px;">
                         <label>
                             Anytime during date of Exposure:
                         </label>
@@ -1455,12 +1707,12 @@ async function saveAll() {
                     </div>
                 </VRow>
                 <VRow>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField v-model="clinas.name_facility" outlined dense
                             label="Name of Referral Health Facility:" :readonly="!isEditing"
                             :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
-                    <VCol>
+                    <VCol cols="12" sm>
                         <VTextField type="date" v-model="clinas.referral_date" outlined dense label="Date of Referral:"
                             :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
                     </VCol>
@@ -1469,21 +1721,21 @@ async function saveAll() {
             <VDivider />
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField type="number" v-model="clinas.fever" outlined dense label="Fever(°C):" suffix="°C"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol class="align-center" flex>
+            <VCol cols="12" sm class="align-center" flex>
                 <!-- false-value is 0, not Vuetify's default boolean false: these columns
                      are int and MySQL rejects 'false' once a box is unticked. -->
                 <VCheckbox v-model="clinas.cough" label="Cough" :value="1" :false-value="0" density="compact"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol class="align-center" flex>
+            <VCol cols="12" sm class="align-center" flex>
                 <VCheckbox v-model="clinas.colds" label="Colds" :value="1" :false-value="0" density="compact"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol class="align-center" flex>
+            <VCol cols="12" sm class="align-center" flex>
                 <VCheckbox v-model="clinas.sore_throat" label="Sore Throat" :value="1" :false-value="0"
                     density="compact" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
@@ -1499,7 +1751,7 @@ async function saveAll() {
                     :false-value="0" density="compact" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="clinas.other_symptoms" outlined dense label="Other Symptoms Specify:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
@@ -1519,7 +1771,7 @@ async function saveAll() {
                     <template #label><span class="req-label">Specify Illness</span></template>
                 </VTextField>
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VRadioGroup v-model="clinas.xray" inline density="compact" label="Chest Xray Done?:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label="Yes" :value="1" />
@@ -1531,7 +1783,7 @@ async function saveAll() {
                     <template #label><span class="req-label">Date of Chest X-ray</span></template>
                 </VTextField>
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VRadioGroup v-model="clinas.pregnant" inline density="compact" label="Are you pregnant?:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }">
                     <VRadio label=" Yes" :value="1" />
@@ -1547,7 +1799,7 @@ async function saveAll() {
         </VRow>
         <VRow>
             <VCol cols="12" md="7">
-                <div class="d-flex align-center" style="padding-left: 10px;">
+                <div class="d-flex flex-wrap align-center column-gap-3" style="padding-left: 10px;">
                     <label>
                         CXR Results:
                     </label>
@@ -1574,39 +1826,39 @@ async function saveAll() {
             </Vcol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="clinas.specimen_collected" outlined dense label="Specimen Collected:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField type="date" v-model="clinas.date_collected" outlined dense label="Date Collected:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField type="date" v-model="clinas.date_sent_ritm" outlined dense
                     label="Date Sent to RITM or any accredited laboratory:" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField type="date" v-model="clinas.date_received_ritm" outlined dense
                     label="Date Received in RITM:" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="clinas.virus_isolation_result" outlined dense label="Virus Isolation Result:"
                     :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
-            <VCol>
+            <VCol cols="12" sm>
                 <VTextField v-model="clinas.rt_pcr_result" outlined dense label="RT-PCR Result:" :readonly="!isEditing"
                     :class="{ 'custom-disabled': !isEditing }" />
             </VCol>
             <VDivider />
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <label class="text-body-1 font-weight-medium">
                     Scrum:
                 </label>
@@ -1642,7 +1894,7 @@ async function saveAll() {
             <VDivider />
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <label class="text-body-1 font-weight-medium">
                     Oropharyngeal/Nasopharyngeal Swab
                 </label>
@@ -1678,7 +1930,7 @@ async function saveAll() {
             <VDivider />
         </VRow>
         <VRow>
-            <VCol>
+            <VCol cols="12" sm>
                 <label class="text-body-1 font-weight-medium">
                     Others:
                 </label>
@@ -1767,25 +2019,6 @@ async function saveAll() {
 
 <style>
 
-/*
-  Shown while the other participant is in edit mode. Deliberately loud: it is the
-  only warning that this form is about to be refreshed out from under you, taking
-  any unsaved typing with it.
-*/
-.form-remote-editing {
-  border: 2px solid #ff6d00;
-  color: #ff6d00 !important;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-
-  /* Black outline keeps the orange readable — the drawer sits over the video feed,
-     so the backdrop behind it is unpredictable. */
-  text-shadow:
-    -1px -1px 0 #000,
-    1px -1px 0 #000,
-    -1px 1px 0 #000,
-    1px 1px 0 #000;
-}
 .req-label::after {
     content: " *";
     color: #f44336;

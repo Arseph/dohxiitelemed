@@ -25,8 +25,9 @@
 </template>
 
 <script setup lang="ts">
+import { getAuthToken } from '@/utils/authStorage'
 onMounted(() => {
-  const token = localStorage.getItem('auth_token')
+  const token = getAuthToken()
   console.log('hahays')
   if (!token) {
     router.push('/login')

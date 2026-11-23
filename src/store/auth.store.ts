@@ -1,5 +1,6 @@
 import { useOnlineStatus } from '@/composables/useOnlineStatus';
 import { axiosIns } from '@/plugins/axios';
+import { authStorage } from '@/utils/authStorage';
 import type { Commit, Dispatch, Module } from 'vuex';
 import type { RootState } from './types';
 
@@ -7,6 +8,15 @@ interface User {
   id: number;
   emp_id: number;
   username: string;
+  fname?: string;
+  mname?: string | null;
+  lname?: string;
+  title?: string | null;
+  contact?: string | null;
+  designation?: string | null;
+  license_no?: string | null;
+  picture?: string | null;
+  facility?: { id: number; facilityname: string } | null;
   level: string;
   last_login: string | null;
   login_status: string;
@@ -62,7 +72,7 @@ const auth: Module<AuthState, RootState> = {
     SET_USER(state: AuthState, value: User | null): void {
       state.user = value
       if (value) {
-        localStorage.setItem('auth_user', JSON.stringify(value))
+        authStorage.set('auth_user', JSON.stringify(value))
       }
     },
     SET_PROFILE(state: AuthState, value: Profile | null): void {
@@ -71,7 +81,7 @@ const auth: Module<AuthState, RootState> = {
   },
   actions: {
     async generateCsrfToken({ dispatch }: { dispatch: Dispatch }): Promise<void> {
-      const cachedToken = localStorage.getItem('auth_token')
+      const cachedToken = authStorage.get('auth_token')
       if(!cachedToken) {
         await axiosIns.get('/sanctum/csrf-cookie')
       }
@@ -84,7 +94,7 @@ const auth: Module<AuthState, RootState> = {
         const response = await axiosIns.post('api/auth/login', form)
         const token = response.data.accessToken
         if (token) {
-          localStorage.setItem('auth_token', token)
+          authStorage.startSession(token, Boolean(form.remember))
           await dispatch('user')
         }
       } catch (error) {
@@ -93,7 +103,7 @@ const auth: Module<AuthState, RootState> = {
     },
     async user({ commit }: { commit: Commit }): Promise<void> {
       const { isOnline } = useOnlineStatus()
-      const cachedUser = localStorage.getItem('auth_user')
+      const cachedUser = authStorage.get('auth_user')
       try {
         if(!cachedUser) {
           if (isOnline.value) {
@@ -121,13 +131,26 @@ const auth: Module<AuthState, RootState> = {
       }
     },
 
+    // Bypasses the cached auth_user so profile pages show saved changes.
+    async refreshUser({ commit }: { commit: Commit }): Promise<void> {
+      const { data } = await axiosIns.get('/api/employee/me')
+      commit('SET_USER', data)
+    },
+
+    async userProfile(): Promise<Blob | null> {
+      try {
+        const { data } = await axiosIns.get('/api/employee/profile-pic', { responseType: 'blob' })
+        return data
+      } catch {
+        return null
+      }
+    },
+
     async logout({ commit }: { commit: Commit }): Promise<void> {
       try {
         await axiosIns.get('/api/auth/logout')
       } catch (_) {}
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_user')
-      localStorage.removeItem('auth_profile')
+      authStorage.clear()
       commit('SET_USER', null)
       commit('SET_PROFILE', null)
       commit('SET_CHECKED')

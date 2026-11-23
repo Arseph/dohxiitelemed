@@ -1,13 +1,23 @@
 <script lang="ts" setup>
-import { defineProps } from 'vue'
-import { format } from 'date-fns'
-const user = defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   data: any
 }>()
-const date = new Date(user.data?.info?.hrinfo?.date_hired)
-const hired = isNaN(date.getTime())
-  ? 'Invalid date'
-  : format(date, 'MMMM d, yyyy')
+
+const about = computed(() => [
+  { icon: 'tabler-user', label: 'Full Name', value: [props.data?.fname, props.data?.mname, props.data?.lname].filter(Boolean).join(' ') },
+  { icon: 'tabler-crown', label: 'Role', value: props.data?.level },
+  { icon: 'tabler-check', label: 'Status', value: props.data?.status },
+  { icon: 'tabler-briefcase', label: 'Designation', value: props.data?.designation },
+  { icon: 'tabler-building-hospital', label: 'Facility', value: props.data?.facility?.facilityname },
+  { icon: 'tabler-id', label: 'License No.', value: props.data?.license_no },
+])
+
+const contacts = computed(() => [
+  { icon: 'tabler-phone-call', label: 'Contact', value: props.data?.contact },
+  { icon: 'tabler-mail', label: 'Email', value: props.data?.email },
+])
 </script>
 
 <template>
@@ -18,43 +28,21 @@ const hired = isNaN(date.getTime())
       </p>
       <VList class="card-list text-medium-emphasis">
         <VListItem>
-          <VListItemTitle class="mb-3">
+          <VListItemTitle
+            v-for="item in about"
+            :key="item.label"
+            class="mb-3"
+          >
             <span class="d-flex align-center">
               <VIcon
-                icon="tabler-user"
+                :icon="item.icon"
                 size="24"
                 class="me-2"
               />
               <div class="text-body-1 font-weight-medium me-2">
-                Full Name:
+                {{ item.label }}:
               </div>
-              <div>{{ data?.info?.first_name }} {{ data?.info?.middle_name }} {{ data?.info?.sur_name }}</div>
-            </span>
-          </VListItemTitle>
-          <VListItemTitle class="mb-3">
-            <span class="d-flex align-center">
-              <VIcon
-                icon="tabler-check"
-                size="24"
-                class="me-2"
-              />
-              <div class="text-body-1 font-weight-medium me-2">
-                Status:
-              </div>
-              <div>{{data?.status}}</div>
-            </span>
-          </VListItemTitle>
-          <VListItemTitle class="mb-3">
-            <span class="d-flex align-center">
-              <VIcon
-                icon="tabler-calendar"
-                size="24"
-                class="me-2"
-              />
-              <div class="text-body-1 font-weight-medium me-2">
-                Date Hired:
-              </div>
-              <div>{{hired}}</div>
+              <div class="text-capitalize-first">{{ item.value || '—' }}</div>
             </span>
           </VListItemTitle>
         </VListItem>
@@ -66,41 +54,35 @@ const hired = isNaN(date.getTime())
 
       <VList class="card-list text-medium-emphasis">
         <VListItem>
-          <VListItemTitle class="mb-3">
+          <VListItemTitle
+            v-for="item in contacts"
+            :key="item.label"
+            class="mb-3"
+          >
             <span class="d-flex align-center">
               <VIcon
-                icon="tabler-phone-call"
+                :icon="item.icon"
                 size="24"
                 class="me-2"
               />
               <div class="text-body-1 font-weight-medium me-2">
-                Contact:
+                {{ item.label }}:
               </div>
-              <div>{{ data?.info?.cell_no }}</div>
-            </span>
-          </VListItemTitle>
-          <VListItemTitle class="mb-3">
-            <span class="d-flex align-center">
-              <VIcon
-                icon="tabler-mail"
-                size="24"
-                class="me-2"
-              />
-              <div class="text-body-1 font-weight-medium me-2">
-                Email:
-              </div>
-              <div>{{data?.email}}</div>
+              <div>{{ item.value || '—' }}</div>
             </span>
           </VListItemTitle>
         </VListItem>
       </VList>
     </VCardText>
   </VCard>
-
 </template>
 
 <style lang="scss" scoped>
 .card-list {
   --v-card-list-gap: 16px;
+}
+
+.text-capitalize-first::first-letter {
+  text-transform: uppercase;
 }
 </style>

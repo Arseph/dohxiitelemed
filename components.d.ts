@@ -7,7 +7,6 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
-    __vc_head_tmp: typeof import('./src/components/__vc_head_tmp.vue')['default']
     AcceptDec: typeof import('./src/components/AcceptDec.vue')['default']
     AddAuthenticatorAppDialog: typeof import('./src/components/dialogs/AddAuthenticatorAppDialog.vue')['default']
     AddEditAddressDialog: typeof import('./src/components/dialogs/AddEditAddressDialog.vue')['default']
@@ -85,6 +84,7 @@ declare module 'vue' {
     UserInfoEditDialog: typeof import('./src/components/dialogs/UserInfoEditDialog.vue')['default']
     UserUpgradePlanDialog: typeof import('./src/components/dialogs/UserUpgradePlanDialog.vue')['default']
     VideoConference: typeof import('./src/components/VideoConference.vue')['default']
+    VueApexCharts: typeof import('vue3-apexcharts')['default']
     Warning: typeof import('./src/components/snackbars/warning.vue')['default']
   }
 }

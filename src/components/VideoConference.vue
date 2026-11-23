@@ -8,6 +8,7 @@ import Form2 from './forms/form2.vue'
 import Form3 from './forms/form3.vue'
 import Form4 from './forms/form4.vue'
 import Form5 from './forms/form5.vue'
+import { authStorage } from '@/utils/authStorage'
 import { axiosIns } from '@/plugins/axios'
 import { globals } from '@/globals'
 import WarningSnackbar from '@/components/snackbars/warning.vue'
@@ -49,20 +50,6 @@ const cards = ref<CardItem[]>([
   { id: 4, title: 'Diagnosis / Assessment', icon: 'tabler-notes', color: 'blue', component: Form4 },
   { id: 5, title: 'Plan of Management', icon: 'tabler-clipboard-check', color: 'green', component: Form5 },
 ])
-
-/**
- * Form keys as sent over the socket by useFormSync, mapped to the labels shown on
- * the drawer cards. Kept here rather than in the forms so the notice can name a form
- * that is not currently open — the form components only exist while their card is
- * showing, so they cannot announce anything about the other four.
- */
-const FORM_LABELS: Record<string, string> = {
-  demographic_profile: 'Demographic Profile',
-  clinical_history: 'Clinical History & Physical Examination',
-  covid_screening: 'COVID-19 Screening',
-  diagnosis_assessment: 'Diagnosis / Assessment',
-  plan_of_management: 'Plan of Management',
-}
 
 // const activeCard = ref<number | null>(null);
 // const showCard = ref(false);
@@ -123,13 +110,20 @@ function closeCard() {
 }
 
 const { isError, errorMessage, isSuccess, successMessage, isWarning, warningMessage } = cStatus()
-const { smAndDown } = useDisplay()
-const colSize = ref(12)
+const { smAndDown, xs, width: viewportWidth } = useDisplay()
 const isStartDialog = ref(true)
 
-// const toggleCols = () => {
-//   colSize.value = colSize.value === 12 ? 9 : 12;
-// };
+// Large enough to hit with a thumb on phones, but five still fit across 320px
+const controlSize = computed(() => (smAndDown.value ? 'large' : 'x-large'))
+
+// The drawers are 400px (form list) and 700px (form) wide on desktop; on a phone
+// they take the whole screen instead of running off the edge.
+const listDrawerWidth = computed(() => (xs.value ? viewportWidth.value : 400))
+const formDrawerWidth = computed(() => Math.min(700, viewportWidth.value))
+
+// iPhone Safari (and some Android WebViews) have no Fullscreen API: requestFullscreen
+// is undefined there and the button would throw. Hide it where it can't work.
+const canFullscreen = typeof document !== 'undefined' && !!document.fullscreenEnabled
 
 const localVideo = ref<HTMLVideoElement | null>(null)
 const localVideoPreview = ref<HTMLVideoElement | null>(null)
@@ -148,7 +142,7 @@ let socket: Socket
 
 const currentUserId = (() => {
   try {
-    return JSON.parse(localStorage.getItem('auth_user') ?? 'null')?.id ?? null
+    return JSON.parse(authStorage.get('auth_user') ?? 'null')?.id ?? null
   }
   catch {
     return null
@@ -246,6 +240,7 @@ const config: RTCConfiguration = {
       username: 'telemed',
       credential: 'telemed2026secret',
     },
+
     // TURNS disabled — no valid SSL cert for IP
     // {
     //   urls: 'turns:telemed-dev.dohsox.com:5349',
@@ -341,18 +336,6 @@ onMounted(async () => {
 
   socket.on('connect', () => {
     socket.emit('join', roomId)
-  })
-
-  // Announce when the other participant starts editing any form, not just the one
-  // open here. The forms raise their own in-place banner; this covers the other four.
-  socket.on('form-editing', (payload: { form?: string; by?: string; editing?: boolean }) => {
-    if (!payload?.editing || !payload.form)
-      return
-
-    const label = FORM_LABELS[payload.form] ?? 'a form'
-
-    warningMessage.value = `${payload.by ?? 'Other user'} is editing ${label}`
-    isWarning.value = true
   })
 
   // ✅ 2. Setup socket listeners
@@ -482,9 +465,11 @@ function createPeerConnection() {
   return peerConnection
 }
 
-/** Close and forget, so the next offer builds a working connection instead of
+/**
+ * Close and forget, so the next offer builds a working connection instead of
  *  reusing a closed one. Closing without clearing the reference is what left the
- *  call permanently dead after the other participant dropped. */
+ *  call permanently dead after the other participant dropped.
+ */
 function teardownPeerConnection() {
   if (!peerConnection)
     return
@@ -498,9 +483,11 @@ function teardownPeerConnection() {
   peerConnection = null
 }
 
-/** Attach the local camera/mic to the connection, skipping tracks already sent.
+/**
+ * Attach the local camera/mic to the connection, skipping tracks already sent.
  *  The offer path did this inline but the answer path never did, so whoever
- *  answered negotiated with no media of their own and the caller saw a black frame. */
+ *  answered negotiated with no media of their own and the caller saw a black frame.
+ */
 function attachLocalTracks() {
   if (!peerConnection || !localStream)
     return
@@ -937,291 +924,272 @@ const closeTab = () => {
 </script>
 
 <template>
-  <VRow
+  <!-- The call fills the window: the route uses the blank layout (no app nav) -->
+  <div
     v-if="!callEnded"
-    class="fullscreen-video-row"
-    no-gutters
+    class="call-stage"
+    :class="{ 'call-stage--compact': smAndDown }"
   >
-    <VCol
-      :cols="colSize"
-      :md="colSize"
-      :sm="colSize"
+    <div
+      class="video-container"
+      @mousemove="showControls"
+      @click="toggleControls"
     >
-      <!-- <VCol cols="12" md="9"> -->
-      <div
-        class="video-container"
-        @mousemove="showControls"
-        @click="toggleControls"
-      >
-        <div class="video-wrap">
-          <video
-            ref="remoteVideo"
-            autoplay
-            playsinline
-            class="remote-video"
-          />
-          <video
-            ref="localVideo"
-            autoplay
-            playsinline
-            muted
-            class="local-video"
-          />
-          <div class="call-timer">
-            {{ formatTime(elapsedSeconds) }}
-          </div>
-          <div
-            v-if="isRecording || remoteRecording"
-            class="rec-notice"
-          >
-            <span class="rec-dot" />
-            {{ isRecording ? 'Recording' : 'This consultation is being recorded' }}
-          </div>
-
-          <Transition name="fade">
-            <div
-              v-if="controlsVisible"
-              class="video-controls"
-              @mouseenter="cancelHide"
-              @mouseleave="scheduleHide"
-            >
-              <!--
-                <VBtn variant="tonal" icon="tabler-notebook" color="success" :class="smAndDown ? 'mt-3' : 'ma-3'"
-                :size="smAndDown ? 'small' : 'x-large'" @click="toggleCols" />
-              -->
-              <!-- Notebook Button -->
-              <VBtn
-                variant="tonal"
-                icon="tabler-notebook"
-                color="success"
-                :class="smAndDown ? 'mt-3' : 'ma-3'"
-                :size="smAndDown ? 'small' : 'x-large'"
-                @click="drawerOpen = true"
-              />
-              <!-- check call duration value -->
-              <!-- <p>{{ callDuration }}</p> -->
-              <VMenu location="top">
-                <template #activator="{ props }">
-                  <VBtn
-                    v-if="videoEnabled"
-                    v-bind="props"
-                    variant="tonal"
-                    icon="tabler-video"
-                    color="warning"
-                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                    :size="smAndDown ? 'small' : 'x-large'"
-                  />
-                  <VBtn
-                    v-else
-                    v-bind="props"
-                    variant="tonal"
-                    icon="tabler-video-off"
-                    color="error"
-                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                    :size="smAndDown ? 'small' : 'x-large'"
-                  />
-                </template>
-
-                <VList>
-                  <VListItem
-                    v-for="cam in cameras"
-                    :key="cam.deviceId"
-                    @click="selecVid(cam.deviceId)"
-                  >
-                    <VListItemTitle>
-                      <VBtn
-                        v-if="selectedCamera === cam.deviceId"
-                        icon="tabler-check"
-                        variant="text"
-                        color="error"
-                      />
-                      {{ cam.label || `Camera ${cam.deviceId}` }}
-                    </VListItemTitle>
-                  </VListItem>
-                  <VListItem @click="toggleVideo">
-                    <VListItemTitle>
-                      {{ videoEnabled ? "Turn Off Camera" : "Turn On Camera" }}
-                    </VListItemTitle>
-                  </VListItem>
-                </VList>
-              </VMenu>
-              <VMenu location="top">
-                <template #activator="{ props }">
-                  <VBtn
-                    v-if="audioEnabled"
-                    v-bind="props"
-                    variant="tonal"
-                    icon="tabler-microphone"
-                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                    :size="smAndDown ? 'small' : 'x-large'"
-                  />
-                  <VBtn
-                    v-else
-                    v-bind="props"
-                    variant="tonal"
-                    icon="tabler-microphone-off"
-                    color="error"
-                    :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                    :size="smAndDown ? 'small' : 'x-large'"
-                  />
-                </template>
-
-                <VList>
-                  <VListItem
-                    v-for="mic in microphones"
-                    :key="mic.deviceId"
-                    @click="selectMic(mic.deviceId)"
-                  >
-                    <VListItemTitle>
-                      <VBtn
-                        v-if="selectedMic === mic.deviceId"
-                        icon="tabler-check"
-                        variant="text"
-                        color="error"
-                      />
-                      {{ mic.label || `Mic ${mic.deviceId}` }}
-                    </VListItemTitle>
-                  </VListItem>
-                  <VListItem @click="toggleAudio">
-                    <VListItemTitle>
-                      {{ audioEnabled ? "Mute Mic" : "Unmute Mic" }}
-                    </VListItemTitle>
-                  </VListItem>
-                </VList>
-              </VMenu>
-              <VBtn
-                variant="tonal"
-                :icon="isFullscreen ? 'tabler-minimize' : 'tabler-maximize'"
-                color="secondary"
-                :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                :size="smAndDown ? 'small' : 'x-large'"
-                @click="toggleFullscreen"
-              />
-              <VBtn
-                variant="tonal"
-                icon="tabler-logout"
-                color="error"
-                :class="smAndDown ? 'ml-1 mt-3' : 'ma-3'"
-                :size="smAndDown ? 'small' : 'x-large'"
-                @click="stopCall"
-              />
-            </div>
-          </Transition>
+      <div class="video-wrap">
+        <video
+          ref="remoteVideo"
+          autoplay
+          playsinline
+          class="remote-video"
+        />
+        <video
+          ref="localVideo"
+          autoplay
+          playsinline
+          muted
+          class="local-video"
+        />
+        <div class="call-timer">
+          {{ formatTime(elapsedSeconds) }}
         </div>
+        <div
+          v-if="isRecording || remoteRecording"
+          class="rec-notice"
+        >
+          <span class="rec-dot" />
+          {{ isRecording ? 'Recording' : 'This consultation is being recorded' }}
+        </div>
+
+        <Transition name="fade">
+          <div
+            v-if="controlsVisible"
+            class="video-controls"
+            @click.stop
+            @mouseenter="cancelHide"
+            @mouseleave="scheduleHide"
+          >
+            <!-- Notebook Button -->
+            <VBtn
+              variant="tonal"
+              icon="tabler-notebook"
+              color="success"
+              :size="controlSize"
+              @click="drawerOpen = true"
+            />
+            <!-- check call duration value -->
+            <!-- <p>{{ callDuration }}</p> -->
+            <VMenu location="top">
+              <template #activator="{ props }">
+                <VBtn
+                  v-if="videoEnabled"
+                  v-bind="props"
+                  variant="tonal"
+                  icon="tabler-video"
+                  color="warning"
+                  :size="controlSize"
+                />
+                <VBtn
+                  v-else
+                  v-bind="props"
+                  variant="tonal"
+                  icon="tabler-video-off"
+                  color="error"
+                  :size="controlSize"
+                />
+              </template>
+
+              <VList>
+                <VListItem
+                  v-for="cam in cameras"
+                  :key="cam.deviceId"
+                  @click="selecVid(cam.deviceId)"
+                >
+                  <VListItemTitle>
+                    <VBtn
+                      v-if="selectedCamera === cam.deviceId"
+                      icon="tabler-check"
+                      variant="text"
+                      color="error"
+                    />
+                    {{ cam.label || `Camera ${cam.deviceId}` }}
+                  </VListItemTitle>
+                </VListItem>
+                <VListItem @click="toggleVideo">
+                  <VListItemTitle>
+                    {{ videoEnabled ? "Turn Off Camera" : "Turn On Camera" }}
+                  </VListItemTitle>
+                </VListItem>
+              </VList>
+            </VMenu>
+            <VMenu location="top">
+              <template #activator="{ props }">
+                <VBtn
+                  v-if="audioEnabled"
+                  v-bind="props"
+                  variant="tonal"
+                  icon="tabler-microphone"
+                  :size="controlSize"
+                />
+                <VBtn
+                  v-else
+                  v-bind="props"
+                  variant="tonal"
+                  icon="tabler-microphone-off"
+                  color="error"
+                  :size="controlSize"
+                />
+              </template>
+
+              <VList>
+                <VListItem
+                  v-for="mic in microphones"
+                  :key="mic.deviceId"
+                  @click="selectMic(mic.deviceId)"
+                >
+                  <VListItemTitle>
+                    <VBtn
+                      v-if="selectedMic === mic.deviceId"
+                      icon="tabler-check"
+                      variant="text"
+                      color="error"
+                    />
+                    {{ mic.label || `Mic ${mic.deviceId}` }}
+                  </VListItemTitle>
+                </VListItem>
+                <VListItem @click="toggleAudio">
+                  <VListItemTitle>
+                    {{ audioEnabled ? "Mute Mic" : "Unmute Mic" }}
+                  </VListItemTitle>
+                </VListItem>
+              </VList>
+            </VMenu>
+            <VBtn
+              v-if="canFullscreen"
+              variant="tonal"
+              :icon="isFullscreen ? 'tabler-minimize' : 'tabler-maximize'"
+              color="secondary"
+              :size="controlSize"
+              @click="toggleFullscreen"
+            />
+            <VBtn
+              variant="tonal"
+              icon="tabler-logout"
+              color="error"
+              :size="controlSize"
+              @click="stopCall"
+            />
+          </div>
+        </Transition>
       </div>
-      <div class="device-selectors d-flex align-center justify-center gap-x-4 mb-1" />
-    </VCol>
-    <VCol
-      cols="12"
-      md="3"
+    </div>
+
+    <!-- Buttons to open forms -->
+    <VNavigationDrawer
+      v-model="drawerOpen"
+      location="end"
+      temporary
+      :width="listDrawerWidth"
+      elevation="0"
+      class="bg-opacity-75"
     >
-      <!-- Buttons to open forms -->
-      <VNavigationDrawer
-        v-model="drawerOpen"
-        location="end"
-        temporary
-        width="400"
-        elevation="0"
-        class="bg-opacity-75"
-      >
-        <VDivider />
-        <VToolbar color="primary">
-          <VToolbarTitle class="text-white">
-            Forms
-          </VToolbarTitle>
-          <VSpacer />
-          <VBtn
-            icon="tabler-x"
-            color="white"
-            @click="drawerOpen = false"
-          />
-        </VToolbar>
+      <VDivider />
+      <VToolbar color="primary">
+        <VToolbarTitle class="text-white">
+          Forms
+        </VToolbarTitle>
+        <VSpacer />
+        <VBtn
+          icon="tabler-x"
+          color="white"
+          @click="drawerOpen = false"
+        />
+      </VToolbar>
 
-        <VDivider />
+      <VDivider />
 
-        <VCard
-          flat
-          class="pa-4"
-        >
-          <!-- Render form section buttons -->
-          <VBtn
-            v-for="card in cards"
-            :key="card.id"
-            variant="tonal"
-            class="justify-start mb-3 w-100 text-white"
-            :class="[`btn-${card.color}`]"
-            @click="openCard(card.id)"
-          >
-            <VIcon
-              v-if="card.icon"
-              :icon="card.icon"
-              start
-              size="24"
-              class="mr-2"
-            />
-            {{ card.title }}
-          </VBtn>
-        </VCard>
-      </VNavigationDrawer>
-      <!-- Larger drawer: actual form view -->
-      <VNavigationDrawer
-        v-model="isDrawerOpen"
-        location="end"
-        temporary
-        width="700"
-        border="none"
-        class="form-drawer"
+      <VCard
+        flat
+        class="pa-4"
       >
-        <VToolbar
+        <!-- Render form section buttons -->
+        <VBtn
+          v-for="card in cards"
+          :key="card.id"
           variant="tonal"
-          class="text-white"
-          :class="[`toolbar-${activeCardIconColor}`, `icon-${activeCardIconColor}`]"
+          class="justify-start mb-3 w-100 text-white"
+          :class="[`btn-${card.color}`]"
+          @click="openCard(card.id)"
         >
-          <VCol class="mr-2 d-flex align-end">
-            <VIcon
-              v-if="activeCardIcon"
-              :icon="activeCardIcon"
-              size="28"
-              class="mr-2"
-            />
-            <VToolbarTitle>{{ activeCardTitle }}</VToolbarTitle>
-          </VCol>
-          <VSpacer />
-          <VBtn
-            icon="tabler-x"
-            variant="text"
-            color="white"
-            @click="closeCard"
+          <VIcon
+            v-if="card.icon"
+            :icon="card.icon"
+            start
+            size="24"
+            class="mr-2"
           />
-        </VToolbar>
-        <VDivider />
-        <VCard flat>
-          <!--
-            <VCardText>
-            <component :is="activeCardComponent" :consultId="activeMeetingId" />
-            </VCardText>
-          -->
-          <VCardText
-            class="d-flex justify-center align-center"
-            style="min-height: 200px;"
-          >
-            <VProgressCircular
-              v-if="isLoading"
-              indeterminate
-              color="primary"
-              size="48"
-            />
-            <component
-              :is="activeCardComponent"
-              v-show="!isLoading"
-              :consult-id="activeMeetingId"
-              @loaded="onComponentLoaded"
-            />
+          {{ card.title }}
+        </VBtn>
+      </VCard>
+    </VNavigationDrawer>
+    <!-- Larger drawer: actual form view -->
+    <VNavigationDrawer
+      v-model="isDrawerOpen"
+      location="end"
+      temporary
+      :width="formDrawerWidth"
+      border="none"
+      class="form-drawer"
+    >
+      <VToolbar
+        variant="tonal"
+        class="text-white"
+        :class="[`toolbar-${activeCardIconColor}`, `icon-${activeCardIconColor}`]"
+      >
+        <VCol class="mr-2 d-flex align-end">
+          <VIcon
+            v-if="activeCardIcon"
+            :icon="activeCardIcon"
+            size="28"
+            class="mr-2"
+          />
+          <VToolbarTitle>{{ activeCardTitle }}</VToolbarTitle>
+        </VCol>
+        <VSpacer />
+        <VBtn
+          icon="tabler-x"
+          variant="text"
+          color="white"
+          @click="closeCard"
+        />
+      </VToolbar>
+      <VDivider />
+      <VCard flat>
+        <!--
+          <VCardText>
+          <component :is="activeCardComponent" :consultId="activeMeetingId" />
           </VCardText>
-        </VCard>
-      </VNavigationDrawer>
-    </VCol>
-  </VRow>
+        -->
+        <VCardText
+          class="d-flex justify-center align-center"
+          :class="{ 'px-3': xs }"
+          style="min-block-size: 200px;"
+        >
+          <VProgressCircular
+            v-if="isLoading"
+            indeterminate
+            color="primary"
+            size="48"
+          />
+          <component
+            :is="activeCardComponent"
+            v-show="!isLoading"
+            :consult-id="activeMeetingId"
+            @loaded="onComponentLoaded"
+          />
+        </VCardText>
+      </VCard>
+    </VNavigationDrawer>
+  </div>
 
   <VRow v-else>
     <VContainer>
@@ -1392,59 +1360,43 @@ const closeTab = () => {
 </template>
 
 <style scoped>
-.fullscreen-video-row {
-  width: 100%;
-  height: 100%;
-  flex: 1;
-}
-
-html:fullscreen .fullscreen-video-row {
+/* The call fills the window (the route uses the blank layout, so there is no app
+   nav around it). Fixed positioning also keeps it the same size when the mobile
+   browser's address bar slides in and out. */
+.call-stage {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  margin: 0;
-  z-index: 9999;
-  background: #000000;
+  inset: 0;
+  background: #000;
 }
 
-html:fullscreen .remote-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.video-container {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
+.video-container,
 .video-wrap {
   position: relative;
   width: 100%;
   height: 100%;
-  background: #000000;
   overflow: hidden;
-  border-radius: 12px;
+  background: #000;
 }
 
+/* contain, not cover: a portrait phone camera shown on a landscape screen (or the
+   reverse) would otherwise be cropped to the patient's mid-face */
 .remote-video {
-  position: relative;
+  display: block;
   width: 100%;
-  height: 700px;
+  height: 100%;
+  object-fit: contain;
   background: #000;
-  overflow: hidden;
-  border-radius: 12px;
+}
+
+html:fullscreen .remote-video {
+  object-fit: cover;
 }
 
 .local-video {
   position: absolute;
-  bottom: 1rem;
-  right: 1rem;
+  z-index: 5;
+  right: 1.5rem;
+  bottom: 1.5rem;
   width: 20%;
   max-width: 240px;
   aspect-ratio: 16 / 9;
@@ -1452,21 +1404,25 @@ html:fullscreen .remote-video {
   border-radius: 8px;
   object-fit: cover;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.6);
-  margin-right: 20px;
 }
 
-@media (max-width: 768px) {
-  .local-video {
-    width: 30%;
-    max-width: 120px;
-    bottom: 0.5rem;
-    right: 0.5rem;
-    height: 140px;
-  }
+/* Phones and portrait tablets: self view in the top corner, clear of the controls
+   and of the notch / status bar */
+.call-stage--compact .local-video {
+  top: calc(0.75rem + env(safe-area-inset-top));
+  right: calc(0.75rem + env(safe-area-inset-right));
+  bottom: auto;
+  width: 28vw;
+  max-width: 150px;
+  aspect-ratio: 3 / 4;
+}
 
-  .video-wrap {
-    aspect-ratio: auto;
-    height: 500px;
+/* A phone turned sideways: a portrait tile would cover half the screen height */
+@media (orientation: landscape) {
+  .call-stage--compact .local-video {
+    width: 22vw;
+    max-width: 170px;
+    aspect-ratio: 4 / 3;
   }
 }
 
@@ -1517,15 +1473,36 @@ html:fullscreen .remote-video {
 
 .video-controls {
   position: absolute;
-  bottom: 10px;
+  z-index: 6;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: 12px;
+  gap: 1.25rem;
   background: rgba(0, 0, 0, 0.5);
-  padding: 10px 20px;
-  border-radius: 40px;
+  padding: 12px 24px;
+  border-radius: 999px;
   transition: opacity 0.3s ease;
+}
+
+/* Phones: tighter bar that still fits five 48px buttons across a 320px screen,
+   lifted above the iPhone home indicator */
+.call-stage--compact .video-controls {
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  gap: 0.5rem;
+  padding: 8px 12px;
+}
+
+.call-stage--compact .call-timer {
+  top: calc(0.75rem + env(safe-area-inset-top));
+  left: calc(0.75rem + env(safe-area-inset-left));
+  font-size: 14px;
+}
+
+.call-stage--compact .rec-notice {
+  top: calc(3rem + env(safe-area-inset-top));
+  left: calc(0.75rem + env(safe-area-inset-left));
+  font-size: 12px;
 }
 
 .fade-enter-active,

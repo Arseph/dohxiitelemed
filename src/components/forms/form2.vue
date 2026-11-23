@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { cStatus } from "@/components/snackbars/cStatus";
-import { useDirtyTracker, useFormSync } from '@/composables/useFormSync';
+import { useDirtyTracker } from '@/composables/useFormSync';
 import { useUser } from '@/composables/useUser';
 import { axiosIns } from '@/plugins/axios';
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { VForm } from 'vuetify/components/VForm';
 import { VCol, VRow, VTextField } from "vuetify/lib/components/index.mjs";
 
@@ -90,18 +90,8 @@ const examFields = [
 
 // const meeting = ref<any>(null);
 
-// Collaborative editing — see useFormSync. This card holds two records (clinical
-// history and physical exam) but is one form to the user and to the other
-// participant, so there is a single presence/refetch channel and one dirty tracker
-// per record.
-const { connected, remoteEditor, notifySaved, setEditing } = useFormSync({
-  form: 'clinical_history',
-  editorName: computed(() => user.value?.name ?? 'Other user'),
-  onRemoteSave: () => {
-    if (props.consultId)
-      fetchMeetingInfo(props.consultId)
-  },
-})
+// This card holds two records (clinical history and physical exam), so there is one
+// dirty tracker per record. Each save sends only what changed.
 
 // clinichis stores the facility under 'facilityOptions' but the column is
 // 'facility_id', so dirtiness is tracked on the payload shape, not the model.
@@ -123,10 +113,61 @@ const peTracker = useDirtyTracker(physexam, ['meeting_id'])
 
 const isEditing = ref(false);
 
-// Announce edit mode both ways, so the other side's banner appears and clears.
-watch(isEditing, editing => setEditing(editing))
+// Doctors (the accepting side) can read the requester's copy of these forms, read only.
+const myRole = ref<string | null>(null);
+const canEdit = ref(true); // false: a doctor reading a consultation they are not part of
+const otherCH = ref<Record<string, any> | null>(null);
+const otherPE = ref<Record<string, any> | null>(null);
+
+// Doctors can switch between the accepter's form and the requester's. The requester's
+// is always read only.
+const viewing = ref<'mine' | 'rhu'>('mine');
+const ownCH = ref<Record<string, any>>({}); // the doctor's own copy, set after every load
+const ownPE = ref<Record<string, any>>({});
+
+// Maps a saved row (the doctor's own, or the requester's) onto the form's field names.
+function chFromRow(ch: Record<string, any>) {
+  return {
+    meeting_id: ch.meeting_id ?? null,
+    reason_consult: ch.reason_consult ?? '',
+    date_onset_illness: ch.date_onset_illness ?? null,
+    date_referral: ch.date_referral ?? null,
+    facilityOptions: ch.facility_id ?? null,
+    known_medical_history: ch.known_medical_history ?? null,
+    current_medication: ch.current_medication ?? null,
+    blood_type: ch.blood_type ?? null,
+    clinical_status_time_consult: ch.clinical_status_time_consult ?? null,
+    specific_findings: ch.specific_findings ?? null,
+  };
+}
+
+function peFromRow(pe: Record<string, any>) {
+  return {
+    meeting_id: pe.meeting_id ?? null,
+    head: pe.head ?? '',
+    conjunctiva: pe.conjunctiva ?? '',
+    con_remarks: pe.con_remarks ?? '',
+    neck: pe.neck ?? '',
+    chest: pe.chest ?? '',
+    breast: pe.breast ?? '',
+    breast_remarks: pe.breast_remarks ?? '',
+    thorax: pe.thorax ?? '',
+    thorax_remarks: pe.thorax_remarks ?? '',
+    abdomen: pe.abdomen ?? '',
+    abdomen_remarks: pe.abdomen_remarks ?? '',
+    genitals: pe.genitals ?? '',
+    genital_remarks: pe.genital_remarks ?? '',
+    extremities: pe.extremities ?? '',
+    extremities_remarks: pe.extremities_remarks ?? '',
+    others: pe.others ?? '',
+    waist_circumference: pe.waist_circumference ?? '',
+  };
+}
+
 async function fetchMeetingInfo(meetId: number) {
   try {
+    viewing.value = 'mine';
+
     // Step 1: Fetch both Clinical History (CH) and Physical Exam (PE) in parallel
     const [chResponse, peResponse] = await Promise.all([
       axiosIns.get(`/api/get-clinicalhistory/${meetId}`),
@@ -135,22 +176,15 @@ async function fetchMeetingInfo(meetId: number) {
 
     const ch = chResponse.data.data;
     const pe = peResponse.data.data;
+    myRole.value = chResponse.data.my_role ?? null;
+    canEdit.value = chResponse.data.can_edit ?? true;
+    otherCH.value = chResponse.data.other ?? null;
+    otherPE.value = peResponse.data.other ?? null;
 
     // Step 2: Handle Clinical History
     if (ch) {
       console.log("✅ Existing clinical history found:", ch);
-      clinichis.value = {
-        meeting_id: ch.meeting_id ?? null,
-        reason_consult: ch.reason_consult ?? '',
-        date_onset_illness: ch.date_onset_illness ?? null,
-        date_referral: ch.date_referral ?? null,
-        facilityOptions: ch.facility_id ?? null,
-        known_medical_history: ch.known_medical_history ?? null,
-        current_medication: ch.current_medication ?? null,
-        blood_type: ch.blood_type ?? null,
-        clinical_status_time_consult: ch.clinical_status_time_consult ?? null,
-        specific_findings: ch.specific_findings ?? null,
-      };
+      clinichis.value = chFromRow(ch);
       console.log("✅ Clinical History fetched:", clinichis.value);
     } else {
       console.log("ℹ️ No clinical history found.");
@@ -159,26 +193,7 @@ async function fetchMeetingInfo(meetId: number) {
     // Step 3: Handle Physical Exam
     if (pe) {
       console.log("✅ Existing physical exam found:", pe);
-      physexam.value = {
-        meeting_id: pe.meeting_id ?? null,
-        head: pe.head ?? '',
-        conjunctiva: pe.conjunctiva ?? '',
-        con_remarks: pe.con_remarks ?? '',
-        neck: pe.neck ?? '',
-        chest: pe.chest ?? '',
-        breast: pe.breast ?? '',
-        breast_remarks: pe.breast_remarks ?? '',
-        thorax: pe.thorax ?? '',
-        thorax_remarks: pe.thorax_remarks ?? '',
-        abdomen: pe.abdomen ?? '',
-        abdomen_remarks: pe.abdomen_remarks ?? '',
-        genitals: pe.genitals ?? '',
-        genital_remarks: pe.genital_remarks ?? '',
-        extremities: pe.extremities ?? '',
-        extremities_remarks: pe.extremities_remarks ?? '',
-        others: pe.others ?? '',
-        waist_circumference: pe.waist_circumference ?? '',
-      };
+      physexam.value = peFromRow(pe);
       console.log("✅ Physical Exam fetched:", physexam.value);
     } else {
       console.log("ℹ️ No physical exam found.");
@@ -230,6 +245,10 @@ async function fetchMeetingInfo(meetId: number) {
       });
     }
 
+    // The doctor's own copy, restored when switching back from the requester's form.
+    ownCH.value = { ...clinichis.value };
+    ownPE.value = { ...physexam.value };
+
     // Baseline for working out what is dirty on the next save. Covers every branch
     // above, so it sits at the end of the try rather than inside one of them.
     // setRecordExists decides whether the next save can narrow to changed
@@ -257,13 +276,16 @@ onMounted(() => {
 
 async function saveUpdateCH() {
   try {
+    if (viewing.value !== 'mine' || !canEdit.value)
+      return false;
+
     // Ensure form validation
     const { valid } = await clinform.value.validate();
 
     if (!valid) {
       errorMessage.value = "Please fill in all required fields correctly.";
       isError.value = true;
-      return;
+      return false;
     }
 
     // Only the changed fields, so this save cannot overwrite what the other
@@ -284,25 +306,30 @@ async function saveUpdateCH() {
     successMessage.value = "Saved  Clinical history.";
     isSuccess.value = true;
     cancelEdit();
+    return true;
 
 
   } catch (error) {
     console.error("Error Saving Clinical History:", error);
-    errorMessage.value = "Failed to save Clinical History.";
+    errorMessage.value = (error as any)?.response?.data?.message ?? "Failed to save Clinical History.";
     isError.value = true;
+    return false;
 
   }
 }
 
 async function saveUpdatePE() {
   try {
+    if (viewing.value !== 'mine' || !canEdit.value)
+      return false;
+
     // Ensure form validation
     const { valid } = await clinform.value.validate();
 
     if (!valid) {
       errorMessage.value = "Please fill in all required fields correctly.";
       isError.value = true;
-      return;
+      return false;
     }
 
     const changed = peTracker.dirty();
@@ -317,22 +344,20 @@ async function saveUpdatePE() {
       peTracker.markClean();
     }
 
-    // Both records are saved from this one card, so announce once here.
-    notifySaved();
-
     // Success response handling
     setTimeout(function () {
       successMessage.value = "Saved Physical Exam.";
     }, 1050);
     isSuccess.value = true;
+    return true;
 
   } catch (error) {
     console.error("Error Saving Physical Exam:", error);
     setTimeout(function () {
-      errorMessage.value = "Failed to save Physical Exam.";
+      errorMessage.value = (error as any)?.response?.data?.message ?? "Failed to save Physical Exam.";
     }, 1050);
     isError.value = true;
-
+    return false;
   }
 }
 
@@ -343,21 +368,112 @@ function cancelEdit() {
   isEditing.value = false;
 }
 
-// One after the other, not in parallel: saveUpdatePE is the one that tells the other
-// participant to refetch, and if it finished first they would reload before the
-// clinical history row was written and show the old values.
+// Switching only happens while not editing (the toggle is disabled otherwise), so no
+// unsaved typing is lost. The requester's view can never be edited or saved.
+function showMyForm() {
+  Object.assign(clinichis.value, ownCH.value);
+  Object.assign(physexam.value, ownPE.value);
+}
+
+function showRhuForm() {
+  isEditing.value = false;
+  Object.assign(clinichis.value, chFromRow(otherCH.value ?? {}));
+  Object.assign(physexam.value, peFromRow(otherPE.value ?? {}));
+}
+
+function onViewChange(view: 'mine' | 'rhu') {
+  if (view === 'rhu')
+    showRhuForm();
+  else
+    showMyForm();
+}
+
+// Reloads everything from the server and stays on the requester's form, so a doctor can
+// pick up what the requester saved since the page loaded. Nothing is pushed to the page
+// any more, so this is how the requester's form is brought up to date.
+const refreshing = ref(false);
+
+async function refreshRhuForm() {
+  if (!props.consultId)
+    return;
+
+  refreshing.value = true;
+  try {
+    await fetchMeetingInfo(props.consultId); // also puts the view back on the doctor's form
+    viewing.value = 'rhu';
+    showRhuForm();
+  }
+  finally {
+    refreshing.value = false;
+  }
+}
+
+// Cancel button: put the doctor's own saved values back, which also undoes a copy.
+// (cancelEdit stays as it is, because the saves call it once they succeed.)
+function discardEdits() {
+  showMyForm();
+  isEditing.value = false;
+}
+
+const confirmReplace = ref(false);
+
+function isEmpty(value: unknown) {
+  return value === null || value === undefined || value === '';
+}
+
+// Copies the requester's answers into the doctor's own form and leaves it open for
+// editing. Nothing is saved until the doctor presses Save, and Cancel restores the
+// saved values. overwrite=false only fills fields that are still empty.
+function copyToMine(overwrite: boolean) {
+  confirmReplace.value = false;
+  if (!canEdit.value || (!otherCH.value && !otherPE.value))
+    return;
+
+  viewing.value = 'mine';
+  showMyForm();
+
+  let copied = 0;
+  const take = (target: Record<string, any>, row: Record<string, any>) => {
+    for (const [key, from] of Object.entries(row)) {
+      if (key === 'meeting_id')
+        continue;
+
+      const doCopy = overwrite ? target[key] !== from : !isEmpty(from) && isEmpty(target[key]);
+      if (doCopy) {
+        target[key] = from;
+        copied++;
+      }
+    }
+  };
+
+  take(clinichis.value, chFromRow(otherCH.value ?? {}));
+  take(physexam.value, peFromRow(otherPE.value ?? {}));
+
+  if (copied)
+    isEditing.value = true;
+
+  successMessage.value = copied
+    ? `Copied ${copied} field(s). Review them, then press Save.`
+    : 'Nothing to copy: your form already has those answers.';
+  isSuccess.value = true;
+}
+
+// One after the other, not in parallel, so the reload below sees both rows.
 async function saveAll() {
-  await saveUpdateCH();
-  await saveUpdatePE();
+  const chOk = await saveUpdateCH();
+  const peOk = await saveUpdatePE();
+
+  // Reload this user's own form so the screen shows what the server stored. Only
+  // after both saves went through, so a failed validation can't wipe unsaved typing.
+  // The other participant's form is not touched.
+  if (chOk && peOk && props.consultId)
+    await fetchMeetingInfo(props.consultId);
 }
 
 </script>
 
 <template>
   <VForm ref="clinform" style="align-self: stretch; width: 100%;">
-    <VAlert v-if="remoteEditor" type="warning" variant="tonal" density="compact" class="mb-3 form-remote-editing">
-      {{ remoteEditor }} is editing this form. It will refresh when they save.
-    </VAlert>
     <VTooltip v-if="isEditing == true" text="Save" location="top">
       <template #activator="{ props }">
         <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-device-floppy" size="48"
@@ -367,10 +483,10 @@ async function saveAll() {
     <VTooltip v-if="isEditing == true" text="Cancel" location="top">
       <template #activator="{ props }">
         <VBtn v-bind="props" variant="tonal" color="error" icon="tabler-x" size="48" class="fab-fixed-botr mr-15"
-          @click="cancelEdit" />
+          @click="discardEdits" />
       </template>
     </VTooltip>
-    <VTooltip v-if="isEditing == false" text="Edit" location="top">
+    <VTooltip v-if="canEdit && viewing === 'mine' && isEditing == false" text="Edit" location="top">
       <template #activator="{ props }">
         <VBtn v-bind="props" variant="tonal" color="success" icon="tabler-edit" size="48" class="fab-fixed-botr" rounded
           @click="isEditing = true" />
@@ -382,6 +498,89 @@ async function saveAll() {
       <!-- <pre>{{ clinichis }}{{ physexam }}</pre> -->
     </h5>
     <br></br>
+
+    <!-- Doctors can switch to the requester's form. It is read only. -->
+    <VRow v-if="myRole === 'accepter'">
+      <VCol cols="12">
+        <VBtnToggle v-model="viewing" mandatory divided color="primary" class="w-100 mb-4"
+          :disabled="isEditing" @update:model-value="onViewChange">
+          <VBtn value="mine" class="flex-grow-1">Accepter form</VBtn>
+          <VBtn value="rhu" class="flex-grow-1">Requester form</VBtn>
+        </VBtnToggle>
+      </VCol>
+    </VRow>
+    <VAlert
+        v-if="viewing === 'rhu'"
+        type="info"
+        variant="tonal"
+        density="compact"
+        class="mb-3"
+      >
+        <div class="d-flex flex-column flex-sm-row align-sm-center justify-space-between ga-2">
+          <!-- Message -->
+          <div class="text-body-2">
+            You are viewing the requester's form. It is read only.
+            <span v-if="!otherCH && !otherPE">The requester has not filled it in yet.</span>
+          </div>
+
+          <!-- Actions -->
+          <div class="d-flex align-center flex-wrap ga-2 flex-shrink-0">
+            <VMenu v-if="canEdit && (otherCH || otherPE)">
+              <template #activator="{ props }">
+                <VBtn
+                  v-bind="props"
+                  size="small"
+                  variant="tonal"
+                  color="success"
+                  prepend-icon="tabler-copy"
+                  append-icon="tabler-chevron-down"
+                >
+                  Copy to my form
+                </VBtn>
+              </template>
+
+              <VList density="compact">
+                <VListItem
+                  prepend-icon="tabler-forms"
+                  @click="copyToMine(false)"
+                >
+                  <VListItemTitle>Fill empty fields only</VListItemTitle>
+                </VListItem>
+                <VListItem
+                  prepend-icon="tabler-replace"
+                  @click="confirmReplace = true"
+                >
+                  <VListItemTitle>Replace my form with this</VListItemTitle>
+                </VListItem>
+              </VList>
+            </VMenu>
+
+            <VBtn
+              size="small"
+              variant="tonal"
+              prepend-icon="tabler-refresh"
+              :loading="refreshing"
+              @click="refreshRhuForm"
+            >
+              Refresh
+            </VBtn>
+          </div>
+        </div>
+      </VAlert>
+
+    <VDialog v-model="confirmReplace" max-width="420">
+      <VCard title="Replace your form?">
+        <VCardText>
+          Everything in your form will be replaced by the requester's answers. Nothing is saved until you press Save, and Cancel brings your form back.
+        </VCardText>
+        <VCardActions>
+          <VSpacer />
+          <VBtn variant="text" @click="confirmReplace = false">Keep mine</VBtn>
+          <VBtn color="warning" variant="tonal" @click="copyToMine(true)">Replace</VBtn>
+        </VCardActions>
+      </VCard>
+    </VDialog>
+
     <VRow>
       <VCol cols="12" md="12">
         <VTextarea v-model="clinichis.reason_consult" outlined dense hide-details auto-grow rows="2"
@@ -390,51 +589,51 @@ async function saveAll() {
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="clinichis.date_referral" type="date" outlined dense hide-details label="Date of Referral:"
           :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="clinichis.date_onset_illness" type="date" outlined dense hide-details
           label="Date of Onset of Illness:" :rules="[requiredValidator]" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VAutocomplete v-model="clinichis.facilityOptions" :items="facilityOptions" item-title="facilityname"
           item-value="id" label="Name of Referral Health Facility (if Applicable):" outlined dense hide-details
           clearable persistent-hint :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="clinichis.known_medical_history" outlined dense hide-details auto-grow rows="2"
           label="Known Medical Condition/s & Medical History:" :rules="[requiredValidator]" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="clinichis.current_medication" outlined dense hide-details label="Current Medications:"
           :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextField v-model="clinichis.blood_type" outlined dense hide-details label="Blood Type:"
           :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="clinichis.specific_findings" outlined dense hide-details auto-grow rows="2"
           label="Specific Findings:" :rules="[requiredValidator]" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="clinichis.clinical_status_time_consult" outlined dense hide-details auto-grow rows="2"
           label="Clinical Status at the Time of Consult:" :rules="[requiredValidator]" :readonly="!isEditing"
           :class="{ 'custom-disabled': !isEditing }" />
@@ -450,13 +649,13 @@ async function saveAll() {
       </Vcol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="physexam.head" outlined dense hide-details auto-grow rows="2" label="Head:"
           :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow v-for="(item, index) in examFields" :key="index">
-      <VCol>
+      <VCol cols="12" sm>
         <!-- Field -->
         <VTextField v-model="physexam[item.field]" outlined dense hide-details :label="item.label + ':'" class="mb-2"
           :rules="[requiredValidator]" :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
@@ -467,39 +666,16 @@ async function saveAll() {
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="physexam.others" outlined dense hide-details auto-grow rows="2" label="Others: "
           :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
     <VRow>
-      <VCol>
+      <VCol cols="12" sm>
         <VTextarea v-model="physexam.waist_circumference" outlined dense hide-details auto-grow rows="2"
           label="Waist Circumference: " :readonly="!isEditing" :class="{ 'custom-disabled': !isEditing }" />
       </VCol>
     </VRow>
   </VForm>
 </template>
-
-<style>
-
-/*
-  Shown while the other participant is in edit mode. Deliberately loud: it is the
-  only warning that this form is about to be refreshed out from under you, taking
-  any unsaved typing with it.
-*/
-.form-remote-editing {
-  border: 2px solid #ff6d00;
-  color: #ff6d00 !important;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-
-  /* Black outline keeps the orange readable — the drawer sits over the video feed,
-     so the backdrop behind it is unpredictable. */
-  text-shadow:
-    -1px -1px 0 #000,
-    1px -1px 0 #000,
-    -1px 1px 0 #000,
-    1px 1px 0 #000;
-}
-</style>

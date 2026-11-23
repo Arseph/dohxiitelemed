@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getAuthToken } from '@/utils/authStorage'
 import { useUser } from '@/composables/useUser'
 import { axiosIns } from "@/plugins/axios"
 import { onMounted, ref } from 'vue'
@@ -13,7 +14,7 @@ const { user } = useUser()
 const profileUrl = ref<string | null>(null)
 const tokenValid = ref(false)
 onMounted(() => {
-  const token = localStorage.getItem('auth_token')
+  const token = getAuthToken()
   if (!token) {
       router.push('/login')
   }

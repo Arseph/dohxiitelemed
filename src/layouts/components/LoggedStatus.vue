@@ -1,4 +1,5 @@
 <script lang="ts">
+import { authStorage } from '@/utils/authStorage'
 import { defineComponent, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 export default defineComponent({
@@ -19,7 +20,7 @@ export default defineComponent({
     const isValid = ref(props.visible)
     const router = useRouter()
     const logout = async () => {
-        localStorage.removeItem('auth_token')
+        authStorage.clear()
         router.push('/login')
     }
 

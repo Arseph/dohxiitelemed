@@ -53,6 +53,11 @@ const generatedRoutes: Array<RouteRecordRaw> = modules.flatMap((module) => [
     meta: {
       middleware: [ensureCsrfTokenSet, authenticated],
       resource: module.name,
+      // The call opens in its own tab. The default layout swaps its horizontal nav for
+      // a vertical one when the window crosses ~976px, which unmounts the page: the
+      // peer connection, socket and camera were torn down and the call restarted on
+      // every resize or tablet rotation. The blank layout has nothing to swap.
+      layout: 'blank',
     },
     component: () => import(`../../views/pages/${module.name}/Consultation.vue`),
   },

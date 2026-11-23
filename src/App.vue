@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { authStorage } from '@/utils/authStorage'
 import ScrollToTop from '@core/components/ScrollToTop.vue'
 import initCore from '@core/initCore'
 import { initConfigStore, useConfigStore } from '@core/stores/config'
@@ -19,7 +20,7 @@ interface MyNotification {
   isSeen: boolean
 }
 onMounted(async () => {
-  const cachedUser =JSON.parse(localStorage.getItem('auth_user') || '{}')
+  const cachedUser =JSON.parse(authStorage.get('auth_user') || '{}')
   await requestNotificationPermission()
 
     var pusher = new Pusher('0b758fd17aaeea982810', {

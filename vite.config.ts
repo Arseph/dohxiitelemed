@@ -1,6 +1,5 @@
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
-import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import AutoImport from 'unplugin-auto-import/vite'
@@ -13,16 +12,9 @@ import Layouts from 'vite-plugin-vue-layouts'
 import vuetify from 'vite-plugin-vuetify'
 import svgLoader from 'vite-svg-loader'
 
-// Shown in the footer. The version is bumped by hand in package.json; the commit
-// is stamped at build time so every commit shows up, bumped or not. Builds without
-// git (e.g. a container with no git binary) just leave the commit out.
+// Shown in the footer. The version is bumped by hand in package.json, with a
+// matching entry in src/changelog.ts.
 const appVersion = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
-
-let appCommit = ''
-try {
-  appCommit = execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
-}
-catch {}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -109,7 +101,6 @@ export default defineConfig({
   define: {
     'process.env': {},
     '__APP_VERSION__': JSON.stringify(appVersion),
-    '__APP_COMMIT__': JSON.stringify(appCommit),
   },
   resolve: {
     alias: {
