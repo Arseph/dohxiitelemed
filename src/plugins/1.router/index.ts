@@ -1,4 +1,5 @@
 import AuthRoutes from '@/plugins/1.router/AuthRoutes';
+import DashboardRoutes from '@/plugins/1.router/DashboardRoutes';
 import middleware from '@/plugins/1.router/middlewares/middleware';
 import ModuleRoutes from '@/plugins/1.router/ModuleRoutes';
 import ProfileRoutes from '@/plugins/1.router/ProfileRoutes';
@@ -29,6 +30,7 @@ const router = createRouter({
   extendRoutes: () => [
     ...ModuleRoutes.map(route => recursiveLayouts(route)),
     ...ProfileRoutes.map(route => recursiveLayouts(route)),
+    ...DashboardRoutes.map(route => recursiveLayouts(route)),
     ...AuthRoutes
   ],
 });

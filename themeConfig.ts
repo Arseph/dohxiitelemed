@@ -1,17 +1,31 @@
-import { defineThemeConfig } from '@core'
-import { Skins } from '@core/enums'
 import { breakpointsVuetify } from '@vueuse/core'
+import { useTheme } from 'vuetify'
 import { VIcon } from 'vuetify/components/VIcon'
-
-// ❗ Logo SVG must be imported with ?raw suffix
-import logo from './public/ro12.png'
+import { Skins } from '@core/enums'
+import { defineThemeConfig } from '@core'
 
 import { AppContentLayoutNav, ContentWidth, FooterType, NavbarType } from '@layouts/enums'
+
+// Circular DOH Telemedicine logo, as on the login page: the navy disc in light mode,
+// the mint disc in dark mode so it keeps its edge against a dark navbar.
+// Served from public/assets; BASE_URL keeps it working under a sub-path.
+const AppLogo = defineComponent({
+  name: 'AppLogo',
+  setup() {
+    const theme = useTheme()
+
+    return () => h('img', {
+      src: `${import.meta.env.BASE_URL}assets/${theme.current.value.dark ? 'telemed-logo-on-dark.png' : 'telemed-logo.png'}`,
+      alt: 'DOH Telemedicine',
+      style: 'width: 32px; height: 32px',
+    })
+  },
+})
 
 export const { themeConfig, layoutConfig } = defineThemeConfig({
   app: {
     title: 'telemedicine',
-    logo: h('img', { src: logo, style: 'width: 32px' }),
+    logo: h(AppLogo),
     contentWidth: ContentWidth.Boxed,
     contentLayoutNav: AppContentLayoutNav.Horizontal,
     overlayNavFromBreakpoint: breakpointsVuetify.md + 16, // 16 for scrollbar. Docs: https://next.vuetifyjs.com/en/features/display-and-platform/

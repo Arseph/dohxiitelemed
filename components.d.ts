@@ -84,6 +84,7 @@ declare module 'vue' {
     UserInfoEditDialog: typeof import('./src/components/dialogs/UserInfoEditDialog.vue')['default']
     UserUpgradePlanDialog: typeof import('./src/components/dialogs/UserUpgradePlanDialog.vue')['default']
     VideoConference: typeof import('./src/components/VideoConference.vue')['default']
+    VueApexCharts: typeof import('vue3-apexcharts')['default']
     Warning: typeof import('./src/components/snackbars/warning.vue')['default']
   }
 }

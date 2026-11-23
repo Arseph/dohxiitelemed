@@ -5,8 +5,6 @@ import { getAuthToken } from '@/utils/authStorage'
 import '@fontsource/atkinson-hyperlegible-next/400.css'
 import '@fontsource/atkinson-hyperlegible-next/500.css'
 import '@fontsource/atkinson-hyperlegible-next/700.css'
-import { themeConfig } from '@themeConfig'
-import { VNodeRenderer } from '@layouts/components/VNodeRenderer'
 import type { ThemeSwitcherTheme } from '@layouts/types'
 
 definePage({
@@ -84,6 +82,9 @@ const isDarkTheme = computed(() => theme.global.current.value.dark)
 const logoOnLight = `${import.meta.env.BASE_URL}assets/telemed-logo.png`
 const logoOnDark = `${import.meta.env.BASE_URL}assets/telemed-logo-on-dark.png`
 const logoSrc = computed(() => (isDarkTheme.value ? logoOnDark : logoOnLight))
+
+// The side panel keeps the regional DOH XII seal next to the "DOH XII TELEMED" name
+const regionalSeal = `${import.meta.env.BASE_URL}ro12.png`
 
 // The blank layout has no navbar, so the login page carries its own theme switcher.
 // Same Vuexy component the navbar uses, so the choice is saved and carries over after sign-in.
@@ -174,7 +175,12 @@ const themes: ThemeSwitcherTheme[] = [
 
       <div class="stage__content">
         <div class="stage__brand">
-          <VNodeRenderer :nodes="themeConfig.app.logo" />
+          <img
+            :src="regionalSeal"
+            alt=""
+            width="32"
+            height="32"
+          >
           <span class="stage__name">DOH XII TELEMED</span>
         </div>
 
